@@ -1,0 +1,361 @@
+/* Base: reset, typography roles, focus, and shared primitives. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: calc(
+    var(--w-header) + var(--glass-gap) * 2 + var(--space-4)
+  );
+}
+
+body {
+  background: var(--page-bg);
+  background-attachment: fixed;
+  color: var(--text-body);
+  font-size: 17px;
+  line-height: 1.65;
+  margin: 0;
+  min-height: 100vh;
+  overflow-wrap: anywhere;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--text-strong);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--text-accent);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+}
+
+:focus-visible {
+  /* Opaque ring: brand ink holds 4.5:1 on both panels, and an outline stays
+   * visible in forced-colors mode where box-shadows are dropped. */
+  outline: 3px solid var(--brand-ink);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: color-mix(in oklch, var(--brand) 25%, transparent);
+}
+
+.visually-hidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.skip-link {
+  background: var(--primary-bg);
+  border-radius: var(--radius-sm);
+  color: var(--primary-fg);
+  font-size: 14px;
+  font-weight: 500;
+  left: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  position: fixed;
+  top: -5rem;
+  z-index: 30;
+}
+
+.skip-link:focus {
+  top: var(--space-4);
+}
+
+/* Typography roles */
+.eyebrow {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.display {
+  font-size: clamp(32px, 4vw, 44px);
+  line-height: 1.05;
+}
+
+.page-title {
+  font-size: clamp(28px, 3vw, 34px);
+  line-height: 1.1;
+}
+
+.section-title {
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.body-small {
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.ui-text {
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.strong {
+  color: var(--text-strong);
+}
+
+/* Surfaces */
+.panel {
+  backdrop-filter: var(--panel-blur);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--panel-shadow);
+}
+
+.code-surface {
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--code-shadow);
+  color: var(--code-text);
+}
+
+/* Controls */
+.button {
+  align-items: center;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-strong);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 500;
+  gap: var(--space-2);
+  height: 36px;
+  justify-content: center;
+  padding: 0 var(--space-4);
+  text-decoration: none;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.button:hover {
+  text-decoration: none;
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+.button--primary {
+  background: var(--primary-bg);
+  border-color: transparent;
+  color: var(--primary-fg);
+}
+
+.button--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  height: 28px;
+  padding: 0 var(--space-2);
+}
+
+.button--ghost:hover {
+  color: var(--text-strong);
+}
+
+.button--success {
+  color: var(--status-success);
+}
+
+@media (max-width: 767px) {
+  .button {
+    height: var(--touch-target);
+  }
+}
+
+.badge {
+  border: 1px solid currentColor;
+  border-radius: var(--radius-xs);
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  padding: 3px 6px;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.badge--deprecated {
+  color: var(--status-warning);
+}
+
+.badge--neutral {
+  color: var(--text-muted);
+}
+
+/* Method label: text only, colour plus word, fixed width in lists. */
+.method {
+  color: var(--m-other);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.method--get {
+  color: var(--m-get);
+}
+
+.method--post {
+  color: var(--m-post);
+}
+
+.method--put {
+  color: var(--m-put);
+}
+
+.method--patch {
+  color: var(--m-patch);
+}
+
+.method--delete {
+  color: var(--m-delete);
+}
+
+.method--compact {
+  font-size: 10px;
+  min-width: 44px;
+  text-align: right;
+}
+
+.status {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status--success {
+  color: var(--status-success);
+}
+
+.status--warning {
+  color: var(--status-warning);
+}
+
+.status--danger {
+  color: var(--status-danger);
+}
+
+.status--info {
+  color: var(--status-info);
+}
+
+.status--neutral {
+  color: var(--text-muted);
+}
+
+.callout {
+  align-items: start;
+  border: 1px solid var(--callout-warning-border);
+  border-radius: var(--radius-md);
+  background: var(--callout-warning-bg);
+  color: var(--text-body);
+  display: grid;
+  font-size: 14.5px;
+  gap: var(--space-3);
+  grid-template-columns: 20px 1fr;
+  line-height: 1.55;
+  padding: var(--space-3) var(--space-4);
+}
+
+.callout__glyph {
+  color: var(--status-warning);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-align: center;
+}
+
+.prose {
+  white-space: pre-line;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .panel,
+  .drawer,
+  .code-surface {
+    background: Canvas;
+    border: 1px solid CanvasText;
+  }
+}

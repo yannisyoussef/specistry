@@ -8,3 +8,5 @@ tests/fixtures/openapi/adversarial/malformed.yaml
 # Local-only agent working directories (excluded from git via .git/info/exclude)
 .agent
 prompts
+# Canonical artifacts are byte-exact CLI output, never reformatted.
+tests/fixtures/reader/*/.specra/

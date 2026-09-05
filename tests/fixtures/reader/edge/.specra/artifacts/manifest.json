@@ -1,0 +1,29 @@
+{
+  "artifactFormat": 1,
+  "diagnostics": {
+    "errors": 0,
+    "warnings": 2
+  },
+  "files": {
+    "documentation": "documentation.json"
+  },
+  "generator": "specra",
+  "modelVersion": 1,
+  "project": {
+    "id": "project_a3922714c2d7065a",
+    "name": "Edge cases"
+  },
+  "sources": [
+    {
+      "bytes": 8040,
+      "path": "openapi.yaml",
+      "sha256": "c600c11e44ef00a7b4f27c3255d2bd6c9f394a801e8169f6d1d784a4f462bda2"
+    }
+  ],
+  "statistics": {
+    "documents": 1,
+    "operations": 13,
+    "references": 6,
+    "schemas": 1
+  }
+}

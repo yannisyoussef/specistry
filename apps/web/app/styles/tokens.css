@@ -1,0 +1,287 @@
+/*
+ * Reader design tokens (docs/design/reader-v1.md). The consumer supplies one
+ * accent (`--brand`); every other colour derives from it and the mode. Light is
+ * the default; dark applies with `data-mode="dark"` or, without an explicit
+ * choice, with the system preference.
+ */
+:root {
+  --brand: #2a6fdb;
+  --glass-intensity: 0.15;
+
+  --font-display:
+    "Space Grotesk Variable", "Space Grotesk", system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans Variable", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono:
+    "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-panel: 16px;
+  --radius-overlay: 18px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 48px;
+  --space-9: 64px;
+
+  --w-header: 52px;
+  --w-sidebar: 248px;
+  --w-sidebar-tablet: 224px;
+  --w-doc: 680px;
+  --w-doc-max: 760px;
+  --w-drawer: 280px;
+  --glass-gap: 12px;
+  --touch-target: 44px;
+
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --ga-light: calc(0.55 + var(--glass-intensity) * 0.35);
+  --ga-dark: calc(0.06 + var(--glass-intensity) * 0.1);
+  --glass-blur: calc(8px + var(--glass-intensity) * 28px);
+
+  /* Glass · light */
+  color-scheme: light;
+  --page-bg:
+    radial-gradient(
+      ellipse 60% 70% at 12% 0%,
+      color-mix(in oklch, var(--brand) 28%, white),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 50% 60% at 95% 100%,
+      color-mix(in oklch, var(--brand) 18%, white),
+      transparent 60%
+    ),
+    radial-gradient(ellipse 40% 40% at 60% 40%, white, transparent 70%), #eef0f3;
+  --page-bg-solid: #eef0f3;
+  --panel-bg: rgba(255, 255, 255, var(--ga-light));
+  --panel-border: rgba(255, 255, 255, 0.75);
+  --panel-blur: blur(var(--glass-blur)) saturate(1.5);
+  --panel-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 12px 40px rgba(20, 20, 23, 0.08);
+  --divider: rgba(20, 20, 23, 0.08);
+  --border: rgba(20, 20, 23, 0.1);
+  --border-strong: rgba(20, 20, 23, 0.22);
+  --surface: #ffffff;
+  --surface-subtle: rgba(255, 255, 255, 0.4);
+  --active-bg: rgba(255, 255, 255, 0.85);
+  --text-strong: #141417;
+  --text-body: #333338;
+  --text-muted: #6c6c73;
+  --text-faint: #93939a;
+  --brand-ink: color-mix(in oklch, var(--brand) 85%, black);
+  --text-accent: var(--brand-ink);
+  --primary-bg: #141417;
+  --primary-fg: #ffffff;
+  --code-bg: rgba(255, 255, 255, 0.92);
+  --code-border: rgba(20, 20, 23, 0.12);
+  --code-text: #1f1f23;
+  --code-shadow:
+    0 1px 0 rgba(255, 255, 255, 1) inset, 0 4px 14px rgba(20, 20, 23, 0.08);
+  --overlay-bg: rgba(255, 255, 255, 0.92);
+  --tab-inactive: var(--text-muted);
+  --overlay-blur: blur(30px) saturate(1.6);
+  --scrim: rgba(20, 20, 23, 0.25);
+  --m-get: #1f55ad;
+  --m-post: #178049;
+  --m-put: #8a5a00;
+  --m-patch: #8a5a00;
+  --m-delete: #d40606;
+  --m-other: #333338;
+  --status-success: #178049;
+  --status-warning: #8a5a00;
+  --status-danger: #d40606;
+  --status-info: #1f55ad;
+  --callout-warning-bg: rgba(245, 163, 0, 0.12);
+  --callout-warning-border: rgba(204, 134, 0, 0.45);
+  --syn-key: #1f55ad;
+  --syn-str: #178049;
+  --syn-num: #e25800;
+  --syn-kw: #aa0606;
+  --syn-cmt: #93939a;
+}
+
+/* Glass · dark */
+:root[data-mode="dark"] {
+  color-scheme: dark;
+  --page-bg:
+    radial-gradient(
+      ellipse 60% 70% at 10% 0%,
+      color-mix(in oklch, var(--brand) 45%, #0c0c10),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 50% 60% at 95% 100%,
+      color-mix(in oklch, var(--brand) 30%, #0c0c10),
+      transparent 60%
+    ),
+    #0b0b0e;
+  --page-bg-solid: #0b0b0e;
+  --panel-bg: rgba(255, 255, 255, var(--ga-dark));
+  --panel-border: rgba(255, 255, 255, 0.12);
+  --panel-blur: blur(var(--glass-blur)) saturate(1.4);
+  --panel-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 20px 60px rgba(0, 0, 0, 0.5);
+  --divider: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.24);
+  --surface: #121216;
+  --surface-subtle: rgba(255, 255, 255, 0.05);
+  --active-bg: rgba(255, 255, 255, 0.1);
+  --text-strong: #f4f4f5;
+  --text-body: #c4c4c9;
+  --text-muted: #9a9aa1;
+  --text-faint: #6f6f76;
+  --brand-ink: color-mix(in oklch, var(--brand) 65%, white);
+  --text-accent: var(--brand-ink);
+  --primary-bg: #f4f4f5;
+  --primary-fg: #0e0e10;
+  --code-bg: rgba(0, 0, 0, 0.45);
+  --code-border: rgba(255, 255, 255, 0.14);
+  --code-text: #e4e4e7;
+  --code-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+  --overlay-bg: rgba(20, 20, 26, 0.9);
+  --overlay-blur: blur(28px) saturate(1.4);
+  --scrim: rgba(0, 0, 0, 0.45);
+  --tab-inactive: var(--text-body);
+  --m-get: #6fa3ff;
+  --m-post: #4fc98a;
+  --m-put: #f5b942;
+  --m-patch: #f5b942;
+  --m-delete: #ff6f6a;
+  --m-other: #c4c4c9;
+  --status-success: #4fc98a;
+  --status-warning: #f5b942;
+  --status-danger: #ff6f6a;
+  --status-info: #6fa3ff;
+  --callout-warning-bg: rgba(245, 185, 66, 0.12);
+  --callout-warning-border: rgba(245, 185, 66, 0.4);
+  --syn-key: #8fb5ff;
+  --syn-str: #7fd6a4;
+  --syn-num: #ffb27a;
+  --syn-kw: #ff8f8a;
+  --syn-cmt: #6c6c73;
+}
+
+/* System preference applies only when the reader has no explicit choice. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
+    color-scheme: dark;
+    --page-bg:
+      radial-gradient(
+        ellipse 60% 70% at 10% 0%,
+        color-mix(in oklch, var(--brand) 45%, #0c0c10),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 50% 60% at 95% 100%,
+        color-mix(in oklch, var(--brand) 30%, #0c0c10),
+        transparent 60%
+      ),
+      #0b0b0e;
+    --page-bg-solid: #0b0b0e;
+    --panel-bg: rgba(255, 255, 255, var(--ga-dark));
+    --panel-border: rgba(255, 255, 255, 0.12);
+    --panel-blur: blur(var(--glass-blur)) saturate(1.4);
+    --panel-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 20px 60px rgba(0, 0, 0, 0.5);
+    --divider: rgba(255, 255, 255, 0.08);
+    --border: rgba(255, 255, 255, 0.12);
+    --border-strong: rgba(255, 255, 255, 0.24);
+    --surface: #121216;
+    --surface-subtle: rgba(255, 255, 255, 0.05);
+    --active-bg: rgba(255, 255, 255, 0.1);
+    --text-strong: #f4f4f5;
+    --text-body: #c4c4c9;
+    --text-muted: #9a9aa1;
+    --text-faint: #6f6f76;
+    --brand-ink: color-mix(in oklch, var(--brand) 65%, white);
+    --text-accent: var(--brand-ink);
+    --primary-bg: #f4f4f5;
+    --primary-fg: #0e0e10;
+    --code-bg: rgba(0, 0, 0, 0.45);
+    --code-border: rgba(255, 255, 255, 0.14);
+    --code-text: #e4e4e7;
+    --code-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
+    --overlay-bg: rgba(20, 20, 26, 0.9);
+    --overlay-blur: blur(28px) saturate(1.4);
+    --scrim: rgba(0, 0, 0, 0.45);
+    --tab-inactive: var(--text-body);
+    --m-get: #6fa3ff;
+    --m-post: #4fc98a;
+    --m-put: #f5b942;
+    --m-patch: #f5b942;
+    --m-delete: #ff6f6a;
+    --m-other: #c4c4c9;
+    --status-success: #4fc98a;
+    --status-warning: #f5b942;
+    --status-danger: #ff6f6a;
+    --status-info: #6fa3ff;
+    --callout-warning-bg: rgba(245, 185, 66, 0.12);
+    --callout-warning-border: rgba(245, 185, 66, 0.4);
+    --syn-key: #8fb5ff;
+    --syn-str: #7fd6a4;
+    --syn-num: #ffb27a;
+    --syn-kw: #ff8f8a;
+    --syn-cmt: #6c6c73;
+  }
+}
+
+/*
+ * Fallbacks come last and match every mode selector at equal or higher
+ * specificity, so they win over both explicit and system-preference modes.
+ */
+@supports not (backdrop-filter: blur(1px)) {
+  :root[data-mode="light"],
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
+    --panel-bg: rgba(255, 255, 255, 0.96);
+    --overlay-bg: rgba(255, 255, 255, 0.98);
+  }
+  :root[data-mode="dark"] {
+    --panel-bg: #16161b;
+    --overlay-bg: #16161b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-mode="light"]):not([data-mode="dark"]) {
+      --panel-bg: #16161b;
+      --overlay-bg: #16161b;
+    }
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-mode="light"],
+  :root[data-mode="dark"],
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
+    --panel-blur: none;
+    --panel-bg: var(--surface);
+    --overlay-blur: none;
+    --overlay-bg: var(--surface);
+    --page-bg: var(--page-bg-solid);
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --glass-blur: min(12px, calc(8px + var(--glass-intensity) * 28px));
+    --glass-gap: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+  }
+}

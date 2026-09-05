@@ -1,0 +1,67 @@
+openapi: 3.1.0
+info:
+  title: Billing API
+  version: 2.0.0
+  description: Invoices and payment methods.
+servers:
+  - url: https://billing.acme.example.test/v2
+tags:
+  - name: Invoices
+  - name: Users
+    description: Billing contacts, distinct from account users.
+paths:
+  /invoices:
+    get:
+      operationId: listInvoices
+      summary: List invoices
+      tags: [Invoices]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, open, paid, void]
+      responses:
+        "200":
+          description: Invoices matching the filter.
+  /invoices/{invoiceId}:
+    get:
+      operationId: getInvoice
+      summary: Get an invoice
+      tags: [Invoices]
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The invoice.
+        "404":
+          description: No such invoice.
+  /users:
+    get:
+      # Same operationId as the Accounts API: the reader must keep both.
+      operationId: listUsers
+      summary: List billing contacts
+      tags: [Users]
+      responses:
+        "200":
+          description: Billing contacts.
+  /health:
+    get:
+      operationId: billingHealth
+      summary: Health
+      security: []
+      responses:
+        "200":
+          description: The service is up.
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+security:
+  - apiKey: []

@@ -44,13 +44,13 @@ The CLI, config loader, and initial orchestration context are implemented by SPE
 
 The repository is a pnpm monorepo with a thin author-workflow orchestrator. Pnpm's topological recursive commands remain sufficient for building the workspace itself.
 
-| Boundary           | Current responsibility                                                 | May depend on                                                                 |
-| ------------------ | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `packages/model`   | Canonical serializable contracts and invariants                        | TypeScript/platform types only                                                |
-| `packages/openapi` | Bounded parse, confined reference graph, OpenAPI 3.0/3.1 normalization | `model`, `yaml`; no filesystem or network access                              |
-| `packages/config`  | Serializable public configuration schema and defaults                  | focused validation libraries                                                  |
-| `packages/cli`     | CLI parsing/presentation, bounded hosts, acquisition policy, artifacts | `config`, `model`, `openapi`; the only package allowed filesystem/network I/O |
-| `apps/web`         | Next.js reader shell and future rendering composition                  | canonical/rendering contracts, UI/content/search ports; never parser objects  |
+| Boundary           | Current responsibility                                                  | May depend on                                                                 |
+| ------------------ | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `packages/model`   | Canonical serializable contracts and invariants                         | TypeScript/platform types only                                                |
+| `packages/openapi` | Bounded parse, confined reference graph, OpenAPI 3.0/3.1 normalization  | `model`, `yaml`; no filesystem or network access                              |
+| `packages/config`  | Serializable public configuration schema and defaults                   | focused validation libraries                                                  |
+| `packages/cli`     | CLI parsing/presentation, bounded hosts, acquisition policy, artifacts  | `config`, `model`, `openapi`; the only package allowed filesystem/network I/O |
+| `apps/web`         | Next.js reader: artifact loader, reader projection, server-first routes | `@specra/model` contracts and `@specra/config` only; never parser objects     |
 
 Future packages earn their existence when their slice begins: `content`, `search`, `snippets`, and `ui` remain expected candidates. The concrete orchestration responsibility now lives with `cli`; a generic `core` package is still unjustified.
 
@@ -130,7 +130,7 @@ flowchart LR
 - **Source model:** original JSON/YAML bytes and origin metadata; immutable input, retained only for diagnostics when policy permits.
 - **Parser model:** adapter-private representation retaining OpenAPI vocabulary and source pointers. It never crosses package boundaries into rendering.
 - **Normalized model:** the canonical model in `@specra/model`; source-independent semantics, stable IDs, normalized methods/statuses, explicit unsupported nodes and diagnostics.
-- **Rendering model:** small derived view state for a route or component. It may add presentation grouping, but never source semantics.
+- **Rendering model:** small derived view state for a route or component. It may add presentation grouping, but never source semantics. SPEC-004 implements it as the reader projection in `apps/web/lib/reader` (route identity, navigation grouping, operation views, schema summaries, page metadata), documented in ADR-010.
 
 There is no second domain model between normalized and canonical. Search and snippets derive their own purpose-built documents from canonical input rather than mutating it.
 
@@ -166,6 +166,19 @@ OpenAPI-specific features such as callbacks are normalized into future canonical
 Builds fail closed for errors and threshold breaches. Warnings are machine-readable and may be promoted by project policy.
 
 SPEC-002 establishes `.specra/artifacts` as the deterministic project-relative artifact root. `validate` resolves but never creates or cleans it; SPEC-003's `build` writes it through a staged directory and atomic rename, removes it after a failed build, and refuses a symlinked entry. Existing source paths use canonical real paths; a not-yet-created artifact tail is proven against its nearest existing real ancestor. Every future filesystem access must revalidate immediately before use because point-in-time checks cannot eliminate symlink replacement races.
+
+## Reader (SPEC-004)
+
+```mermaid
+flowchart LR
+  Artifact[".specra/artifacts (documentation.json + manifest.json)"] --> Loader["Artifact loader: manifest + model validation, memoized"]
+  Loader --> Projection["Reader projection: index, routes, operation views"]
+  Projection --> Routes["Next.js routes (/, /api, /api/[...segments])"]
+  Routes --> RSC["React Server Components"]
+  RSC --> Islands["Client islands: mobile drawer, copy control"]
+```
+
+Build time: `specra build` produces the artifact; `next build` compiles the reader and fails when `SPECRA_PROJECT_ROOT` holds no valid artifact. Runtime: every documentation route renders on demand from the one validated artifact under a per-request nonce CSP; the theme choice is a cookie set by a form-post handler. Trust: the artifact is validated through `parseDocumentationArtifact` and `parseArtifactManifest` before any render, and every canonical string is rendered as text. Client boundary: navigation, endpoint content, and metadata are server HTML; only the drawer control and the copy button hydrate. See the [reader reference](../reader.md), the [design contract](../design/reader-v1.md), and ADR-010.
 
 ## Runtime responsibilities
 

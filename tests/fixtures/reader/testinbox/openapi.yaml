@@ -1,0 +1,1023 @@
+openapi: 3.1.0
+info:
+  title: TestInbox API
+  version: 1.4.0
+  description: >-
+    Disposable inboxes and message retrieval for automated email testing. Create an
+    inbox, point your application at its address, then wait for and assert on the
+    messages it receives.
+servers:
+  - url: https://api.testinbox.email/{version}
+    description: Production
+    variables:
+      version:
+        default: v1
+        enum: [v1]
+  - url: https://sandbox.testinbox.email/v1
+    description: Sandbox (mail never leaves the sandbox)
+security:
+  - apiKey: []
+  - bearer: []
+tags:
+  - name: Inboxes
+    description: Disposable inboxes that receive email.
+  - name: Messages
+    description: Messages received by an inbox.
+  - name: Attachments
+  - name: Webhooks
+  - name: Domains
+  - name: Team
+paths:
+  /inboxes:
+    get:
+      operationId: listInboxes
+      tags: [Inboxes]
+      summary: List inboxes
+      description: >-
+        Returns inboxes in the current project, newest first. Expired inboxes are
+        included for 24 hours after expiry and are marked `expired`.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: status
+          in: query
+          description: Only return inboxes in this lifecycle state.
+          schema:
+            type: string
+            enum: [active, expired]
+        - name: tag
+          in: query
+          description: Filter by inbox tag. Repeat the parameter to match any of several tags.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 40
+            maxItems: 10
+      responses:
+        "200":
+          description: A page of inboxes.
+          headers:
+            X-RateLimit-Remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InboxPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createInbox
+      tags: [Inboxes]
+      summary: Create inbox
+      description: >-
+        Creates a disposable inbox that can immediately receive email. Inboxes expire
+        after `ttl` seconds; expired inboxes stop receiving mail but stay readable for
+        24 hours.
+
+
+        Addresses are random by default. Provide `localPart` to request a readable
+        address on one of your verified domains; the request fails with `409` when the
+        address is already in use.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        description: Inbox settings. All fields are optional; an empty object creates an inbox with defaults.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInboxRequest"
+            examples:
+              minimal:
+                summary: Defaults
+                value: {}
+              named:
+                summary: Named inbox on a verified domain
+                value:
+                  ttl: 3600
+                  name: signup
+                  localPart: signup-42
+                  domain: mail.example.test
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/CreateInboxRequest"
+      responses:
+        "201":
+          description: The created inbox.
+          headers:
+            Location:
+              description: URL of the created inbox.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inbox"
+              example:
+                id: inbox_01J7Q9X4M2K8
+                address: abc123@testinbox.email
+                status: active
+                expiresAt: "2026-09-05T18:00:00Z"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "409":
+          description: The requested address is already in use.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /inboxes/{inboxId}:
+    parameters:
+      - $ref: "#/components/parameters/InboxId"
+    get:
+      operationId: getInbox
+      tags: [Inboxes]
+      summary: Get inbox
+      description: Returns one inbox, including its current message count.
+      responses:
+        "200":
+          description: The inbox.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inbox"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateInbox
+      tags: [Inboxes]
+      summary: Update inbox
+      description: Renames an inbox or extends its lifetime. Fields that are omitted keep their current value.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 64
+                ttl:
+                  type: integer
+                  minimum: 60
+                  maximum: 86400
+                  description: New lifetime in seconds, counted from now.
+      responses:
+        "200":
+          description: The updated inbox.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inbox"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteInbox
+      tags: [Inboxes]
+      summary: Delete inbox
+      description: Deletes the inbox and every message it received. This cannot be undone.
+      responses:
+        "204":
+          description: The inbox was deleted.
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /inboxes/{inboxId}/stats:
+    get:
+      tags: [Inboxes]
+      summary: Inbox statistics
+      parameters:
+        - $ref: "#/components/parameters/InboxId"
+        - name: window
+          in: query
+          description: Aggregation window.
+          schema:
+            type: string
+            enum: [1h, 24h, 7d]
+            default: 24h
+      responses:
+        "200":
+          description: Message counts for the window.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [received, bounced]
+                properties:
+                  received:
+                    type: integer
+                  bounced:
+                    type: integer
+                  lastReceivedAt:
+                    type: [string, "null"]
+                    format: date-time
+  /inboxes/{inboxId}/messages:
+    parameters:
+      - $ref: "#/components/parameters/InboxId"
+    get:
+      operationId: listMessages
+      tags: [Messages]
+      summary: List messages
+      description: >-
+        Returns messages received by the inbox, newest first. Use `since` to poll for
+        new mail; the response is empty rather than an error when nothing arrived.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: since
+          in: query
+          description: Only messages received after this instant.
+          schema:
+            type: string
+            format: date-time
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: X-Request-Id
+          in: header
+          description: Correlation identifier echoed in the response.
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9-]{8,64}$"
+      responses:
+        "200":
+          description: A page of messages.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessagePage"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: clearMessages
+      tags: [Messages]
+      summary: Clear messages
+      description: Deletes every message in the inbox but keeps the inbox itself.
+      responses:
+        "204":
+          description: Messages were deleted.
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /inboxes/{inboxId}/messages/{messageId}:
+    parameters:
+      - $ref: "#/components/parameters/InboxId"
+      - $ref: "#/components/parameters/MessageId"
+    get:
+      operationId: getMessage
+      tags: [Messages]
+      summary: Get message
+      description: Returns one message with its parsed headers, text and HTML bodies, and attachment metadata.
+      responses:
+        "200":
+          description: The message.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteMessage
+      tags: [Messages]
+      summary: Delete message
+      responses:
+        "204":
+          description: The message was deleted.
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /inboxes/{inboxId}/messages/{messageId}/raw:
+    get:
+      operationId: getRawMessage
+      tags: [Messages]
+      summary: Get raw message
+      description: Returns the message exactly as received, as an RFC 5322 document.
+      parameters:
+        - $ref: "#/components/parameters/InboxId"
+        - $ref: "#/components/parameters/MessageId"
+      responses:
+        "200":
+          description: The raw message.
+          content:
+            message/rfc822:
+              schema:
+                type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /inboxes/{inboxId}/messages/{messageId}/read:
+    post:
+      operationId: markMessageRead
+      tags: [Messages]
+      summary: Mark message read
+      deprecated: true
+      description: >-
+        Marks a message as read. Deprecated: read state is now tracked automatically
+        when a message body is fetched, and this endpoint will be removed in v2.
+      parameters:
+        - $ref: "#/components/parameters/InboxId"
+        - $ref: "#/components/parameters/MessageId"
+      responses:
+        "204":
+          description: The message is marked read.
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /inboxes/{inboxId}/wait:
+    post:
+      operationId: waitForMessage
+      tags: [Messages, Inboxes]
+      summary: Wait for message
+      description: >-
+        Long-polls until a message matching the criteria arrives or the timeout
+        elapses. Use this from tests instead of sleeping and listing.
+      parameters:
+        - $ref: "#/components/parameters/InboxId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                timeoutMs:
+                  type: integer
+                  minimum: 1000
+                  maximum: 120000
+                  default: 30000
+                  description: Maximum time to wait before returning `408`.
+                match:
+                  $ref: "#/components/schemas/MessageMatcher"
+      responses:
+        "200":
+          description: A matching message arrived.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "408":
+          description: No matching message arrived within the timeout.
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /inboxes/{inboxId}/messages/{messageId}/attachments:
+    get:
+      operationId: listAttachments
+      tags: [Attachments]
+      summary: List attachments
+      parameters:
+        - $ref: "#/components/parameters/InboxId"
+        - $ref: "#/components/parameters/MessageId"
+      responses:
+        "200":
+          description: Attachment metadata for the message.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Attachment"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /inboxes/{inboxId}/messages/{messageId}/attachments/{attachmentId}:
+    get:
+      operationId: downloadAttachment
+      tags: [Attachments]
+      summary: Download attachment
+      description: Streams the attachment bytes with the content type declared by the sender.
+      parameters:
+        - $ref: "#/components/parameters/InboxId"
+        - $ref: "#/components/parameters/MessageId"
+        - name: attachmentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: Accept-Encoding
+          in: header
+          schema:
+            type: string
+        - name: disposition
+          in: query
+          description: "Whether to send `Content-Disposition: attachment`."
+          schema:
+            type: string
+            enum: [inline, attachment]
+            default: attachment
+      responses:
+        "200":
+          description: The attachment bytes.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+            image/*:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /webhooks:
+    get:
+      operationId: listWebhooks
+      tags: [Webhooks]
+      summary: List webhooks
+      responses:
+        "200":
+          description: Configured webhooks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Webhook"
+    post:
+      operationId: createWebhook
+      tags: [Webhooks]
+      summary: Create webhook
+      description: Registers an HTTPS endpoint that receives a signed `POST` for every message an inbox receives.
+      security:
+        - apiKey: []
+          mtls: []
+        - oauth: [webhooks:write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookRequest"
+      responses:
+        "201":
+          description: The registered webhook.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "403":
+          description: The credential is not allowed to manage webhooks.
+  /webhooks/{webhookId}:
+    parameters:
+      - name: webhookId
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      operationId: deleteWebhook
+      tags: [Webhooks]
+      summary: Delete webhook
+      security:
+        - apiKey: []
+          mtls: []
+        - oauth: [webhooks:write]
+      responses:
+        "204":
+          description: The webhook was removed.
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /webhooks/{webhookId}/test:
+    post:
+      operationId: testWebhook
+      tags: [Webhooks]
+      summary: Send test delivery
+      description: Sends a synthetic `message.received` event to the webhook and returns the delivery result.
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Delivery result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  durationMs:
+                    type: number
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          description: The endpoint did not accept the delivery.
+  /domains:
+    get:
+      operationId: listDomains
+      tags: [Domains]
+      summary: List domains
+      responses:
+        "200":
+          description: Verified and pending domains.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Domain"
+    post:
+      operationId: addDomain
+      tags: [Domains]
+      summary: Add domain
+      description: Starts verification for a domain you control. Add the returned DNS records, then call Verify domain.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  format: hostname
+      responses:
+        "202":
+          description: Verification started.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Domain"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+  /domains/{domainId}/verify:
+    post:
+      operationId: verifyDomain
+      tags: [Domains]
+      summary: Verify domain
+      parameters:
+        - name: domainId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Domain"
+        "409":
+          description: DNS records are not visible yet.
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /domains/{domainId}/logo:
+    put:
+      operationId: uploadDomainLogo
+      tags: [Domains]
+      summary: Upload domain logo
+      description: Uploads the logo shown in the inbox dashboard for addresses on this domain.
+      parameters:
+        - name: domainId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PNG or SVG, at most 512 KiB.
+                altText:
+                  type: string
+                  maxLength: 120
+            encoding:
+              file:
+                contentType: image/png, image/svg+xml
+      responses:
+        "204":
+          description: The logo was stored.
+        "413":
+          description: The file is larger than 512 KiB.
+  /team/members:
+    get:
+      operationId: listTeamMembers
+      tags: [Team]
+      summary: List team members
+      security:
+        - oauth: [team:read]
+      parameters:
+        - name: session
+          in: cookie
+          description: Dashboard session cookie, accepted as an alternative to OAuth for browser calls.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Members of the project.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMember"
+        default:
+          description: Unexpected error.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    post:
+      operationId: inviteTeamMember
+      tags: [Team]
+      summary: Invite team member
+      security:
+        - oauth: [team:write]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [owner, developer, viewer]
+      responses:
+        "202":
+          description: The invitation was sent.
+        "4XX":
+          description: The invitation was rejected; the body explains why.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: Project API key. Sandbox and production keys are separate.
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Short-lived token issued by the dashboard.
+    oauth:
+      type: oauth2
+      description: OAuth 2.0 for team-management integrations.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.testinbox.email/authorize
+          tokenUrl: https://auth.testinbox.email/token
+          scopes:
+            team:read: Read team membership
+            team:write: Manage team membership
+            webhooks:write: Manage webhooks
+    mtls:
+      type: mutualTLS
+      description: Client certificate issued from the dashboard.
+  parameters:
+    InboxId:
+      name: inboxId
+      in: path
+      required: true
+      description: Inbox identifier, as returned by Create inbox.
+      schema:
+        type: string
+        pattern: "^inbox_[0-9A-Z]{16}$"
+    MessageId:
+      name: messageId
+      in: path
+      required: true
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      description: Page size.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque cursor from a previous page.
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      description: Retrying with the same key returns the original result instead of creating a duplicate.
+      schema:
+        type: string
+        maxLength: 64
+  headers:
+    RateLimitRemaining:
+      description: Requests remaining in the current window.
+      schema:
+        type: integer
+  responses:
+    NotFound:
+      description: No resource exists at this path for the current project.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Unauthorized:
+      description: The credential is missing, expired, or belongs to another project.
+    ValidationError:
+      description: The request body or parameters failed validation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    RateLimited:
+      description: Too many requests; retry after the indicated delay.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+  schemas:
+    Inbox:
+      type: object
+      required: [id, address, status, expiresAt]
+      properties:
+        id:
+          type: string
+          description: Stable identifier.
+        address:
+          type: string
+          format: email
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, expired]
+        tags:
+          type: array
+          items:
+            type: string
+        messageCount:
+          type: integer
+          minimum: 0
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    InboxPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Inbox"
+        nextCursor:
+          type: [string, "null"]
+    CreateInboxRequest:
+      type: object
+      properties:
+        ttl:
+          type: integer
+          minimum: 60
+          maximum: 86400
+          default: 3600
+          description: Seconds until the inbox expires. Expired inboxes stop receiving mail but remain readable for 24 hours.
+        name:
+          type: string
+          maxLength: 64
+          description: Human-readable label shown in the dashboard and returned in message metadata.
+        localPart:
+          type: string
+          pattern: "^[a-z0-9][a-z0-9.-]{0,62}$"
+          description: Requested local part of the address. Requires `domain`.
+        domain:
+          type: string
+          format: hostname
+          description: A verified domain of this project.
+        tags:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+    Message:
+      type: object
+      required: [id, inboxId, from, subject, receivedAt]
+      properties:
+        id:
+          type: string
+        inboxId:
+          type: string
+        from:
+          $ref: "#/components/schemas/Address"
+        to:
+          type: array
+          items:
+            $ref: "#/components/schemas/Address"
+        subject:
+          type: string
+        text:
+          type: [string, "null"]
+          description: Plain-text body, or null when the message had none.
+        html:
+          type: [string, "null"]
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attachment"
+        receivedAt:
+          type: string
+          format: date-time
+        read:
+          type: boolean
+    MessagePage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        nextCursor:
+          type: [string, "null"]
+    MessageMatcher:
+      description: Criteria a message must satisfy. All present fields must match.
+      type: object
+      properties:
+        subjectContains:
+          type: string
+        from:
+          type: string
+          format: email
+        hasAttachment:
+          type: boolean
+        bodyMatches:
+          type: string
+          description: Regular expression tested against the text body.
+    Address:
+      type: object
+      required: [email]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+    Attachment:
+      type: object
+      required: [id, filename, contentType, size]
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        contentType:
+          type: string
+        size:
+          type: integer
+          description: Size in bytes.
+        inline:
+          type: boolean
+    Webhook:
+      type: object
+      required: [id, url, events, status]
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+        events:
+          type: array
+          items:
+            type: string
+            enum: [message.received, inbox.expired]
+        status:
+          type: string
+          enum: [active, paused, failing]
+        secretPreview:
+          type: string
+          description: Last four characters of the signing secret.
+    CreateWebhookRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Must use `https`.
+        events:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum: [message.received, inbox.expired]
+          default: [message.received]
+        filter:
+          oneOf:
+            - $ref: "#/components/schemas/InboxFilter"
+            - $ref: "#/components/schemas/TagFilter"
+          description: Limit deliveries to some inboxes.
+    InboxFilter:
+      type: object
+      required: [kind, inboxIds]
+      properties:
+        kind:
+          const: inbox
+        inboxIds:
+          type: array
+          items:
+            type: string
+    TagFilter:
+      type: object
+      required: [kind, tags]
+      properties:
+        kind:
+          const: tag
+        tags:
+          type: array
+          items:
+            type: string
+    Domain:
+      type: object
+      required: [id, name, status]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          format: hostname
+        status:
+          type: string
+          enum: [pending, verified, failed]
+        dnsRecords:
+          type: array
+          items:
+            type: object
+            required: [type, name, value]
+            properties:
+              type:
+                type: string
+                enum: [MX, TXT]
+              name:
+                type: string
+              value:
+                type: string
+    TeamMember:
+      type: object
+      required: [id, email, role]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [owner, developer, viewer]
+        invitedAt:
+          type: string
+          format: date-time
+    Problem:
+      type: object
+      description: RFC 9457 problem details.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
