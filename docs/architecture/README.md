@@ -97,7 +97,16 @@ There is no second domain model between normalized and canonical. Search and sni
 
 ## Canonical model
 
-`DocumentationModel` is a versioned documentation projection, not a JSON Schema validator AST. It owns projects, documentation versions, authored-page metadata, services, operations, servers, authentication, parameters, media variants, responses, examples, and schemas. Schema recursion is represented through stable `SchemaId` references into a service registry, never object cycles. The Phase 0 draft includes boolean schemas, scalar constraints, arrays, tuples, objects, composition, discriminators, `additionalProperties`, metadata, and explicit unknown nodes. SPEC-001 must resolve keyword-without-type and mixed-vocabulary semantics before model v1 is frozen; adapters must emit capability diagnostics rather than narrow validation meaning silently.
+`DocumentationModel` is a versioned documentation projection, not a JSON Schema
+validator AST. It owns projects, documentation versions, authored-page metadata,
+services, operations, servers, authentication, parameters, media variants, responses,
+examples, and schemas. Model v1 is frozen by SPEC-001: recursion uses stable registry
+references, type-less constraints never imply a type, boolean forms remain explicit,
+composition is not flattened, and mixed/unsupported vocabulary receives linked
+capability diagnostics rather than silent narrowing. See the
+[canonical model reference](canonical-model.md),
+[normalization contract](normalization-contract.md), and
+[diagnostic catalog](model-diagnostics.md).
 
 Key invariants include operation IDs unique within a versioned service, required and template-matched path parameters, resolvable schema/security/server IDs, normalized uppercase HTTP methods, explicit response descriptions, deterministic ordering, JSON-only extension values, and no parser-library objects. Validation returns stable codes and JSON pointers.
 
