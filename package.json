@@ -28,6 +28,7 @@
     "test:e2e": "playwright test",
     "test:performance": "vitest run tests/performance",
     "test:security": "vitest run tests/security",
+    "pretypecheck": "pnpm --filter @specra/config build",
     "typecheck": "pnpm --recursive --if-present run typecheck"
   },
   "devDependencies": {
