@@ -28,7 +28,7 @@ Do not weaken a gate to land a change. Explain and disposition failures instead.
 - Promote a tested release by opening a pull request from `develop` to `master`. Do not squash unrelated features together during promotion, and do not rewrite either shared branch.
 - Urgent production fixes branch from `master`, return to `master` through review, and are then merged forward into `develop` so the branches do not diverge.
 
-Both shared branches run the complete CI workflow. Repository rules should prohibit force pushes and deletion and require pull requests plus the fast, build, browser, and applicable dependency-review checks before merge.
+Both shared branches run the complete CI workflow. Repository rules should prohibit force pushes and deletion and require pull requests plus the fast, build, browser, and dependency-policy checks before merge.
 
 ## Change expectations
 

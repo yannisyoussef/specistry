@@ -28,7 +28,7 @@ Large generated fixtures declare deterministic construction parameters rather th
 
 ## CI grouping
 
-The fast job runs formatting, lint, types, semantic tests, architecture, security, license, and redacted secret checks. Build/coverage/audit and browser/axe jobs run after it. Dependency review runs only for pull requests. Future visual shards begin when stable reader states exist; they do not block the fast feedback path.
+The fast job runs formatting, lint, types, semantic tests, architecture, security, dependency-manifest, license, and redacted secret checks. Build/coverage/audit and browser/axe jobs run after it. A dedicated frozen-install/manifest/license/audit dependency-policy job runs only for pull requests. Future visual shards begin when stable reader states exist; they do not block the fast feedback path.
 
 ## Manual checks
 

@@ -45,6 +45,7 @@ Then open `http://localhost:3000`.
 | `pnpm test:security`      | Run the malicious-input foundation tests                         |
 | `pnpm test:performance`   | Run the performance smoke fixture                                |
 | `pnpm check:architecture` | Enforce critical dependency directions                           |
+| `pnpm check:dependencies` | Enforce exact dependency and private-package manifest policy     |
 | `pnpm check:licenses`     | Reject denied production dependency licenses                     |
 | `pnpm check:secrets`      | Reject likely committed secrets without printing their values    |
 | `pnpm check`              | Run the local fast quality gate                                  |

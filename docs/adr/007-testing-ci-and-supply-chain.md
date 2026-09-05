@@ -28,7 +28,7 @@ What test and CI foundation provides credible gates from Phase 0 and scales with
 
 ## Decision
 
-Use Vitest for unit/cross-package/security/performance tests, Testing Library and axe for component accessibility, Playwright plus axe for browser-level behavior, ESLint/markdownlint/Prettier for source quality, TypeScript strict mode, an architecture boundary script, V8 coverage reporting, Next production build, high/critical pnpm audit, a denied-license gate, dependency review, and redacted secret scanning. Split fast validation from build/coverage/audit/browser jobs. Add deterministic visual baselines with the first interactive reader slice.
+Use Vitest for unit/cross-package/security/performance tests, Testing Library and axe for component accessibility, Playwright plus axe for browser-level behavior, ESLint/markdownlint/Prettier for source quality, TypeScript strict mode, an architecture boundary script, V8 coverage reporting, Next production build, high/critical pnpm audit, exact-manifest and denied-license gates, a pull-request dependency-policy job, and redacted secret scanning. Split fast validation from build/coverage/audit/browser jobs. Add deterministic visual baselines with the first interactive reader slice.
 
 Use a difficult fixture corpus and generated scale cases. Record manual accessibility, OpenAPI semantics, and security checks that automation cannot prove.
 
@@ -48,4 +48,4 @@ Pinned CI action commits still require deliberate update review, and performance
 
 ## Security implications
 
-Jobs use least permissions, frozen installs, no production secrets, audit and dependency review. Secret scans redact output. Untrusted pull-request code must not receive privileged tokens or deployment credentials.
+Jobs use least permissions, frozen installs, no production secrets, audit and repository-local dependency policy. The local policy is deliberate because GitHub's Dependency Review action requires unavailable Advanced Security features on this private repository; enabling a paid plan may supplement but must not replace the portable gates. Secret scans redact output. Untrusted pull-request code must not receive privileged tokens or deployment credentials.
