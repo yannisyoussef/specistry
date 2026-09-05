@@ -1,16 +1,50 @@
+import path from "node:path";
+
 import { defineConfig, devices } from "@playwright/test";
 
+/**
+ * Browser suites run against the production reader (`next start`) serving
+ * the committed TestInbox fixture. `SPECRA_SITE_URL` is set so canonical and
+ * sitemap URLs are absolute and testable. The `visual` project keeps its
+ * Linux-only baselines under `tests/visual/__screenshots__`; see
+ * `docs/development/testing.md` for the update procedure.
+ */
+const fixtureProject = path.resolve("tests/fixtures/reader/testinbox");
+
 export default defineConfig({
+  expect: {
+    toHaveScreenshot: {
+      animations: "disabled",
+      caret: "hide",
+      maxDiffPixelRatio: 0.01,
+      scale: "css",
+    },
+  },
   forbidOnly: Boolean(process.env.CI),
   fullyParallel: true,
   projects: [
-    { name: "chromium-desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "chromium-mobile", use: { ...devices["Pixel 5"] } },
+    {
+      name: "chromium-desktop",
+      testDir: "./tests/e2e",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "chromium-mobile",
+      testDir: "./tests/e2e",
+      testIgnore: /reader\.spec\.ts/,
+      use: { ...devices["Pixel 5"] },
+    },
+    {
+      name: "visual",
+      testDir: "./tests/visual",
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
   reporter: process.env.CI ? [["line"], ["html", { open: "never" }]] : "list",
   retries: process.env.CI ? 1 : 0,
-  testDir: "./tests/e2e",
-  timeout: 15_000,
+  snapshotPathTemplate:
+    "{testDir}/__screenshots__/{testFilePath}/{arg}-{projectName}-{platform}{ext}",
+  timeout: 20_000,
   use: {
     baseURL: "http://127.0.0.1:3100",
     screenshot: "only-on-failure",
@@ -18,7 +52,11 @@ export default defineConfig({
   },
   webServer: {
     command: "pnpm --filter @specra/web start",
-    env: { PORT: "3100" },
+    env: {
+      PORT: "3100",
+      SPECRA_PROJECT_ROOT: fixtureProject,
+      SPECRA_SITE_URL: "https://docs.example.test",
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
     url: "http://127.0.0.1:3100",

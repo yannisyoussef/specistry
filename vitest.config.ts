@@ -9,8 +9,16 @@ export default defineConfig({
         "packages/cli/src/config-worker.ts",
         "packages/cli/src/ingestion-host.ts",
         "**/*.test-helper.ts",
+        // Client islands and route files are exercised by the Playwright
+        // suites against the production server, not by in-process rendering.
+        "apps/web/components/reader/copy-button.tsx",
+        "apps/web/components/reader/mobile-nav.tsx",
       ],
-      include: ["packages/*/src/**/*.ts"],
+      include: [
+        "packages/*/src/**/*.ts",
+        "apps/web/lib/**/*.ts",
+        "apps/web/components/**/*.tsx",
+      ],
       provider: "v8",
       reporter: ["text", "json-summary"],
       thresholds: {
