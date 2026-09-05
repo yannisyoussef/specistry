@@ -8,6 +8,8 @@ import { expect, test, type Page } from "@playwright/test";
  */
 
 const OPERATION = "/api/inboxes/create-inbox";
+/** The adversarial fixture served by the second reader (playwright.config.ts). */
+const EDGE_URL = "http://127.0.0.1:3101";
 const HTML_BUDGET_BYTES = 200 * 1_024;
 const JS_BUDGET_BYTES = 150 * 1_024;
 
@@ -20,6 +22,55 @@ async function horizontalOverflow(page: Page): Promise<number> {
 }
 
 test.describe("security headers", () => {
+  test("applies the policy to prefetch-shaped requests and ignores spoofed internal headers", async ({
+    request,
+  }) => {
+    for (const headers of [
+      { purpose: "prefetch" },
+      { "sec-purpose": "prefetch" },
+      { "next-router-prefetch": "1" },
+      { "x-specra-pathname": "/api/inboxes/get-inbox" },
+    ]) {
+      const response = await request.get(OPERATION, { headers });
+      expect(response.status(), JSON.stringify(headers)).toBe(200);
+      expect(response.headers()["content-security-policy"]).toMatch(
+        /script-src 'self' 'nonce-/,
+      );
+      // The current item comes from the real URL, never from the header.
+      const html = await response.text();
+      expect(html).toContain(
+        'aria-current="page" class="nav-item" href="/api/inboxes/create-inbox"',
+      );
+    }
+  });
+
+  test("accepts theme changes only from same-origin form posts", async ({
+    request,
+  }) => {
+    const get = await request.get("/theme", { maxRedirects: 0 });
+    expect(get.status()).toBe(405);
+    const crossSite = await request.post("/theme", {
+      form: { mode: "dark", return: "/api" },
+      headers: {
+        origin: "https://evil.example",
+        "sec-fetch-site": "cross-site",
+      },
+      maxRedirects: 0,
+    });
+    expect(crossSite.status()).toBe(403);
+    expect(crossSite.headers()["set-cookie"]).toBeUndefined();
+    const openRedirect = await request.post("/theme", {
+      form: { mode: "dark", return: "//evil.example/phish" },
+      headers: { "sec-fetch-site": "same-origin" },
+      maxRedirects: 0,
+    });
+    expect(openRedirect.status()).toBe(303);
+    expect(openRedirect.headers()["location"]).toBe("/");
+    expect(openRedirect.headers()["set-cookie"]).toContain("specra-mode=dark");
+    expect(openRedirect.headers()["set-cookie"]).toContain("HttpOnly");
+    expect(openRedirect.headers()["set-cookie"]).toContain("SameSite=lax");
+  });
+
   test("serves a nonce-based CSP whose nonce matches every script and stylesheet", async ({
     page,
     request,
@@ -124,13 +175,53 @@ test.describe("desktop reader", () => {
     await expect(
       page.getByRole("link", { name: "API reference" }).nth(1),
     ).toBeFocused();
-    const copy = page.getByRole("button", { name: "Copy" });
+    const copy = page.getByRole("button", { name: "Copy POST /inboxes" });
     await copy.focus();
     await expect(copy).toBeFocused();
-    const ring = await copy.evaluate(
-      (node) => getComputedStyle(node).boxShadow,
+    // The focus ring is an opaque outline, so it survives forced-colors mode.
+    const ring = await copy.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return `${style.outlineStyle} ${style.outlineWidth}`;
+    });
+    expect(ring).toBe("solid 3px");
+    await page
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"]);
+    await copy.click();
+    await expect(copy).toHaveText("✓ Copied");
+    await expect(page.getByRole("status")).toHaveText("Copied POST /inboxes");
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      "POST /inboxes",
     );
-    expect(ring).not.toBe("none");
+  });
+
+  test("keeps a visible focus ring and panel borders in forced-colors mode", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await page.goto(OPERATION);
+    const link = page
+      .getByRole("complementary", { name: "API navigation" })
+      .getByRole("link", { name: /Create inbox/ });
+    await link.focus();
+    const outline = await link.evaluate(
+      (node) => getComputedStyle(node).outlineStyle,
+    );
+    expect(outline).toBe("solid");
+    const border = await page
+      .locator("main")
+      .evaluate((node) => getComputedStyle(node).borderTopStyle);
+    expect(border).toBe("solid");
+  });
+
+  test("renders the glass surfaces with a real backdrop blur", async ({
+    page,
+  }) => {
+    await page.goto(OPERATION);
+    const filter = await page
+      .locator("header")
+      .evaluate((node) => getComputedStyle(node).backdropFilter);
+    expect(filter).toContain("blur(");
   });
 
   test("switches theme through the footer form without client script", async ({
@@ -209,14 +300,42 @@ test.describe("desktop reader", () => {
       "/api/Inboxes",
       "/api/inboxes/create-inbox/extra",
       "/api/..%2f",
+      "/not-found",
     ]) {
       const response = await page.goto(path);
       expect(response?.status(), path).toBe(404);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(
         "Page not found",
       );
+      await expect(page.locator("html")).not.toHaveAttribute("data-mode", /./);
     }
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("serves the 404 page, navigation, and the copy-free operation as HTML", async ({
+      page,
+    }) => {
+      const missing = await page.goto("/api/inboxes/nope");
+      expect(missing?.status()).toBe(404);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+        "Page not found",
+      );
+      await expect(
+        page.getByRole("main").getByRole("link", { name: "API reference" }),
+      ).toHaveAttribute("href", "/api");
+      await page.goto(OPERATION);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+        "Create inbox",
+      );
+      await expect(
+        page.getByRole("complementary", { name: "API navigation" }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Dark" }).click();
+      await expect(page.locator("html")).toHaveAttribute("data-mode", "dark");
+    });
   });
 
   test("publishes a sitemap and robots policy for the documented routes", async ({
@@ -237,61 +356,36 @@ test.describe("desktop reader", () => {
     );
     expect(await robots.text()).toContain("Disallow: /theme");
   });
-});
 
-test.describe("mobile reader", () => {
-  test.use({
-    viewport: { height: 812, width: 375 },
-    hasTouch: true,
-    isMobile: true,
-  });
-
-  test("opens the navigation drawer with focus management and no horizontal overflow", async ({
+  test("renders the adversarial fixture as inert text end to end", async ({
     page,
   }) => {
-    await page.goto(OPERATION);
-    expect(await horizontalOverflow(page)).toBe(0);
-    await expect(
-      page.getByRole("complementary", { name: "API navigation" }),
-    ).toBeHidden();
-    const menu = page.getByRole("button", { name: "Navigation" });
-    await menu.click();
-    const drawer = page.getByRole("dialog", { name: "Navigation" });
-    await expect(drawer).toBeVisible();
-    await expect(
-      page.locator("dialog[open] .nav-item[aria-current='page']"),
-    ).toContainText("Create inbox");
-    const focusedInside = await page.evaluate(() =>
-      Boolean(document.activeElement?.closest("dialog[open]")),
+    const alerts: string[] = [];
+    page.on("dialog", (dialog) => {
+      alerts.push(dialog.message());
+      void dialog.dismiss();
+    });
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto(`${EDGE_URL}/api/operations/legacy-lookup`);
+    await expect(page).toHaveTitle(
+      "Legacy lookup <b>bold?</b> | Edge cases API",
     );
-    expect(focusedInside).toBe(true);
-    await page.keyboard.press("Escape");
-    await expect(drawer).toBeHidden();
-    await expect(menu).toBeFocused();
-    await menu.click();
-    await drawer.getByRole("link", { name: /Get inbox/ }).click();
-    await expect(page).toHaveURL(/\/api\/inboxes\/get-inbox$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "Get inbox",
+      "Legacy lookup <b>bold?</b>",
     );
-    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-    await page.getByRole("button", { name: "Navigation" }).click();
-    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  });
-
-  test("reflows the longest paths and parameter lists at 320 CSS px", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ height: 640, width: 320 });
-    await page.goto("/api/attachments/download-attachment");
-    expect(await horizontalOverflow(page)).toBe(0);
-    await expect(page.locator(".endpoint-line__path")).toContainText(
-      "/attachments/{attachmentId}",
+    await expect(page.locator("main")).toContainText(
+      "<script>alert(1)</script>",
     );
-    await expect(
-      page.getByRole("heading", { level: 3, name: "Query parameters" }),
-    ).toBeVisible();
-    await page.goto("/api");
-    expect(await horizontalOverflow(page)).toBe(0);
+    expect(await page.locator("main script").count()).toBe(0);
+    expect(await page.locator("main img").count()).toBe(0);
+    // Hostile server URLs are text, never links.
+    await page.goto(`${EDGE_URL}/api/operations/plain-operation`);
+    const servers = page.getByRole("region", { name: "Servers" });
+    await expect(servers).toContainText("javascript:alert(1)");
+    expect(await servers.locator('a[href^="javascript"]').count()).toBe(0);
+    expect(alerts).toEqual([]);
+    expect(errors).toEqual([]);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });
 });

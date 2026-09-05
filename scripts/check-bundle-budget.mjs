@@ -58,7 +58,10 @@ function routeClientChunks(route) {
 
 export function measure(route = OPERATION_ROUTE) {
   const build = readJson(path.join(buildRoot, "build-manifest.json"));
-  const bootstrap = (build.rootMainFiles ?? []).map((file) => `/_next/${file}`);
+  const bootstrap = [
+    ...(build.rootMainFiles ?? []),
+    ...(build.lowPriorityFiles ?? []),
+  ].map((file) => `/_next/${file}`);
   // Polyfills are referenced with `nomodule` and never downloaded by the
   // browsers Specra supports; they are reported but not budgeted.
   const polyfills = (build.polyfillFiles ?? []).map((file) => `/_next/${file}`);

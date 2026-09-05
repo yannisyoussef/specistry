@@ -30,7 +30,7 @@ afterEach(async () => {
 });
 
 describe("reader fixtures", () => {
-  it.each(["testinbox", "edge"])(
+  it.each(["testinbox", "edge", "multi"])(
     "keeps the committed %s artifact identical to a fresh specra build",
     async (fixture) => {
       const source = path.join(fixtureRoot, fixture);

@@ -4,36 +4,56 @@ import { useEffect, useRef, useState } from "react";
 
 const COPIED_REVERT_MS = 1_200;
 
+type CopyState = "failed" | "copied" | "idle";
+
 /**
- * Copies a short value (the method and path) to the clipboard. The label
- * becomes "Copied" for 1.2 s, and the change is announced politely.
+ * Copies a short value (the method and path) to the clipboard. The visible
+ * label becomes "Copied" for 1.2 s; a polite status region announces success
+ * or failure without renaming the control.
  */
 export function CopyButton({
   label,
   value,
 }: Readonly<{ label: string; value: string }>) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<CopyState>("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
   return (
-    <button
-      aria-live="polite"
-      className="button button--ghost"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(value);
-          setCopied(true);
+    <>
+      <button
+        aria-label={`Copy ${value}`}
+        className={`button button--ghost${state === "copied" ? " button--success" : ""}`}
+        onClick={async () => {
           clearTimeout(timer.current);
-          timer.current = setTimeout(() => setCopied(false), COPIED_REVERT_MS);
-        } catch {
-          setCopied(false);
-        }
-      }}
-      type="button"
-    >
-      {copied ? "✓ Copied" : label}
-    </button>
+          try {
+            await navigator.clipboard.writeText(value);
+            setState("copied");
+          } catch {
+            setState("failed");
+          }
+          timer.current = setTimeout(() => setState("idle"), COPIED_REVERT_MS);
+        }}
+        type="button"
+      >
+        {state === "copied" ? (
+          <>
+            <span aria-hidden="true">✓ </span>Copied
+          </>
+        ) : state === "failed" ? (
+          "Copy failed"
+        ) : (
+          label
+        )}
+      </button>
+      <span className="visually-hidden" role="status">
+        {state === "copied"
+          ? `Copied ${value}`
+          : state === "failed"
+            ? "Copy failed; select the text to copy it."
+            : ""}
+      </span>
+    </>
   );
 }

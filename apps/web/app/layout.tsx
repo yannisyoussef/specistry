@@ -12,7 +12,7 @@ import "./styles/reader.css";
 import { Shell } from "../components/reader/shell";
 import { loadReaderArtifact } from "../lib/reader/artifact";
 import { siteName, siteUrl } from "../lib/reader/metadata";
-import { THEME_COOKIE, readThemeMode } from "../lib/theme";
+import { THEME_COOKIE, readThemeMode, safeReturnPath } from "../lib/theme";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { index } = await loadReaderArtifact();
@@ -33,7 +33,8 @@ export default async function RootLayout({
     headers(),
   ]);
   const mode = readThemeMode(cookieStore.get(THEME_COOKIE)?.value);
-  const currentPath = requestHeaders.get("x-specra-pathname") ?? "/";
+  const forwarded = requestHeaders.get("x-specra-pathname") ?? "/";
+  const currentPath = safeReturnPath(forwarded);
   return (
     <html
       data-theme="glass"

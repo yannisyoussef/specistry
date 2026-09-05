@@ -1,5 +1,6 @@
 import type {
   ApiService,
+  Example,
   MediaTypeContent,
   Operation,
   Parameter,
@@ -60,11 +61,20 @@ export interface ParameterGroupView {
   readonly rows: readonly ParameterRow[];
 }
 
+export interface ExampleView {
+  readonly name: string;
+  readonly summary?: string;
+  /** Pretty-printed JSON of the example value, bounded in size. */
+  readonly json?: string;
+  readonly truncated: boolean;
+  readonly externalValue?: string;
+}
+
 export interface MediaTypeView {
   readonly mediaType: string;
   readonly anchor: string;
   readonly schema?: SchemaSummary;
-  readonly exampleCount: number;
+  readonly examples: readonly ExampleView[];
   readonly encodings: readonly {
     readonly propertyName: string;
     readonly detail: string;
@@ -254,9 +264,36 @@ function mediaView(
           : `${encoding.serialization.style}${encoding.serialization.explode ? ", exploded" : ""}`,
       propertyName: encoding.propertyName,
     })),
-    exampleCount: content.examples.length,
+    examples: content.examples.map(exampleView),
     mediaType: content.mediaType,
     ...(schema === undefined ? {} : { schema }),
+  };
+}
+
+/** Example values are contract data; they are shown verbatim, bounded in size. */
+const MAX_EXAMPLE_CHARACTERS = 4_000;
+
+function exampleView(example: Example): ExampleView {
+  const serialized =
+    example.value === undefined
+      ? undefined
+      : JSON.stringify(example.value, null, 2);
+  const truncated =
+    serialized !== undefined && serialized.length > MAX_EXAMPLE_CHARACTERS;
+  return {
+    name: example.name,
+    truncated,
+    ...(example.summary === undefined ? {} : { summary: example.summary }),
+    ...(serialized === undefined
+      ? {}
+      : {
+          json: truncated
+            ? `${serialized.slice(0, MAX_EXAMPLE_CHARACTERS)}\n…`
+            : serialized,
+        }),
+    ...(example.externalValue === undefined
+      ? {}
+      : { externalValue: example.externalValue }),
   };
 }
 

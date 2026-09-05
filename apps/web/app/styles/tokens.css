@@ -87,17 +87,18 @@
   --code-text: #1f1f23;
   --code-shadow:
     0 1px 0 rgba(255, 255, 255, 1) inset, 0 4px 14px rgba(20, 20, 23, 0.08);
-  --overlay-bg: rgba(255, 255, 255, 0.82);
+  --overlay-bg: rgba(255, 255, 255, 0.92);
+  --tab-inactive: var(--text-muted);
   --overlay-blur: blur(30px) saturate(1.6);
   --scrim: rgba(20, 20, 23, 0.25);
   --m-get: #1f55ad;
   --m-post: #178049;
-  --m-put: #cc8600;
-  --m-patch: #cc8600;
+  --m-put: #8a5a00;
+  --m-patch: #8a5a00;
   --m-delete: #d40606;
   --m-other: #333338;
   --status-success: #178049;
-  --status-warning: #cc8600;
+  --status-warning: #8a5a00;
   --status-danger: #d40606;
   --status-info: #1f55ad;
   --callout-warning-bg: rgba(245, 163, 0, 0.12);
@@ -149,9 +150,10 @@
   --code-text: #e4e4e7;
   --code-shadow:
     0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
-  --overlay-bg: rgba(20, 20, 26, 0.72);
+  --overlay-bg: rgba(20, 20, 26, 0.9);
   --overlay-blur: blur(28px) saturate(1.4);
   --scrim: rgba(0, 0, 0, 0.45);
+  --tab-inactive: var(--text-body);
   --m-get: #6fa3ff;
   --m-post: #4fc98a;
   --m-put: #f5b942;
@@ -212,9 +214,10 @@
     --code-text: #e4e4e7;
     --code-shadow:
       0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
-    --overlay-bg: rgba(20, 20, 26, 0.72);
+    --overlay-bg: rgba(20, 20, 26, 0.9);
     --overlay-blur: blur(28px) saturate(1.4);
     --scrim: rgba(0, 0, 0, 0.45);
+    --tab-inactive: var(--text-body);
     --m-get: #6fa3ff;
     --m-post: #4fc98a;
     --m-put: #f5b942;
@@ -235,23 +238,32 @@
   }
 }
 
-/* Glass fallbacks */
+/*
+ * Fallbacks come last and match every mode selector at equal or higher
+ * specificity, so they win over both explicit and system-preference modes.
+ */
 @supports not (backdrop-filter: blur(1px)) {
-  :root {
+  :root[data-mode="light"],
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
     --panel-bg: rgba(255, 255, 255, 0.96);
+    --overlay-bg: rgba(255, 255, 255, 0.98);
   }
   :root[data-mode="dark"] {
     --panel-bg: #16161b;
+    --overlay-bg: #16161b;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-mode="light"]):not([data-mode="dark"]) {
       --panel-bg: #16161b;
+      --overlay-bg: #16161b;
     }
   }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  :root {
+  :root[data-mode="light"],
+  :root[data-mode="dark"],
+  :root:not([data-mode="light"]):not([data-mode="dark"]) {
     --panel-blur: none;
     --panel-bg: var(--surface);
     --overlay-blur: none;

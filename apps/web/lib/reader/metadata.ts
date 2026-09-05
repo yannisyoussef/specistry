@@ -113,6 +113,17 @@ export function siteUrl(
   try {
     const url = new URL(candidate);
     if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
+    // Only an origin is accepted: credentials, paths, queries, and fragments
+    // would leak into public metadata or produce inconsistent URLs.
+    if (
+      url.username !== "" ||
+      url.password !== "" ||
+      url.search !== "" ||
+      url.hash !== "" ||
+      url.pathname !== "/"
+    ) {
+      return undefined;
+    }
     return url;
   } catch {
     return undefined;

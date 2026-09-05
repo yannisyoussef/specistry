@@ -69,10 +69,10 @@ ol {
 }
 
 :focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px var(--surface),
-    0 0 0 5px color-mix(in oklch, var(--brand) 45%, transparent);
+  /* Opaque ring: brand ink holds 4.5:1 on both panels, and an outline stays
+   * visible in forced-colors mode where box-shadows are dropped. */
+  outline: 3px solid var(--brand-ink);
+  outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
 
@@ -161,7 +161,6 @@ ol {
 /* Surfaces */
 .panel {
   backdrop-filter: var(--panel-blur);
-  -webkit-backdrop-filter: var(--panel-blur);
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-panel);
@@ -220,6 +219,10 @@ ol {
 
 .button--ghost:hover {
   color: var(--text-strong);
+}
+
+.button--success {
+  color: var(--status-success);
 }
 
 @media (max-width: 767px) {
@@ -345,5 +348,14 @@ ol {
     animation-duration: 0.01ms !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .panel,
+  .drawer,
+  .code-surface {
+    background: Canvas;
+    border: 1px solid CanvasText;
   }
 }

@@ -3,6 +3,7 @@ import type {
   SchemaSummary,
 } from "../../lib/reader/schema-summary";
 import type {
+  ExampleView,
   MediaTypeView,
   OperationView,
   ParameterGroupView,
@@ -10,20 +11,22 @@ import type {
   SecurityAlternativeView,
 } from "../../lib/reader/operation-view";
 import { API_ROOT } from "../../lib/reader/projection";
+import { slugify } from "../../lib/reader/slug";
 import { CopyButton } from "./copy-button";
 import {
   Badge,
   Breadcrumb,
+  countLabel,
   DeprecationCallout,
   MethodLabel,
+  PathText,
   SafeText,
   SectionHeader,
   StatusLabel,
 } from "./primitives";
 
-function countLabel(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
-}
+/** Property rows shown before the remainder is summarized as a count. */
+const MAX_PROPERTY_ROWS = 200;
 
 /** The operation page: the highest-priority SPEC-004 surface. */
 export function OperationPage({ view }: Readonly<{ view: OperationView }>) {
@@ -46,11 +49,13 @@ export function OperationPage({ view }: Readonly<{ view: OperationView }>) {
         </div>
         <div className="endpoint-line">
           <MethodLabel method={view.method} />
-          <code
+          <PathText
             className={`endpoint-line__path${view.deprecated ? " endpoint-line__path--deprecated" : ""}`}
-          >
-            {view.path}
-          </code>
+            text={view.path}
+          />
+          {view.deprecated ? (
+            <span className="visually-hidden">(deprecated)</span>
+          ) : null}
           <CopyButton label="Copy" value={`${view.method} ${view.path}`} />
         </div>
         {view.description === undefined ? null : (
@@ -108,9 +113,7 @@ export function OperationPage({ view }: Readonly<{ view: OperationView }>) {
               text={view.requestBody.description}
             />
           )}
-          {view.requestBody.media.map((media) => (
-            <MediaBlock key={media.anchor} media={media} />
-          ))}
+          <MediaBlocks media={view.requestBody.media} />
         </section>
       )}
 
@@ -138,9 +141,9 @@ export function OperationPage({ view }: Readonly<{ view: OperationView }>) {
           <SectionHeader id="servers" title="Servers" />
           <ul className="rows">
             {view.servers.map((server) => (
-              <li className="row" key={server.url}>
+              <li className="row row--stacked" key={server.url}>
                 <div className="row__key">
-                  <code className="row__name">{server.url}</code>
+                  <PathText className="row__name" text={server.url} />
                 </div>
                 <div className="row__value">
                   {server.label === server.url ? null : (
@@ -165,7 +168,7 @@ function Authentication({
   if (alternatives === undefined) {
     return (
       <p className="section__note">
-        This operation declares no authentication requirement.
+        No authentication is declared for this operation.
       </p>
     );
   }
@@ -181,33 +184,37 @@ function Authentication({
               No authentication (anonymous access is allowed).
             </p>
           ) : (
-            <ul className="rows">
+            <ul className="rows auth-schemes">
               {alternative.schemes.map((scheme, position) => (
                 <li className="auth-scheme" key={scheme.key}>
-                  <span>
-                    {position > 0 ? (
-                      <span className="auth-alternative__joiner">and </span>
-                    ) : null}
-                    <span className="auth-scheme__name">{scheme.label}</span>
-                  </span>
-                  <span className="row__value">
-                    <span className="auth-scheme__detail">{scheme.detail}</span>
-                    {scheme.description === undefined ? null : (
-                      <SafeText
-                        className="body-small"
-                        text={scheme.description}
-                      />
-                    )}
-                    {scheme.scopes.length === 0 ? null : (
-                      <ul aria-label="Required scopes" className="scopes">
-                        {scheme.scopes.map((scope) => (
-                          <li className="scope" key={scope}>
-                            {scope}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </span>
+                  {position > 0 ? (
+                    <span className="auth-scheme__joiner">and</span>
+                  ) : null}
+                  <div className="row auth-scheme__row">
+                    <div className="row__key">
+                      <span className="auth-scheme__name">{scheme.label}</span>
+                      <span className="auth-scheme__detail">
+                        {scheme.detail}
+                      </span>
+                    </div>
+                    <div className="row__value">
+                      {scheme.description === undefined ? null : (
+                        <SafeText
+                          className="row__description"
+                          text={scheme.description}
+                        />
+                      )}
+                      {scheme.scopes.length === 0 ? null : (
+                        <ul aria-label="Required scopes" className="scopes">
+                          {scheme.scopes.map((scope) => (
+                            <li className="scope" key={scope}>
+                              {scope}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -224,7 +231,11 @@ function ParameterGroup({ group }: Readonly<{ group: ParameterGroupView }>) {
       <h3 className="subsection__title">{group.label}</h3>
       <ul className="rows">
         {group.rows.map((row) => (
-          <li className="row" id={`${group.anchor}-${row.name}`} key={row.name}>
+          <li
+            className="row"
+            id={`${group.anchor}-${slugify(row.name, "parameter")}`}
+            key={row.name}
+          >
             <div className="row__key">
               <code
                 className={`row__name${row.deprecated ? " row__name--deprecated" : ""}`}
@@ -261,28 +272,62 @@ function ParameterGroup({ group }: Readonly<{ group: ParameterGroupView }>) {
   );
 }
 
-function MediaBlock({ media }: Readonly<{ media: MediaTypeView }>) {
+/**
+ * Media types that share one schema are shown as a single block titled with
+ * every media type, so a JSON and form body of the same shape are not
+ * documented twice.
+ */
+function MediaBlocks({ media }: Readonly<{ media: readonly MediaTypeView[] }>) {
+  const groups: { readonly key: string; readonly members: MediaTypeView[] }[] =
+    [];
+  for (const entry of media) {
+    const key = JSON.stringify([
+      entry.schema ?? null,
+      entry.encodings,
+      entry.examples,
+    ]);
+    const existing = groups.find((group) => group.key === key);
+    if (existing === undefined) groups.push({ key, members: [entry] });
+    else existing.members.push(entry);
+  }
   return (
-    <div className="media-block" id={media.anchor}>
+    <>
+      {groups.map((group) => (
+        <MediaBlock key={group.key} members={group.members} />
+      ))}
+    </>
+  );
+}
+
+function MediaBlock({
+  members,
+}: Readonly<{ members: readonly MediaTypeView[] }>) {
+  const primary = members[0];
+  if (primary === undefined) return null;
+  return (
+    <div className="media-block" id={primary.anchor}>
+      {members.slice(1).map((member) => (
+        <span hidden id={member.anchor} key={member.anchor} />
+      ))}
       <div className="media-block__header">
-        <code className="media-block__type">{media.mediaType}</code>
-        {media.exampleCount > 0 ? (
-          <span className="section__meta">
-            {media.exampleCount}{" "}
-            {media.exampleCount === 1 ? "example" : "examples"}
-          </span>
-        ) : null}
+        <span className="media-block__types">
+          {members.map((member) => (
+            <code className="media-block__type" key={member.mediaType}>
+              {member.mediaType}
+            </code>
+          ))}
+        </span>
       </div>
-      {media.schema === undefined ? (
+      {primary.schema === undefined ? (
         <p className="schema-line">
           No schema is declared for this media type.
         </p>
       ) : (
-        <Schema schema={media.schema} />
+        <Schema schema={primary.schema} />
       )}
-      {media.encodings.length === 0 ? null : (
+      {primary.encodings.length === 0 ? null : (
         <ul className="rows" aria-label="Encodings">
-          {media.encodings.map((encoding) => (
+          {primary.encodings.map((encoding) => (
             <li className="row" key={encoding.propertyName}>
               <div className="row__key">
                 <code className="row__name">{encoding.propertyName}</code>
@@ -295,7 +340,41 @@ function MediaBlock({ media }: Readonly<{ media: MediaTypeView }>) {
           ))}
         </ul>
       )}
+      {primary.examples.map((example) => (
+        <Example example={example} key={example.name} />
+      ))}
     </div>
+  );
+}
+
+/** Contract examples are artifact data and are shown verbatim as JSON. */
+function Example({ example }: Readonly<{ example: ExampleView }>) {
+  return (
+    <figure className="example">
+      <figcaption className="example__caption">
+        <span className="example__name">{example.name}</span>
+        {example.summary === undefined ? null : (
+          <SafeText
+            as="span"
+            className="example__summary"
+            text={example.summary}
+          />
+        )}
+      </figcaption>
+      {example.json === undefined ? null : (
+        <pre className="code-surface example__code">
+          <code>{example.json}</code>
+        </pre>
+      )}
+      {example.truncated ? (
+        <p className="section__note">The example is longer than shown.</p>
+      ) : null}
+      {example.externalValue === undefined ? null : (
+        <p className="schema-line">
+          External example: <code>{example.externalValue}</code>
+        </p>
+      )}
+    </figure>
   );
 }
 
@@ -308,6 +387,11 @@ function Schema({ schema }: Readonly<{ schema: SchemaSummary }>) {
           <span className="row__constraints">{schema.constraints}</span>
         )}
         {schema.deprecated ? <Badge tone="deprecated">Deprecated</Badge> : null}
+        {schema.truncated ? (
+          <span className="row__constraints">
+            nested structure not expanded in this version
+          </span>
+        ) : null}
       </p>
       {schema.description === undefined ? null : (
         <SafeText className="body-small" text={schema.description} />
@@ -315,11 +399,6 @@ function Schema({ schema }: Readonly<{ schema: SchemaSummary }>) {
       {schema.properties === undefined ? null : (
         <PropertyRows properties={schema.properties} />
       )}
-      {schema.truncated ? (
-        <p className="section__note">
-          Nested structure is not expanded in this version of the reader.
-        </p>
-      ) : null}
     </>
   );
 }
@@ -330,53 +409,60 @@ function PropertyRows({
   if (properties.length === 0) {
     return <p className="section__note">This object declares no properties.</p>;
   }
+  const shown = properties.slice(0, MAX_PROPERTY_ROWS);
+  const rest = properties.length - shown.length;
   return (
-    <ul className="rows">
-      {properties.map((property) => (
-        <li className="row" key={property.name}>
-          <div className="row__key">
-            <code
-              className={`row__name${property.deprecated ? " row__name--deprecated" : ""}`}
-            >
-              {property.name}
-            </code>
-            <span className="row__type">{property.type}</span>
-            <span
-              className={`row__flag${property.required ? " row__flag--required" : ""}`}
-            >
-              {property.required ? "required" : "optional"}
-            </span>
-            {property.deprecated ? (
-              <span className="row__flag row__flag--deprecated">
-                deprecated
+    <>
+      <ul className="rows">
+        {shown.map((property) => (
+          <li className="row" key={property.name}>
+            <div className="row__key">
+              <code
+                className={`row__name${property.deprecated ? " row__name--deprecated" : ""}`}
+              >
+                {property.name}
+              </code>
+              <span className="row__type">
+                {property.type}
+                {property.nested ? " · not expanded" : ""}
               </span>
-            ) : null}
-            {property.readOnly ? (
-              <span className="row__flag">read-only</span>
-            ) : null}
-            {property.writeOnly ? (
-              <span className="row__flag">write-only</span>
-            ) : null}
-          </div>
-          <div className="row__value">
-            {property.description === undefined ? null : (
-              <SafeText
-                className="row__description"
-                text={property.description}
-              />
-            )}
-            {property.constraints === undefined ? null : (
-              <span className="row__constraints">{property.constraints}</span>
-            )}
-            {property.nested ? (
-              <span className="row__constraints">
-                nested structure not expanded
+              <span
+                className={`row__flag${property.required ? " row__flag--required" : ""}`}
+              >
+                {property.required ? "required" : "optional"}
               </span>
-            ) : null}
-          </div>
-        </li>
-      ))}
-    </ul>
+              {property.deprecated ? (
+                <span className="row__flag row__flag--deprecated">
+                  deprecated
+                </span>
+              ) : null}
+              {property.readOnly ? (
+                <span className="row__flag">read-only</span>
+              ) : null}
+              {property.writeOnly ? (
+                <span className="row__flag">write-only</span>
+              ) : null}
+            </div>
+            <div className="row__value">
+              {property.description === undefined ? null : (
+                <SafeText
+                  className="row__description"
+                  text={property.description}
+                />
+              )}
+              {property.constraints === undefined ? null : (
+                <span className="row__constraints">{property.constraints}</span>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {rest > 0 ? (
+        <p className="section__note">
+          {countLabel(rest, "more property")} not shown.
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -426,9 +512,7 @@ function Response({ response }: Readonly<{ response: ResponseView }>) {
       {response.media.length === 0 ? (
         <p className="response__empty">No response body</p>
       ) : (
-        response.media.map((media) => (
-          <MediaBlock key={media.anchor} media={media} />
-        ))
+        <MediaBlocks media={response.media} />
       )}
     </div>
   );

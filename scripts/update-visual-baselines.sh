@@ -3,15 +3,17 @@
 # macOS or Windows workstation never produces the reference images. The
 # repository is copied into a Node 24 container (host node_modules and build
 # output are excluded), dependencies are installed with the frozen lockfile,
-# the reader is built against the TestInbox fixture, and the `visual` project
-# runs with --update-snapshots. Review every changed image against
+# the reader is built, and the `visual` project runs with --update-snapshots
+# (Playwright starts both fixture servers from playwright.config.ts). Review every changed image against
 # docs/design/reader-v1.md before committing.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 mkdir -p tests/visual/__screenshots__
 
-docker run --rm \
+# linux/amd64 matches the GitHub-hosted runners; an arm64 host would otherwise
+# rasterize text differently and produce baselines CI cannot reproduce.
+docker run --rm --platform linux/amd64 \
   -v "$PWD:/host:ro" \
   -v "$PWD/tests/visual/__screenshots__:/out" \
   -e CI=1 \

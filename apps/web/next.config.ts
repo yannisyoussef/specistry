@@ -13,7 +13,9 @@ const securityHeaders = [
 ] as const;
 
 const nextConfig: NextConfig = {
-  agentRules: true,
+  // Dependency-written agent instructions are a supply-chain channel; the
+  // tracked AGENTS.md is reviewed like any other change instead.
+  agentRules: false,
   poweredByHeader: false,
   reactStrictMode: true,
   async headers() {

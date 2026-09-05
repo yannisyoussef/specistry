@@ -30,6 +30,7 @@ export function safeReturnPath(
   ) {
     return "/";
   }
-  if (/[\u0000-\u001f\u007f]/.test(value) || value.length > 2_048) return "/";
+  // Printable ASCII only: header values cannot carry other code points.
+  if (!/^[\x21-\x7e]*$/.test(value) || value.length > 2_048) return "/";
   return value;
 }

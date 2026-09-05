@@ -78,7 +78,7 @@
 }
 
 .wordmark__suffix {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: 13px;
   margin-left: -4px;
 }
@@ -91,7 +91,7 @@
 
 .tab {
   border-bottom: 2px solid transparent;
-  color: var(--text-muted);
+  color: var(--tab-inactive);
   display: inline-block;
   font-size: 14px;
   line-height: var(--w-header);
@@ -148,7 +148,7 @@
 }
 
 .nav-group__title {
-  color: var(--text-faint);
+  color: var(--text-muted);
   padding: 0 10px var(--space-2);
 }
 
@@ -206,7 +206,6 @@
 /* Mobile drawer */
 .drawer {
   backdrop-filter: var(--overlay-blur);
-  -webkit-backdrop-filter: var(--overlay-blur);
   background: var(--overlay-bg);
   border: 0;
   border-radius: 0 var(--radius-panel) var(--radius-panel) 0;
@@ -219,6 +218,11 @@
   max-width: 90vw;
   padding: 0;
   width: var(--w-drawer);
+}
+
+.drawer[open] {
+  display: flex;
+  flex-direction: column;
 }
 
 .drawer::backdrop {
@@ -250,8 +254,10 @@
 
 .drawer__body {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--space-5);
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-4);
 }
@@ -261,7 +267,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
-  padding: var(--space-7) var(--space-8) var(--space-9);
+  padding: 44px 56px var(--space-9);
 }
 
 .document__column {
@@ -284,7 +290,7 @@
 
 .breadcrumb li + li::before {
   color: var(--text-faint);
-  content: "/";
+  content: "/" / "";
   margin-right: var(--space-2);
 }
 
@@ -316,7 +322,8 @@
 
 .endpoint-line__path {
   color: var(--text-strong);
-  overflow-wrap: anywhere;
+  font-size: 15px;
+  overflow-wrap: normal;
 }
 
 .endpoint-line__path--deprecated {
@@ -404,8 +411,20 @@
 }
 
 .row:hover,
-.row:target {
+.row:target,
+.response:target,
+.media-block:target {
   background: var(--surface-subtle);
+}
+
+.row--stacked {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.row .row__name code,
+.operation-link__path,
+.row__name {
+  overflow-wrap: normal;
 }
 
 .row__key {
@@ -435,7 +454,7 @@
 }
 
 .row__flag {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 11px;
 }
@@ -562,18 +581,40 @@
 }
 
 .auth-alternative__joiner {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
+.auth-schemes {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+}
+
 .auth-scheme {
-  display: grid;
-  font-size: 14.5px;
-  gap: var(--space-4);
-  grid-template-columns: 160px minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-scheme__row {
+  margin: 0;
+  padding: var(--space-3) 0;
+}
+
+.auth-scheme:last-child .auth-scheme__row {
+  border-bottom: 0;
+}
+
+.auth-scheme__joiner {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  padding: var(--space-2) 0 0;
+  text-transform: uppercase;
 }
 
 .auth-scheme__name {
@@ -646,7 +687,7 @@
 .group-grid {
   display: grid;
   gap: var(--space-5);
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .group-card {
@@ -680,7 +721,7 @@
 }
 
 .theme-form__legend {
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .theme-form fieldset {
@@ -787,6 +828,16 @@
     display: inline-flex;
   }
 
+  /* Without JavaScript the menu control is a link to the sidebar, which the
+   * fragment target reveals in place. */
+  .shell__sidebar:target {
+    display: block;
+  }
+
+  .theme-form button {
+    min-height: var(--touch-target);
+  }
+
   .document {
     padding: var(--space-5) var(--space-4) var(--space-7);
   }
@@ -827,4 +878,79 @@
   .document__column {
     max-width: var(--w-doc-max);
   }
+}
+
+/* Navigation at scale: only the current group is expanded. */
+.nav-group--compact .nav-group__title {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: var(--space-2);
+}
+
+.nav-group__count {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.group-card__more {
+  align-self: flex-start;
+  font-size: 13.5px;
+  padding-top: var(--space-2);
+}
+
+/* Media type blocks may cover several media types with one schema. */
+.media-block__types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* Contract examples */
+.example {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+}
+
+.example__caption {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: 12.5px;
+}
+
+.example__name {
+  color: var(--text-strong);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.example__summary {
+  color: var(--text-muted);
+}
+
+.example__code {
+  font-size: 12.5px;
+  line-height: 1.7;
+  margin: 0;
+  max-height: 24rem;
+  overflow: auto;
+  padding: var(--space-3) var(--space-4);
+  white-space: pre;
+}
+
+/* The document panel is large and static: blur on it costs paint time for
+ * no visible gain, so only the header, sidebar, and drawer keep it. */
+.document {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  contain: paint;
+}
+
+.sidebar {
+  contain: paint;
 }

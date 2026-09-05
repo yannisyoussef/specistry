@@ -47,7 +47,14 @@ space the rail would occupy, so the reading width never shrinks below 680 px at 
 - Code and example surfaces are raised cards on the panels (`--code-bg`, `--code-border`,
   `--code-shadow`).
 - Fallbacks: no `backdrop-filter` → opaque panels; `prefers-reduced-transparency` →
-  solid surfaces and no blur; blur capped at 12 px below 768 px.
+  solid surfaces and no blur; blur capped at 12 px below 768 px; `forced-colors` →
+  `Canvas` panels with a `CanvasText` border.
+- The document panel itself does not blur (it is the largest surface and blurring it
+  costs paint time on long pages); header, sidebar, and drawer do.
+- CSS convention: `backdrop-filter` is written unprefixed only; the build adds the
+  `-webkit-` prefix. Tokens are declared once in `tokens.css` (light on `:root`, dark
+  under `[data-mode="dark"]` and the system-preference block), and component styles
+  reference tokens rather than colours.
 
 ## Navigation
 
@@ -129,16 +136,26 @@ preference by default). The consumer supplies one `--brand`; `--brand-ink` deriv
 text-safe accent (mixed 85 % toward black in light, 65 % toward white in dark). Method
 colours: GET blue, POST green (= success), PUT/PATCH amber (= warning/deprecated),
 DELETE red (= danger); other methods use the strong text colour. Muted text on dark is
-`#9a9aa1` to hold 4.5:1 on the panel.
+`#9a9aa1` to hold 4.5:1 on the panel; the light amber is `#8a5a00` for the same reason,
+and the smallest labels (eyebrows, flags, joiners, counts) use muted rather than faint
+text so every reading-size string holds 4.5:1. The inactive primary tab uses
+`--tab-inactive`.
 
 ## Interaction behaviour
 
-- **Focus**: visible ring everywhere; skip link is the first focusable element and moves
-  focus to `<main>`.
+- **Focus**: a 3 px opaque `--brand-ink` outline with 2 px offset everywhere (an outline
+  rather than a shadow so it survives forced colours); skip link is the first focusable
+  element and moves focus to `<main>`.
 - **Expand/collapse**: not used for endpoint sections in v1 (always open).
-- **Copy**: method-and-path copy control; label becomes "Copied" for 1.2 s.
-- **Responsive drawer**: native `<dialog>` modal; focus trapped by the platform, restored
-  on close; reduced motion disables the slide.
+- **Copy**: method-and-path copy control named "Copy <method> <path>"; the label becomes
+  "Copied" for 1.2 s and a polite status region announces the result (or the failure)
+  without renaming the control.
+- **Responsive drawer**: native `<dialog>` modal that clones the server-rendered
+  navigation on open and scrolls the current item into view; focus trapped by the
+  platform, restored on close; reduced motion disables the slide. Without JavaScript the
+  menu control is an in-page link that reveals the sidebar.
+- **Large contracts**: above 150 operations the sidebar expands only the current group
+  (others show a count) and the reference index previews eight operations per group.
 - **Deep links**: heading ids are deterministic (`authentication`, `parameters`,
   `parameters-query`, `request-body`, `responses`, `response-201`, `response-4xx`,
   `response-default`); `:target` sections receive scroll margin below the sticky header.

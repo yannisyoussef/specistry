@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   ARTIFACT_MANIFEST_FILENAME,
+  CanonicalModelError,
   parseArtifactManifest,
   parseDocumentationArtifact,
   type ArtifactManifest,
@@ -159,6 +160,17 @@ async function readArtifactFile(
 }
 
 function describe(error: unknown): string {
+  if (error instanceof CanonicalModelError) {
+    const issues = error.diagnostics
+      .filter((diagnostic) => diagnostic.severity === "error")
+      .slice(0, 3)
+      .map(
+        (diagnostic) =>
+          `${diagnostic.code} at ${diagnostic.location?.path ?? "/"}`,
+      );
+    const rest = error.diagnostics.length - issues.length;
+    return `${error.message.slice(0, 120)} ${issues.join("; ")}${rest > 0 ? `; ${rest} more` : ""}`;
+  }
   if (error instanceof Error) return error.message.slice(0, 200);
   return "unknown error";
 }

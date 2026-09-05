@@ -101,7 +101,7 @@ export function createReaderIndex(
   const services = version.services;
   const singleService = services.length === 1;
   const serviceSlugs = uniqueSlugs(
-    services.map((service) => slugify(serviceLabel(service), "service")),
+    services.map((service) => slugify(service.name, "service")),
   );
   const projected = services.map((service, index) =>
     projectService(service, serviceSlugs[index] ?? "service", singleService),
@@ -184,53 +184,49 @@ function selectVersion(artifact: DocumentationArtifact): DocumentationVersion {
   return current;
 }
 
-function serviceLabel(service: ApiService): string {
-  // Service ids are derived from the configured document path; strip the file
-  // extension so a single-file project reads as `openapi`, not `openapi-yaml`.
-  return service.id.replace(/\.(json|ya?ml)$/i, "");
-}
-
 function projectService(
   service: ApiService,
   slug: string,
   singleService: boolean,
 ): ReaderService {
   const serviceHref = singleService ? API_ROOT : `${API_ROOT}/${slug}`;
-  const groupNames = collectGroupNames(service.operations);
+  const identities = collectGroups(service.operations);
   const groupSlugs = uniqueSlugs(
-    groupNames.map((name) =>
-      name === UNTAGGED_GROUP_NAME
-        ? UNTAGGED_GROUP_SLUG
-        : slugify(name, "group"),
+    identities.map((identity) =>
+      identity.untagged ? UNTAGGED_GROUP_SLUG : slugify(identity.name, "group"),
     ),
   );
-  const slugByName = new Map(
-    groupNames.map((name, index) => [name, groupSlugs[index] ?? "group"]),
-  );
-  const canonical = new Map<string, Operation[]>();
-  const listed = new Map<string, Operation[]>();
-  for (const name of groupNames) {
-    canonical.set(name, []);
-    listed.set(name, []);
-  }
+  const canonical = new Map<number, Operation[]>();
+  const listed = new Map<number, Operation[]>();
+  const indexOfTag = new Map<string, number>();
+  let untaggedIndex = -1;
+  identities.forEach((identity, index) => {
+    canonical.set(index, []);
+    listed.set(index, []);
+    if (identity.untagged) untaggedIndex = index;
+    else indexOfTag.set(identity.name, index);
+  });
   for (const operation of sortOperations(service.operations)) {
-    const primary = operation.tags[0] ?? UNTAGGED_GROUP_NAME;
+    const primary =
+      operation.tags.length === 0
+        ? untaggedIndex
+        : (indexOfTag.get(operation.tags[0] ?? "") ?? untaggedIndex);
     canonical.get(primary)?.push(operation);
-    for (const tag of operation.tags.length === 0
-      ? [primary]
-      : operation.tags) {
-      listed.get(tag)?.push(operation);
-    }
+    const memberships =
+      operation.tags.length === 0
+        ? [untaggedIndex]
+        : operation.tags.map((tag) => indexOfTag.get(tag) ?? untaggedIndex);
+    for (const index of memberships) listed.get(index)?.push(operation);
   }
   const summaries = new Map<string, ReaderOperationSummary>();
-  const groups = groupNames.map((name): ReaderGroup => {
-    const groupSlug = slugByName.get(name) ?? "group";
+  const groups = identities.map((identity, index): ReaderGroup => {
+    const groupSlug = groupSlugs[index] ?? "group";
     const href = `${serviceHref}/${groupSlug}`;
-    const members = canonical.get(name) ?? [];
+    const members = canonical.get(index) ?? [];
     const operationSlugs = uniqueSlugs(members.map(operationSlugCandidate));
     const operations = members.map(
-      (operation, index): ReaderOperationSummary => {
-        const operationSlug = operationSlugs[index] ?? "operation";
+      (operation, position): ReaderOperationSummary => {
+        const operationSlug = operationSlugs[position] ?? "operation";
         const summary: ReaderOperationSummary = {
           deprecated: operation.deprecated,
           groupSlug,
@@ -246,11 +242,17 @@ function projectService(
         return summary;
       },
     );
-    return { href, listed: [], name, operations, slug: groupSlug };
+    return {
+      href,
+      listed: [],
+      name: identity.name,
+      operations,
+      slug: groupSlug,
+    };
   });
-  const withListed = groups.map((group): ReaderGroup => ({
+  const withListed = groups.map((group, index): ReaderGroup => ({
     ...group,
-    listed: (listed.get(group.name) ?? []).flatMap((operation) => {
+    listed: (listed.get(index) ?? []).flatMap((operation) => {
       const summary = summaries.get(operation.id);
       return summary === undefined ? [] : [summary];
     }),
@@ -268,10 +270,14 @@ function projectService(
   };
 }
 
-/** Group names in first-appearance order of canonical operation order; untagged last. */
-function collectGroupNames(
+/**
+ * Group identities: every tag in case-insensitive canonical order, then the
+ * untagged group when needed. A real tag named like the untagged group keeps
+ * its own identity; only its slug gains a collision suffix.
+ */
+function collectGroups(
   operations: readonly Operation[],
-): readonly string[] {
+): readonly { readonly name: string; readonly untagged: boolean }[] {
   const names: string[] = [];
   let untagged = false;
   for (const operation of sortOperations(operations)) {
@@ -284,8 +290,9 @@ function collectGroupNames(
     }
   }
   names.sort(compareText);
-  if (untagged) names.push(UNTAGGED_GROUP_NAME);
-  return names;
+  const groups = names.map((name) => ({ name, untagged: false }));
+  if (untagged) groups.push({ name: UNTAGGED_GROUP_NAME, untagged: true });
+  return groups;
 }
 
 /**
@@ -310,7 +317,11 @@ function operationSlugCandidate(operation: Operation): string {
     : identifierSlug(operation.contractId);
 }
 
+/** Locale-independent order that folds case before comparing code units. */
 function compareText(left: string, right: string): number {
+  const a = left.toLowerCase();
+  const b = right.toLowerCase();
+  if (a !== b) return a < b ? -1 : 1;
   return left < right ? -1 : left > right ? 1 : 0;
 }
 

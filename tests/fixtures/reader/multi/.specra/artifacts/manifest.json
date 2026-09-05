@@ -1,0 +1,34 @@
+{
+  "artifactFormat": 1,
+  "diagnostics": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "files": {
+    "documentation": "documentation.json"
+  },
+  "generator": "specra",
+  "modelVersion": 1,
+  "project": {
+    "id": "project_3b461578d597485a",
+    "name": "Acme Platform"
+  },
+  "sources": [
+    {
+      "bytes": 3325,
+      "path": "apis/v1/accounts.yaml",
+      "sha256": "45bc64760b42108da050fec744ed2141130764524ee53ec26365a27c730c9d2d"
+    },
+    {
+      "bytes": 1526,
+      "path": "apis/v1/billing.yaml",
+      "sha256": "a9c019afab2957e6926cb5c357d7c4a01889d71acbcf292d18bd0a49db1164f4"
+    }
+  ],
+  "statistics": {
+    "documents": 2,
+    "operations": 10,
+    "references": 8,
+    "schemas": 2
+  }
+}

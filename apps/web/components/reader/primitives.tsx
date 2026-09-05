@@ -35,18 +35,16 @@ export function Badge({
   return <span className={`badge badge--${tone}`}>{children}</span>;
 }
 
-export function DeprecationCallout({
-  children,
-}: Readonly<{ children?: ReactNode }>) {
+/** States only what the contract states: the operation is deprecated. */
+export function DeprecationCallout() {
   return (
     <div className="callout" role="note">
       <span aria-hidden="true" className="callout__glyph">
         !
       </span>
       <p>
-        <strong className="strong">Deprecated.</strong>{" "}
-        {children ??
-          "This operation is still documented but should not be used for new integrations."}
+        <strong className="strong">Deprecated.</strong> The contract marks this
+        operation as deprecated; it remains documented here.
       </p>
     </div>
   );
@@ -86,6 +84,31 @@ export function inlineCode(text: string): ReactNode[] {
   }
   if (last < text.length) nodes.push(text.slice(last));
   return nodes;
+}
+
+/**
+ * A path or URL that may wrap only after separators, never inside a token.
+ * `<wbr>` carries no text, so copied values stay intact.
+ */
+export function PathText({
+  className,
+  text,
+}: Readonly<{ className?: string; text: string }>) {
+  const parts = text.split(/(?<=[/?&.=])/);
+  return (
+    <code className={className}>
+      {parts.map((part, index) =>
+        index === 0 ? (
+          part
+        ) : (
+          <span key={index}>
+            <wbr />
+            {part}
+          </span>
+        ),
+      )}
+    </code>
+  );
 }
 
 export function Breadcrumb({
@@ -142,4 +165,8 @@ export function SectionHeader({
       )}
     </div>
   );
+}
+
+export function countLabel(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }

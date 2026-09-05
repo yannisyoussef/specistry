@@ -4,19 +4,28 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * Browser suites run against the production reader (`next start`) serving
- * the committed TestInbox fixture. `SPECRA_SITE_URL` is set so canonical and
- * sitemap URLs are absolute and testable. The `visual` project keeps its
+ * the committed TestInbox fixture on port 3100; a second instance of the same
+ * build serves the adversarial edge fixture on port 3101 for XSS and
+ * long-content checks. `SPECRA_SITE_URL` is set on the first so canonical and
+ * sitemap URLs are absolute and testable. Desktop and mobile reader suites are
+ * separate files so each runs under one device profile. The `visual` project keeps its
  * Linux-only baselines under `tests/visual/__screenshots__`; see
  * `docs/development/testing.md` for the update procedure.
  */
 const fixtureProject = path.resolve("tests/fixtures/reader/testinbox");
+/** The adversarial fixture is served by a second reader on port 3101. */
+const edgeProject = path.resolve("tests/fixtures/reader/edge");
+export const EDGE_URL = "http://127.0.0.1:3101";
 
 export default defineConfig({
   expect: {
     toHaveScreenshot: {
       animations: "disabled",
       caret: "hide",
+      // Both limits apply: tiny anti-aliasing drift passes, a moved element or
+      // changed colour fails even on a small viewport.
       maxDiffPixelRatio: 0.01,
+      maxDiffPixels: 2_500,
       scale: "css",
     },
   },
@@ -26,6 +35,7 @@ export default defineConfig({
     {
       name: "chromium-desktop",
       testDir: "./tests/e2e",
+      testIgnore: /reader-mobile\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -50,15 +60,24 @@ export default defineConfig({
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
-  webServer: {
-    command: "pnpm --filter @specra/web start",
-    env: {
-      PORT: "3100",
-      SPECRA_PROJECT_ROOT: fixtureProject,
-      SPECRA_SITE_URL: "https://docs.example.test",
+  webServer: [
+    {
+      command: "pnpm --filter @specra/web start",
+      env: {
+        PORT: "3100",
+        SPECRA_PROJECT_ROOT: fixtureProject,
+        SPECRA_SITE_URL: "https://docs.example.test",
+      },
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+      url: "http://127.0.0.1:3100",
     },
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-    url: "http://127.0.0.1:3100",
-  },
+    {
+      command: "pnpm --filter @specra/web start",
+      env: { PORT: "3101", SPECRA_PROJECT_ROOT: edgeProject },
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+      url: EDGE_URL,
+    },
+  ],
 });

@@ -5,9 +5,19 @@ import {
   type ReaderOperationSummary,
   type ReaderService,
 } from "../../lib/reader/projection";
-import { Breadcrumb, MethodLabel, SafeText } from "./primitives";
+import {
+  Breadcrumb,
+  countLabel,
+  MethodLabel,
+  PathText,
+  SafeText,
+} from "./primitives";
+import { COLLAPSE_NAVIGATION_ABOVE, isGenericVersion } from "./shell";
 
 /** Home, API reference index, service, and group pages. */
+
+/** Operations previewed per group on the index of a large contract. */
+const INDEX_PREVIEW = 8;
 
 export function HomePage({ index }: Readonly<{ index: ReaderIndex }>) {
   const description =
@@ -16,7 +26,10 @@ export function HomePage({ index }: Readonly<{ index: ReaderIndex }>) {
     <article className="document__column">
       <div className="hero">
         <p className="eyebrow">
-          {index.project.name} · {index.version.label}
+          {index.project.name}
+          {isGenericVersion(index.version.label)
+            ? ""
+            : ` · ${index.version.label}`}
         </p>
         <h1 className="display">{index.project.name} API</h1>
         {description === undefined ? null : (
@@ -34,8 +47,7 @@ export function HomePage({ index }: Readonly<{ index: ReaderIndex }>) {
             Start here
           </h2>
           <span className="section__meta">
-            {index.operationCount}{" "}
-            {index.operationCount === 1 ? "endpoint" : "endpoints"}
+            {countLabel(index.operationCount, "endpoint")}
           </span>
         </div>
         <ul className="start-list">
@@ -52,8 +64,7 @@ export function HomePage({ index }: Readonly<{ index: ReaderIndex }>) {
                       : `${service.name} · ${group.name}`}
                   </span>
                   <span className="start-list__meta">
-                    {group.listed.length}{" "}
-                    {group.listed.length === 1 ? "endpoint" : "endpoints"}
+                    {countLabel(group.listed.length, "endpoint")}
                   </span>
                 </a>
               </li>
@@ -66,18 +77,21 @@ export function HomePage({ index }: Readonly<{ index: ReaderIndex }>) {
 }
 
 export function ReferencePage({ index }: Readonly<{ index: ReaderIndex }>) {
+  const groups = index.services.reduce(
+    (total, service) => total + service.groups.length,
+    0,
+  );
   return (
     <article className="document__column">
       <div className="page-header">
         <h1 className="page-title">API reference</h1>
         <p className="lede">
-          {index.operationCount} operations across{" "}
-          {index.services.reduce(
-            (total, service) => total + service.groups.length,
-            0,
-          )}{" "}
-          groups
-          {index.singleService ? "" : ` in ${index.services.length} services`}.
+          {countLabel(index.operationCount, "operation")} across{" "}
+          {countLabel(groups, "group")}
+          {index.singleService
+            ? ""
+            : ` in ${countLabel(index.services.length, "service")}`}
+          .
         </p>
       </div>
       {index.services.map((service) => (
@@ -98,20 +112,26 @@ export function ReferencePage({ index }: Readonly<{ index: ReaderIndex }>) {
               )}
             </h2>
             <span className="section__meta">
-              {service.operationCount} operations
+              {countLabel(service.operationCount, "operation")}
             </span>
           </div>
           {service.description === undefined ? null : (
             <SafeText className="section__note" text={service.description} />
           )}
-          <GroupCards service={service} />
+          <GroupCards
+            preview={index.operationCount > COLLAPSE_NAVIGATION_ABOVE}
+            service={service}
+          />
         </section>
       ))}
     </article>
   );
 }
 
-export function ServicePage({ service }: Readonly<{ service: ReaderService }>) {
+export function ServicePage({
+  operationCount,
+  service,
+}: Readonly<{ operationCount: number; service: ReaderService }>) {
   return (
     <article className="document__column">
       <div className="page-header">
@@ -132,10 +152,13 @@ export function ServicePage({ service }: Readonly<{ service: ReaderService }>) {
             Groups
           </h2>
           <span className="section__meta">
-            {service.operationCount} operations
+            {countLabel(service.operationCount, "operation")}
           </span>
         </div>
-        <GroupCards service={service} />
+        <GroupCards
+          preview={operationCount > COLLAPSE_NAVIGATION_ABOVE}
+          service={service}
+        />
       </section>
     </article>
   );
@@ -169,7 +192,9 @@ export function GroupPage({
           <h2 className="section-title" id="operations-heading">
             Operations
           </h2>
-          <span className="section__meta">{group.listed.length}</span>
+          <span className="section__meta">
+            {countLabel(group.listed.length, "operation")}
+          </span>
         </div>
         <OperationList operations={group.listed} />
       </section>
@@ -177,17 +202,36 @@ export function GroupPage({
   );
 }
 
-function GroupCards({ service }: Readonly<{ service: ReaderService }>) {
+/**
+ * Group cards list every operation for ordinary contracts; large contracts
+ * preview the first operations of each group and link to the group page so
+ * the index stays bounded.
+ */
+function GroupCards({
+  preview,
+  service,
+}: Readonly<{ preview: boolean; service: ReaderService }>) {
   return (
     <div className="group-grid">
-      {service.groups.map((group) => (
-        <div className="group-card" key={group.slug}>
-          <h2>
-            <a href={group.href}>{group.name}</a>
-          </h2>
-          <OperationList operations={group.listed} />
-        </div>
-      ))}
+      {service.groups.map((group) => {
+        const shown = preview
+          ? group.listed.slice(0, INDEX_PREVIEW)
+          : group.listed;
+        const rest = group.listed.length - shown.length;
+        return (
+          <div className="group-card" key={group.slug}>
+            <h3>
+              <a href={group.href}>{group.name}</a>
+            </h3>
+            <OperationList operations={shown} />
+            {rest > 0 ? (
+              <a className="group-card__more" href={group.href}>
+                View all {countLabel(group.listed.length, "operation")}
+              </a>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -210,7 +254,10 @@ function OperationList({
                 </>
               ) : null}
               <br />
-              <code className="operation-link__path">{operation.path}</code>
+              <PathText
+                className="operation-link__path"
+                text={operation.path}
+              />
             </span>
           </a>
         </li>

@@ -15,6 +15,7 @@ import {
   GroupPage,
   HomePage,
   ReferencePage,
+  ServicePage,
 } from "../../apps/web/components/reader/list-pages";
 import { OperationPage } from "../../apps/web/components/reader/operation-page";
 import { Shell } from "../../apps/web/components/reader/shell";
@@ -45,6 +46,7 @@ function loadArtifact(name: string): DocumentationArtifact {
 
 const testinbox = loadArtifact("testinbox");
 const edge = loadArtifact("edge");
+const multi = loadArtifact("multi");
 
 afterEach(cleanup);
 
@@ -71,7 +73,9 @@ describe("operation page", () => {
     const endpoint = container.querySelector(".endpoint-line");
     expect(endpoint?.textContent).toContain("POST");
     expect(endpoint?.textContent).toContain("/inboxes");
-    expect(screen.getByRole("button", { name: "Copy" })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Copy POST /inboxes" }),
+    ).toBeDefined();
 
     const auth = screen.getByRole("region", { name: "Authentication" });
     expect(auth.textContent).toContain("API key (apiKey)");
@@ -93,7 +97,8 @@ describe("operation page", () => {
     expect(body.textContent).toContain("application/json");
     expect(body.textContent).toContain("application/x-www-form-urlencoded");
     expect(body.textContent).toContain("default 3600 · min 60 · max 86400");
-    expect(body.textContent).toContain("2 examples");
+    expect(within(body).getAllByRole("figure")).toHaveLength(2);
+    expect(body.querySelector(".example__code")?.textContent).toContain("{");
 
     const responses = screen.getByRole("region", { name: "Responses" });
     expect(responses.textContent).toContain("201 Created");
@@ -117,7 +122,8 @@ describe("operation page", () => {
     ]);
     render(<OperationPage view={view} />);
     const auth = screen.getByRole("region", { name: "Authentication" });
-    expect(auth.textContent).toContain("and Mutual TLS (mtls)");
+    expect(within(auth).getByText("and")).toBeDefined();
+    expect(auth.textContent).toContain("Mutual TLS (mtls)");
     expect(
       within(auth).getByRole("list", { name: "Required scopes" }).textContent,
     ).toContain("webhooks:write");
@@ -217,16 +223,20 @@ describe("shell and list pages", () => {
     expect(
       screen.getByRole("navigation", { name: "Primary" }).textContent,
     ).toContain("API reference");
-    // The navigation is rendered once in the sidebar and once inside the
-    // closed mobile drawer; each copy marks exactly one current operation.
+    // The navigation is rendered exactly once, in the sidebar; the mobile
+    // drawer clones it on open. Exactly one item is current.
     const aside = screen.getByRole("complementary", { name: "API navigation" });
     const current = aside.querySelectorAll('.nav-item[aria-current="page"]');
     expect(current).toHaveLength(1);
     expect(current[0]?.textContent).toContain("Create inbox");
     expect(
       container.querySelectorAll('.nav-item[aria-current="page"]'),
-    ).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "Navigation" })).toBeDefined();
+    ).toHaveLength(1);
+    expect(container.querySelectorAll("#api-navigation")).toHaveLength(1);
+    // Without JavaScript the menu control links to the sidebar region.
+    expect(
+      screen.getByRole("link", { name: "Navigation" }).getAttribute("href"),
+    ).toBe("#api-sidebar-region");
     expect(screen.getByRole("group", { name: "Theme" })).toBeDefined();
     expect(
       screen.getByRole("button", { name: "System", pressed: true }),
@@ -279,9 +289,55 @@ describe("shell and list pages", () => {
         <ReferencePage index={large} />
       </Shell>,
     );
-    expect(html.match(/class="nav-item[" ]/g)?.length).toBe(1_200);
+    // Above the collapse threshold only the current group lists operations;
+    // on the index no group is current, so the sidebar is groups only.
+    expect(html.match(/class="nav-item[" ]/g)).toBeNull();
+    expect(html.match(/nav-group--compact/g)?.length).toBe(30);
     expect(html).not.toContain("onclick");
-    expect(Buffer.byteLength(html, "utf8")).toBeLessThan(600 * 700 + 60_000);
+    expect(Buffer.byteLength(html, "utf8")).toBeLessThan(600 * 400 + 60_000);
+    const first = large.services[0]?.groups[0]?.operations[0];
+    if (first === undefined) throw new Error("operation");
+    const onOperation = renderToStaticMarkup(
+      <Shell currentPath={first.href} index={large} mode="system">
+        <ReferencePage index={large} />
+      </Shell>,
+    );
+    expect(onOperation.match(/class="nav-item[" ]/g)?.length).toBe(20);
+    expect(onOperation.match(/nav-group--compact/g)?.length).toBe(29);
+  });
+
+  it("renders service headings and service-prefixed routes for a multi-service contract", async () => {
+    const multiIndex = createReaderIndex(multi);
+    const target = resolveRoute(multiIndex, multi, ["billing-api"]);
+    if (target?.kind !== "service") throw new Error("service");
+    const { container } = render(
+      <Shell currentPath={target.service.href} index={multiIndex} mode="dark">
+        <ServicePage
+          operationCount={multiIndex.operationCount}
+          service={target.service}
+        />
+      </Shell>,
+    );
+    const aside = screen.getByRole("complementary", { name: "API navigation" });
+    expect(
+      within(aside)
+        .getAllByRole("link", { name: "Users" })
+        .map((link) => link.getAttribute("href")),
+    ).toEqual(["/api/accounts-api/users", "/api/billing-api/users"]);
+    expect(
+      within(aside)
+        .getByRole("link", { name: "Billing API" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Billing API" }),
+    ).toBeDefined();
+    expect(
+      within(screen.getByRole("main"))
+        .getByRole("link", { name: /List billing contacts/ })
+        .getAttribute("href"),
+    ).toBe("/api/billing-api/users/list-users");
+    expect((await axe(container)).violations).toEqual([]);
   });
 });
 

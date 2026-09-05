@@ -15,6 +15,7 @@ import {
   indexablePaths,
   operationMetadata,
   referenceMetadata,
+  serviceMetadata,
   siteUrl,
   summarize,
 } from "../../apps/web/lib/reader/metadata";
@@ -56,6 +57,7 @@ function loadArtifact(name: string): DocumentationArtifact {
 
 const testinbox = loadArtifact("testinbox");
 const edge = loadArtifact("edge");
+const multi = loadArtifact("multi");
 
 function operationTarget(
   index: ReaderIndex,
@@ -99,7 +101,7 @@ describe("reader index", () => {
     expect(index.project.name).toBe("TestInbox");
     expect(
       index.services.map((service) => [service.slug, service.href]),
-    ).toEqual([["openapi", "/api"]]);
+    ).toEqual([["testinbox-api", "/api"]]);
     const service = index.services[0];
     expect(
       service?.groups.map((group) => [
@@ -396,6 +398,96 @@ describe("edge artifact", () => {
   });
 });
 
+describe("multi-service artifact", () => {
+  const index = createReaderIndex(multi);
+
+  it("prefixes every route with the service slug and keeps same-named groups apart", () => {
+    expect(index.singleService).toBe(false);
+    expect(index.operationCount).toBe(10);
+    expect(
+      index.services.map((service) => [
+        service.slug,
+        service.href,
+        service.operationCount,
+      ]),
+    ).toEqual([
+      ["accounts-api", "/api/accounts-api", 6],
+      ["billing-api", "/api/billing-api", 4],
+    ]);
+    expect(
+      index.services.map((service) =>
+        service.groups.map((group) => group.href),
+      ),
+    ).toEqual([
+      [
+        "/api/accounts-api/keys",
+        "/api/accounts-api/users",
+        "/api/accounts-api/operations",
+      ],
+      [
+        "/api/billing-api/invoices",
+        "/api/billing-api/users",
+        "/api/billing-api/operations",
+      ],
+    ]);
+    // `listUsers` exists in both documents; each keeps its own route.
+    expect(
+      listOperations(index)
+        .filter((operation) => operation.slug === "list-users")
+        .map((operation) => operation.href),
+    ).toEqual([
+      "/api/accounts-api/users/list-users",
+      "/api/billing-api/users/list-users",
+    ]);
+  });
+
+  it("resolves service, group, and operation routes and rejects cross-service mixes", () => {
+    expect(resolveRoute(index, multi, ["billing-api"])?.kind).toBe("service");
+    expect(resolveRoute(index, multi, ["billing-api", "users"])?.kind).toBe(
+      "group",
+    );
+    const target = resolveRoute(index, multi, [
+      "billing-api",
+      "users",
+      "list-users",
+    ]);
+    expect(target?.kind).toBe("operation");
+    if (target?.kind !== "operation") throw new Error("operation");
+    expect(target.summary.title).toBe("List billing contacts");
+    expect(target.service.name).toBe("Billing API");
+    // Single-service shapes and mixed service/group pairs are not routes.
+    expect(resolveRoute(index, multi, ["users"])).toBeUndefined();
+    expect(resolveRoute(index, multi, ["users", "list-users"])).toBeUndefined();
+    expect(
+      resolveRoute(index, multi, ["accounts-api", "invoices"]),
+    ).toBeUndefined();
+    expect(
+      resolveRoute(index, multi, ["accounts-api", "users", "get-invoice"]),
+    ).toBeUndefined();
+  });
+
+  it("produces unique titles and indexable paths across services", () => {
+    const titles = index.services.flatMap((service) => [
+      serviceMetadata(index, service).title,
+      ...service.groups.flatMap((group) => [
+        groupMetadata(index, service, group).title,
+        ...group.operations.map(
+          (operation) =>
+            operationMetadata(index, service, operation, undefined).title,
+        ),
+      ]),
+    ]);
+    expect(new Set(titles).size).toBe(titles.length);
+    expect(titles).toContain("Users | Accounts API | Acme Platform API");
+    expect(titles).toContain("Users | Billing API | Acme Platform API");
+    const paths = indexablePaths(index);
+    expect(new Set(paths).size).toBe(paths.length);
+    expect(paths).toContain("/api/accounts-api");
+    expect(paths).toContain("/api/billing-api/users/list-users");
+    expect(paths).toHaveLength(2 + 2 + 6 + 10);
+  });
+});
+
 describe("operation view", () => {
   const index = createReaderIndex(testinbox);
 
@@ -436,7 +528,8 @@ describe("operation view", () => {
     expect(
       view.responses[0]?.headers.map((header) => [header.name, header.type]),
     ).toEqual([["Location", "string · uri"]]);
-    expect(view.responses[0]?.media[0]?.exampleCount).toBe(1);
+    expect(view.responses[0]?.media[0]?.examples).toHaveLength(1);
+    expect(view.responses[0]?.media[0]?.examples[0]?.truncated).toBe(false);
     expect(
       view.security?.map((alternative) =>
         alternative.schemes.map((scheme) => scheme.key),
@@ -531,9 +624,15 @@ describe("metadata", () => {
   it("derives the site origin only from trusted absolute http(s) values", () => {
     expect(siteUrl(index, {})).toBeUndefined();
     expect(
-      siteUrl(index, { SPECRA_SITE_URL: "https://docs.example.test/base" })
-        ?.href,
-    ).toBe("https://docs.example.test/base");
+      siteUrl(index, { SPECRA_SITE_URL: "https://docs.example.test" })?.href,
+    ).toBe("https://docs.example.test/");
+    // Only an origin is accepted: paths, queries, and credentials are rejected.
+    expect(
+      siteUrl(index, { SPECRA_SITE_URL: "https://docs.example.test/base" }),
+    ).toBeUndefined();
+    expect(
+      siteUrl(index, { SPECRA_SITE_URL: "https://user:pw@docs.example.test" }),
+    ).toBeUndefined();
     expect(
       siteUrl(index, { SPECRA_SITE_URL: "javascript:alert(1)" }),
     ).toBeUndefined();

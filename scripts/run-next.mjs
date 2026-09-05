@@ -7,6 +7,15 @@ if (!new Set(["build", "dev", "start"]).has(command)) {
   process.exit(2);
 }
 
+if (command === "build") {
+  const check = spawnSync(
+    process.execPath,
+    [new URL("./check-reader-artifact.mjs", import.meta.url).pathname],
+    { stdio: "inherit" },
+  );
+  if (check.status !== 0) process.exit(check.status ?? 1);
+}
+
 const result = spawnSync("next", [command], {
   env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
   shell: process.platform === "win32",

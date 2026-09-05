@@ -1,0 +1,139 @@
+openapi: 3.1.0
+info:
+  title: Accounts API
+  version: 1.4.0
+  description: Users, teams, and API keys for the Acme platform.
+servers:
+  - url: https://accounts.acme.example.test/v1
+tags:
+  - name: Users
+    description: People who sign in to Acme.
+  - name: Keys
+    description: API keys scoped to a user.
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      summary: List users
+      tags: [Users]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: A page of users.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      summary: Create a user
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewUser"
+      responses:
+        "201":
+          description: The created user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "409":
+          description: A user with this email already exists.
+  /users/{userId}:
+    get:
+      operationId: getUser
+      summary: Get a user
+      tags: [Users]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: The user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: No such user.
+  /users/{userId}/keys:
+    get:
+      operationId: listKeys
+      summary: List API keys
+      tags: [Keys]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: The user's keys, secrets redacted.
+    post:
+      operationId: createKey
+      summary: Create an API key
+      tags: [Keys]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "201":
+          description: The key, including its secret exactly once.
+  /health:
+    get:
+      operationId: accountsHealth
+      summary: Health
+      security: []
+      responses:
+        "200":
+          description: The service is up.
+components:
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    NewUser:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+          maxLength: 80
+    User:
+      allOf:
+        - $ref: "#/components/schemas/NewUser"
+        - type: object
+          required: [id, createdAt]
+          properties:
+            id:
+              type: string
+              format: uuid
+            createdAt:
+              type: string
+              format: date-time
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearer: []
