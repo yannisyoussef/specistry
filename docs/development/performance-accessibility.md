@@ -4,17 +4,17 @@
 
 Targets are budgets to validate, not claims of current product performance.
 
-| Concern                           | Initial target                                                                          | Measurement point                 |
-| --------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------- |
-| OpenAPI parse + normalize         | 10 MiB / 10,000 operations in under 5 seconds and under 1 GiB peak RSS on reference CI  | Dedicated large fixture benchmark |
-| Phase 0 ingestion smoke           | 1,000-operation JSON document in under 2 seconds                                        | Vitest smoke gate                 |
-| Incremental local content rebuild | p95 under 500 ms for one authored-page change                                           | CLI/dev benchmark                 |
-| Full example build                | under 60 seconds on reference CI                                                        | CI timing artifact                |
-| Initial route HTML                | under 200 KiB uncompressed                                                              | Build manifest check              |
-| Initial route JavaScript          | under 150 KiB gzip, excluding lazy search/playground/highlighter chunks                 | Bundle budget                     |
-| Search index                      | under 5 MiB gzip for 10,000 indexed records; first query under 100 ms after worker load | Search corpus benchmark           |
-| Large schema interaction          | expansion response under 100 ms with depth/child virtualization safeguards              | Browser trace                     |
-| Reader experience                 | LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1 at p75 on representative mobile                    | Lab then consumer RUM opt-in      |
+| Concern                           | Initial target                                                                                                                                    | Measurement point                 |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| OpenAPI parse + normalize         | 10 MiB / 10,000 operations in under 5 seconds and under 1 GiB peak RSS on reference CI                                                            | Dedicated large fixture benchmark |
+| Phase 0 ingestion smoke           | 1,000-operation JSON document in under 2 seconds                                                                                                  | Vitest smoke gate                 |
+| Incremental local content rebuild | p95 under 500 ms for one authored-page change                                                                                                     | CLI/dev benchmark                 |
+| Full example build                | under 60 seconds on reference CI                                                                                                                  | CI timing artifact                |
+| Initial route HTML                | under 200 KiB uncompressed (measured 77 KiB for a 25-operation project's operation page)                                                          | Browser test on the fixture       |
+| Initial route JavaScript          | under 150 KiB gzip, excluding lazy search/playground/highlighter chunks (measured 134.7 KiB: 130 KiB framework bootstrap, 4.5 KiB reader islands) | `pnpm check:bundle` on the build  |
+| Search index                      | under 5 MiB gzip for 10,000 indexed records; first query under 100 ms after worker load                                                           | Search corpus benchmark           |
+| Large schema interaction          | expansion response under 100 ms with depth/child virtualization safeguards                                                                        | Browser trace                     |
+| Reader experience                 | LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1 at p75 on representative mobile                                                                              | Lab then consumer RUM opt-in      |
 
 Budgets are reviewed with real TestInbox and pathological fixtures. A change may revise a target only with measured evidence and an ADR or work-item note, never by quietly loosening CI.
 
@@ -40,5 +40,17 @@ Automated gates use axe for stable representative states and browser tests as in
 | Touch targets and gestures                              | Responsive emulation               | Physical device spot check            | Alternatives exist for complex gestures              |
 
 Every UI slice records applicable rows. “Not applicable” requires a reason; automated axe results do not replace this matrix.
+
+### SPEC-004 reader evidence
+
+| Check                        | Automated evidence                                                                                                                                                                  | Manual expectation before release                                                                                           |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Keyboard flow and skip link  | Playwright: Tab reaches the skip link first, Enter focuses `main`, the next Tab reaches the primary tab, the copy control shows the focus ring                                      | Chrome and Firefox: traverse sidebar → main → sections → footer theme buttons with no trap                                  |
+| Screen reader semantics      | jest-axe and browser axe on operation, index, 404, and open drawer; landmarks `banner`, `navigation`, `complementary`, `main`, `contentinfo`; headings h1 → h2 sections → h3 groups | VoiceOver + Safari, NVDA + Firefox: announce method and path, required/optional words, OR/AND joiners, response status text |
+| Mobile drawer                | Playwright: `dialog` opens from a 44 px button, focus moves inside, `Escape` closes and restores focus, links navigate and close                                                    | TalkBack + Chrome: drawer announced as a dialog named "Navigation"                                                          |
+| Reflow and zoom              | Playwright at 320 CSS px: no horizontal overflow on operation, reference, and long-path pages                                                                                       | 200 % and 400 % zoom on the operation page: single-column reading, no clipped code or method labels                         |
+| Contrast and non-colour cues | Tokens follow the design's 4.5:1 rule (muted text `#6c6c73` light / `#9a9aa1` dark); methods and statuses are words plus colour                                                     | Forced Colors: focus, badges, and callout borders remain visible                                                            |
+| Reduced motion               | `prefers-reduced-motion` zeroes durations; the drawer slide is the only animation                                                                                                   | OS preference enabled: no motion on open or close                                                                           |
+| Touch targets                | Menu button 44 px; footer theme buttons ≥ 32 px on desktop and 44 px on mobile                                                                                                      | Physical device spot check of drawer links and the copy control                                                             |
 
 Visual regression will use deterministic local fonts/assets and a small browser matrix. Baselines cover home, guide, endpoint, large schema, light/dark, mobile navigation, search, playground, code, errors, and empty states. Masks and thresholds require documented reasons; semantic assertions remain primary.

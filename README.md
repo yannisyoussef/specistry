@@ -22,7 +22,7 @@ pnpm check
 pnpm build
 ```
 
-For the reader shell:
+For the reader (see [docs/reader.md](docs/reader.md); `SPECRA_PROJECT_ROOT` must point at a project that has run `specra build`, for example `tests/fixtures/reader/testinbox`):
 
 ```bash
 pnpm dev
@@ -64,7 +64,7 @@ The future published executable name is `specra`. See the [CLI reference](docs/c
 
 ```text
 specra/
-├── apps/web/                 Reader application shell
+├── apps/web/                 Next.js reader (artifact loader, projection, routes)
 ├── packages/cli/             Thin CLI and reusable orchestration context
 ├── packages/config/          Validated consumer configuration contract
 ├── packages/model/           Framework-neutral canonical documentation model
