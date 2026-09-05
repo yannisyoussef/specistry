@@ -127,7 +127,7 @@ rejected by the old allowlist.
 
 Final gates on the final commit are recorded in the pull request. Locally, on the
 worktree that contains every fix above: `pnpm check` (format, lint, markdownlint, all
-typechecks, 134 tests, architecture, dependency, license, and secret gates), `pnpm build`,
+typechecks, 138 tests, architecture, dependency, license, and secret gates), `pnpm build`,
 `pnpm test:coverage` above every repository and CLI floor, `pnpm install --frozen-lockfile`
 with no lockfile drift, `pnpm audit --audit-level high` with no known vulnerabilities,
 `pnpm test:e2e` (4 Chromium desktop/mobile cases), and an explicit staged pack/offline

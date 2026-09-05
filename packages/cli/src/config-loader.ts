@@ -97,6 +97,8 @@ export async function loadConfigIsolated(
     let protocolBytes = 0;
     let protocol = Buffer.alloc(0);
     let settled = false;
+    let exited = false;
+    let controlEnded = false;
     let exitGrace: NodeJS.Timeout | undefined;
     const timeout = setTimeout(() => {
       finish({ code: "CONFIG_TIMEOUT", ok: false });
@@ -141,14 +143,25 @@ export async function loadConfigIsolated(
     });
     // Settle on process exit, not on stream close: a descendant that inherited
     // the pipes would otherwise hold this promise open for its own lifetime.
+    // The control channel can end before or after the exit event, so both
+    // orders settle as soon as the other half is observed, and a descendant
+    // holding the channel open is bounded by the grace period.
+    const settleAfterExit = (): void => {
+      if (exited && controlEnded) {
+        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+      }
+    };
+    controlStream.once("end", () => {
+      controlEnded = true;
+      settleAfterExit();
+    });
     child.once("exit", () => {
       if (settled) return;
+      exited = true;
       exitGrace = setTimeout(() => {
         finish({ code: "CONFIG_LOAD_FAILED", ok: false });
       }, EXIT_GRACE_MS);
-      controlStream.once("end", () => {
-        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-      });
+      settleAfterExit();
     });
 
     function handleResponse(message: ProcessResponse | undefined): void {

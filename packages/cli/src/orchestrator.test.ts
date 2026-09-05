@@ -131,6 +131,23 @@ describe("validateProject", () => {
     );
     await expectCodes(validateProject({ cwd: invalid }), ["CONFIG_INVALID"]);
 
+    const multipleIssues = await createProject(
+      "export default { schemaVersion: 1, name: '', openapi: ['./openapi.yaml', '../escape.yaml'], environments: { 'secret-key': { baseUrl: 'ftp://x' } } };",
+    );
+    const multiple = await validateProject({ cwd: multipleIssues });
+    expect(multiple.ok).toBe(false);
+    if (!multiple.ok) {
+      expect(multiple.diagnostics).toEqual([
+        expect.objectContaining({
+          code: "CONFIG_INVALID",
+          path: "environments.*.baseUrl",
+        }),
+        expect.objectContaining({ code: "CONFIG_INVALID", path: "name" }),
+        expect.objectContaining({ code: "CONFIG_INVALID", path: "openapi.[]" }),
+      ]);
+      expect(JSON.stringify(multiple)).not.toContain("secret-key");
+    }
+
     const unsupported = await createProject(
       "export default { schemaVersion: 2, name: 'Future', openapi: './openapi.yaml' };",
     );
@@ -277,6 +294,19 @@ describe("validateProject", () => {
       "CONFIG_LOAD_FAILED",
     ]);
     expect(performance.now() - exitStarted).toBeLessThan(3_000);
+
+    // A descendant that is handed the control channel itself keeps it from
+    // ending; the bounded grace period must settle the early exit anyway.
+    const holdsControl = await createProject(
+      `import { spawn } from "node:child_process";
+       spawn(process.execPath, ["-e", "setTimeout(() => {}, 6000)"], { detached: true, stdio: ["ignore", "ignore", "ignore", 3] }).unref();
+       process.exit(3);`,
+    );
+    const controlStarted = performance.now();
+    await expectCodes(validateProject({ cwd: holdsControl }), [
+      "CONFIG_LOAD_FAILED",
+    ]);
+    expect(performance.now() - controlStarted).toBeLessThan(3_000);
   });
 
   it("rejects traversal, absolute Windows paths, missing paths, and wrong types", async () => {
