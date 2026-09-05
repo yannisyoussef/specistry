@@ -20,6 +20,8 @@ const packageComponents = new Map([
   ["@specra/model", "model"],
   ["@specra/openapi", "openapi"],
 ]);
+const browserGlobalPattern =
+  /\b(?:document|localStorage|navigator|sessionStorage|window)\b/;
 
 const violations = [];
 for (const component of components) {
@@ -37,8 +39,35 @@ for (const component of components) {
           `${path.relative(root, file)} crosses from ${component.name} to forbidden ${dependency} via '${specifier}'.`,
         );
       }
+      if (
+        component.name === "model" &&
+        isProductionSource(file) &&
+        !isModelImportAllowed(specifier)
+      ) {
+        violations.push(
+          `${path.relative(root, file)} imports '${specifier}', but the canonical model must remain dependency-free.`,
+        );
+      }
+    }
+    if (
+      component.name === "model" &&
+      isProductionSource(file) &&
+      browserGlobalPattern.test(stripCommentsAndStrings(source))
+    ) {
+      violations.push(
+        `${path.relative(root, file)} uses a browser global in the canonical model boundary.`,
+      );
     }
   }
+}
+
+const modelPackage = JSON.parse(
+  await readFile(path.join(root, "packages/model/package.json"), "utf8"),
+);
+if (Object.keys(modelPackage.dependencies ?? {}).length > 0) {
+  violations.push(
+    "packages/model/package.json must not declare runtime dependencies in model v1.",
+  );
 }
 
 // Guard the checker itself against the relative-import bypass it is meant to prevent.
@@ -51,6 +80,11 @@ if (
 ) {
   violations.push(
     "Architecture checker self-test failed to resolve a relative cross-boundary import.",
+  );
+}
+if (isModelImportAllowed("react") || !isModelImportAllowed("node:util")) {
+  violations.push(
+    "Architecture checker self-test failed for dependency-free model imports.",
   );
 }
 
@@ -92,6 +126,23 @@ function importSpecifiers(source) {
     }
   }
   return specifiers;
+}
+
+function isModelImportAllowed(specifier) {
+  return specifier.startsWith(".") || specifier.startsWith("node:");
+}
+
+function isProductionSource(file) {
+  return !/\.test\.[cm]?[jt]sx?$/.test(file);
+}
+
+function stripCommentsAndStrings(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/.*$/gm, "")
+    .replace(/`(?:\\[\s\S]|[^`])*`/g, "")
+    .replace(/"(?:\\.|[^"\\])*"/g, "")
+    .replace(/'(?:\\.|[^'\\])*'/g, "");
 }
 
 async function sourceFiles(directory) {
