@@ -15,6 +15,9 @@ const MAX_PROCESS_OUTPUT_BYTES = 65_536;
 const MAX_CONFIG_BYTES = 1_048_576;
 const MAX_PROTOCOL_BYTES = MAX_CONFIG_BYTES + 32_768;
 const MAX_ISSUE_PATHS = 128;
+// After the child exits, a frame it wrote may still sit in the pipe; wait
+// briefly for it rather than for every descendant to release the pipe ends.
+const EXIT_GRACE_MS = 100;
 // The host labels a missing default export itself; every other label must be
 // one the schema authority could have produced.
 const HOST_ISSUE_PATHS = new Set(["default"]);
@@ -94,6 +97,7 @@ export async function loadConfigIsolated(
     let protocolBytes = 0;
     let protocol = Buffer.alloc(0);
     let settled = false;
+    let exitGrace: NodeJS.Timeout | undefined;
     const timeout = setTimeout(() => {
       finish({ code: "CONFIG_TIMEOUT", ok: false });
     }, options.timeoutMs);
@@ -135,8 +139,16 @@ export async function loadConfigIsolated(
     child.once("error", () => {
       finish({ code: "CONFIG_LOAD_FAILED", ok: false });
     });
-    child.once("close", () => {
-      if (!settled) finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+    // Settle on process exit, not on stream close: a descendant that inherited
+    // the pipes would otherwise hold this promise open for its own lifetime.
+    child.once("exit", () => {
+      if (settled) return;
+      exitGrace = setTimeout(() => {
+        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+      }, EXIT_GRACE_MS);
+      controlStream.once("end", () => {
+        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+      });
     });
 
     function handleResponse(message: ProcessResponse | undefined): void {
@@ -169,11 +181,19 @@ export async function loadConfigIsolated(
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
+      clearTimeout(exitGrace);
       options.signal.removeEventListener("abort", onAbort);
       child.stdout?.removeListener("data", countOutput);
       child.stderr?.removeListener("data", countOutput);
       controlStream.removeListener("data", collectProtocol);
       terminateProcessTree(child);
+      // Release this side of every pipe so descendants that inherited the
+      // other side cannot keep the caller's process alive, and let the parent
+      // exit without waiting on the killed child handle.
+      child.stdout?.destroy();
+      child.stderr?.destroy();
+      controlStream.destroy();
+      child.unref();
       resolve(result);
     }
   });

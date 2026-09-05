@@ -255,6 +255,30 @@ describe("validateProject", () => {
     await expect(access(marker)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("settles promptly when a detached descendant keeps inherited pipes open", async () => {
+    const holdPipes = `import { spawn } from "node:child_process";
+       spawn(process.execPath, ["-e", "setTimeout(() => {}, 6000)"], { detached: true, stdio: "inherit" }).unref();`;
+    const success = await createProject(
+      `${holdPipes}
+       export default { schemaVersion: 1, name: "Held", openapi: "./openapi.yaml" };`,
+    );
+    const successStarted = performance.now();
+    await expect(validateProject({ cwd: success })).resolves.toEqual(
+      expect.objectContaining({ ok: true }),
+    );
+    expect(performance.now() - successStarted).toBeLessThan(3_000);
+
+    const earlyExit = await createProject(
+      `${holdPipes}
+       process.exit(3);`,
+    );
+    const exitStarted = performance.now();
+    await expectCodes(validateProject({ cwd: earlyExit }), [
+      "CONFIG_LOAD_FAILED",
+    ]);
+    expect(performance.now() - exitStarted).toBeLessThan(3_000);
+  });
+
   it("rejects traversal, absolute Windows paths, missing paths, and wrong types", async () => {
     const traversal = await createProject(
       "export default { schemaVersion: 1, name: 'Bad', openapi: '../outside.yaml' };",

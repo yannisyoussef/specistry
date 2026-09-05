@@ -43,7 +43,7 @@ Use no CLI framework. SPEC-002 has one command and three options, so a small exp
 ## Consequences
 
 - Positive: thin/testable CLI, deterministic results and exits, cancellable config evaluation, clean JSON stdout, stable future orchestration context, and no model pollution.
-- Negative: a child process does not contain malicious trusted code; config can still read environment/files or perform network/process actions available to the build identity, and deliberately detached descendants can evade ordinary tree lifecycle policy. Node's built-in loader accepts erasable TypeScript, not every transform-requiring TypeScript feature.
+- Negative: a child process does not contain malicious trusted code; config can still read environment/files or perform network/process actions available to the build identity, and deliberately detached descendants can evade ordinary tree lifecycle policy (they cannot, however, hold the orchestrator open through inherited pipes, and the host exits when the orchestrator's control channel closes unless it is blocked in synchronous work). Node's built-in loader accepts erasable TypeScript, not every transform-requiring TypeScript feature.
 - Negative: realpath validation is point-in-time; later readers/writers must revalidate and avoid following replaced symlinks.
 - Neutral: `build` and `dev` remain absent until SPEC-003 supplies a real ingest-to-reader pipeline.
 

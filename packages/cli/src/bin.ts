@@ -4,6 +4,14 @@ import process from "node:process";
 
 import { runCli } from "./cli.js";
 
+// A consumer that closes its end of stdout or stderr early (for example a
+// pipeline head) must not turn a finished validation into a stack trace.
+const ignoreClosedPipe = (error: NodeJS.ErrnoException): void => {
+  if (error.code !== "EPIPE") throw error;
+};
+process.stdout.on("error", ignoreClosedPipe);
+process.stderr.on("error", ignoreClosedPipe);
+
 const controller = new AbortController();
 const cancel = (): void => controller.abort();
 process.once("SIGINT", cancel);

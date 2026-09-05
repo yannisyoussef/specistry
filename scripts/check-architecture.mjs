@@ -186,6 +186,12 @@ const astCases = [
   ],
   ["export function walk(document) { return document.info; }", 0, false],
   ["const { document: doc } = parsed; doc.x;", 0, false],
+  ["eval(code); new Function('s', 'return import(s)')('x');", 2, false],
+  [
+    'process.getBuiltinModule("node:module"); process["getBuiltin" + "Module"]("fs");',
+    2,
+    false,
+  ],
   ['import { window } from "./frame.js"; window.open();', 0, false],
   [
     'interface Source { readonly document: string; } const value = { document: 1 }; class Box { window = 1; } type Kind = "window";',
@@ -257,6 +263,26 @@ if (cliComponent !== undefined && modelComponent !== undefined) {
       cliComponent,
       path.join(root, "packages/cli/src/index.ts"),
       "@specra/config",
+    ) ||
+    !isRelativeImportConfined(
+      cliComponent,
+      path.join(root, "packages/cli/src/index.ts"),
+      "node:path",
+    ) ||
+    isRelativeImportConfined(
+      cliComponent,
+      path.join(root, "packages/cli/src/index.ts"),
+      "/absolute/packages/openapi/src/index.js",
+    ) ||
+    isRelativeImportConfined(
+      cliComponent,
+      path.join(root, "packages/cli/src/index.ts"),
+      "file:///packages/openapi/src/index.js",
+    ) ||
+    isRelativeImportConfined(
+      cliComponent,
+      path.join(root, "packages/cli/src/index.ts"),
+      "#internal",
     )
   ) {
     violations.push(
@@ -391,6 +417,15 @@ function isProcessBoundaryAllowed(file) {
 }
 
 function isRelativeImportConfined(component, importer, specifier) {
+  // Absolute, URL, and subpath-import specifiers cannot be attributed to a
+  // package by inspection, so they are treated as leaving the boundary.
+  if (
+    specifier.startsWith("/") ||
+    specifier.startsWith("#") ||
+    (/^[a-z][a-z\d+.-]*:/i.test(specifier) && !specifier.startsWith("node:"))
+  ) {
+    return false;
+  }
   if (!specifier.startsWith(".")) return true;
   const target = path.resolve(path.dirname(importer), specifier);
   const componentRoot = `${path.join(root, component.directory)}${path.sep}`;
@@ -487,6 +522,19 @@ function analyzeSource(source, file) {
         else opaqueRuntimeLoads += 1;
       }
     }
+    if (
+      (ts.isCallExpression(node) || ts.isNewExpression(node)) &&
+      ((ts.isIdentifier(node.expression) &&
+        (node.expression.text === "eval" ||
+          node.expression.text === "Function")) ||
+        (ts.isPropertyAccessExpression(node.expression) &&
+          node.expression.name.text === "getBuiltinModule") ||
+        (ts.isElementAccessExpression(node.expression) &&
+          staticString(node.expression.argumentExpression) ===
+            "getBuiltinModule"))
+    ) {
+      opaqueRuntimeLoads += 1;
+    }
     if (ts.isIdentifier(node) && referencesGlobal(node)) {
       usesBrowserGlobal = true;
     }
@@ -567,14 +615,21 @@ function isProductionSource(file) {
   return !/\.test\.[cm]?[jt]sx?$/.test(file);
 }
 
-async function sourceFiles(directory) {
+async function sourceFiles(directory, packageRoot = true) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
   for (const entry of entries) {
-    if (new Set([".next", "dist", "node_modules"]).has(entry.name)) continue;
+    // Build output is skipped only at the package root so a nested source
+    // directory that happens to be called `dist` is still checked.
+    if (entry.name === "node_modules") continue;
+    if (packageRoot && (entry.name === ".next" || entry.name === "dist"))
+      continue;
     const resolved = path.join(directory, entry.name);
-    if (entry.isDirectory()) files.push(...(await sourceFiles(resolved)));
-    else if (/\.[cm]?[jt]sx?$/.test(entry.name)) files.push(resolved);
+    if (entry.isDirectory()) {
+      files.push(...(await sourceFiles(resolved, false)));
+    } else if (/\.[cm]?[jt]sx?$/.test(entry.name)) {
+      files.push(resolved);
+    }
   }
   return files;
 }

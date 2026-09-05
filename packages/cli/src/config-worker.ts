@@ -1,11 +1,13 @@
-import { writeSync } from "node:fs";
+import { createReadStream, writeSync } from "node:fs";
 import { registerHooks } from "node:module";
 import { exit } from "node:process";
-import { setInterval as holdProcessOpen } from "node:timers";
 
 import { redactIssuePath, specraConfigSchema } from "@specra/config";
 
 const MAX_CONFIG_BYTES = 1_048_576;
+// Must match the loader's protocol cap: the frame embeds the config JSON as a
+// string, so escaping can inflate a config that is itself under the limit.
+const MAX_PROTOCOL_BYTES = MAX_CONFIG_BYTES + 32_768;
 const MAX_CONFIG_DEPTH = 64;
 const MAX_CONFIG_NODES = 20_000;
 
@@ -75,11 +77,15 @@ async function evaluateConfig(data: ConfigHostData | undefined): Promise<void> {
     }
 
     const configJson = JSON.stringify(parsed.data);
-    if (Buffer.byteLength(configJson, "utf8") > MAX_CONFIG_BYTES) {
+    const response: ProcessResponse = { configJson, type: "success" };
+    if (
+      Buffer.byteLength(configJson, "utf8") > MAX_CONFIG_BYTES ||
+      Buffer.byteLength(JSON.stringify(response), "utf8") >= MAX_PROTOCOL_BYTES
+    ) {
       post({ category: "not-serializable", type: "failure" });
       return;
     }
-    post({ configJson, type: "success" });
+    post(response);
   } catch {
     post({ category: "load-failed", type: "failure" });
   }
@@ -97,10 +103,19 @@ function readHostData(): ConfigHostData | undefined {
 function post(response: ProcessResponse): void {
   try {
     writeSync(3, `${JSON.stringify(response)}\n`);
-    holdProcessOpen(() => undefined, 2_147_483_647);
   } catch {
     exit(1);
   }
+  // Stay alive only while the parent's end of the control channel is open:
+  // the parent terminates the whole tree after a result, and a parent that
+  // died first closes the channel, which ends this host instead of leaving it
+  // orphaned under the init process.
+  const control = createReadStream("", { fd: 3 });
+  const stop = (): void => exit(0);
+  control.on("data", () => undefined);
+  control.once("end", stop);
+  control.once("close", stop);
+  control.once("error", stop);
 }
 
 function isModuleNamespace(value: unknown): value is Record<string, unknown> {

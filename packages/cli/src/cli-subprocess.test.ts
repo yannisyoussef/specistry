@@ -2,13 +2,16 @@ import { spawn, spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { EXIT_CODES } from "./contracts.js";
 
 const cliPath = fileURLToPath(new URL("../dist/bin.js", import.meta.url));
+const configHostPath = fileURLToPath(
+  new URL("../dist/config-worker.js", import.meta.url),
+);
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
@@ -20,6 +23,56 @@ afterEach(async () => {
 });
 
 describe("packaged specra executable", () => {
+  it("does not leave the config host orphaned when the parent disappears", async () => {
+    const project = await createProject();
+    const host = spawn(
+      process.execPath,
+      [
+        configHostPath,
+        import.meta.resolve("@specra/config"),
+        pathToFileURL(path.join(project, "specra.config.ts")).href,
+      ],
+      { stdio: ["ignore", "pipe", "pipe", "pipe"] },
+    );
+    const control = host.stdio[3] as NodeJS.ReadableStream;
+    const frame = await new Promise<string>((resolve) => {
+      control.once("data", (chunk: Buffer) => resolve(chunk.toString("utf8")));
+    });
+    expect(JSON.parse(frame)).toEqual(
+      expect.objectContaining({ type: "success" }),
+    );
+
+    // Simulate a parent that died without terminating the tree: release the
+    // control channel without sending any signal.
+    const started = performance.now();
+    const exited = new Promise<number | null>((resolve) => {
+      host.once("exit", (code) => resolve(code));
+    });
+    (control as unknown as { destroy(): void }).destroy();
+    host.stdout?.destroy();
+    host.stderr?.destroy();
+    await expect(exited).resolves.toBe(0);
+    expect(performance.now() - started).toBeLessThan(3_000);
+  });
+
+  it("exits quietly when a consumer closes stdout early", async () => {
+    const project = await createProject();
+    const child = spawn(process.execPath, [cliPath, "validate", "--json"], {
+      cwd: project,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    child.stdout.destroy();
+    let stderr = "";
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString("utf8");
+    });
+    const status = await new Promise<number | null>((resolve) => {
+      child.once("exit", (code) => resolve(code));
+    });
+    expect(status).toBe(EXIT_CODES.success);
+    expect(stderr).not.toMatch(/EPIPE|at .*\.js:\d+/);
+  });
+
   it("provides accurate root and command help", () => {
     const root = run(["--help"]);
     expect(root.status).toBe(EXIT_CODES.success);

@@ -86,7 +86,8 @@ export function sanitizeTerminal(value: string): string {
       code === 0x200e ||
       code === 0x200f ||
       (code >= 0x2028 && code <= 0x202e) ||
-      (code >= 0x2066 && code <= 0x2069)
+      (code >= 0x2066 && code <= 0x2069) ||
+      /\p{Cf}/u.test(character)
     ) {
       result +=
         code <= 0xffff
