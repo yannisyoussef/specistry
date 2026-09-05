@@ -3,13 +3,15 @@ import { pathToFileURL } from "node:url";
 
 import type { SpecraConfig } from "@specra/config";
 
-import { loadConfigInWorker } from "./config-loader.js";
+import { loadConfigIsolated } from "./config-loader.js";
 import {
   ARTIFACT_DIRECTORY,
   DEFAULT_CONFIG_TIMEOUT_MS,
   MAX_CONFIG_TIMEOUT_MS,
   MIN_CONFIG_TIMEOUT_MS,
+  type BuildContext,
   type BuildPaths,
+  type DeepReadonly,
   type Diagnostic,
   type ValidationOptions,
   type ValidationResult,
@@ -60,14 +62,17 @@ export async function createBuildContext(
       return failure("validation-failure", [createDiagnostic(code, "config")]);
     }
 
-    const loaded = await loadConfigInWorker({
+    const loaded = await loadConfigIsolated({
       configUrl: pathToFileURL(configResolution.path),
       signal,
       timeoutMs,
     });
     if (!loaded.ok) {
       if (loaded.code === "CANCELLED") return cancelled();
-      const paths = loaded.issuePaths ?? ["config"];
+      const paths =
+        loaded.issuePaths === undefined || loaded.issuePaths.length === 0
+          ? ["config"]
+          : loaded.issuePaths;
       return failure(
         "validation-failure",
         paths.map((path) => createDiagnostic(loaded.code, path)),
@@ -81,18 +86,14 @@ export async function createBuildContext(
     }
     if (signal.aborted) return cancelled();
 
-    return {
-      context: {
-        config: loaded.config,
-        configPath: configResolution.path,
-        paths: pathResult.paths,
-        projectRoot,
-        signal,
-      },
-      diagnostics: [],
-      ok: true,
-      outcome: "success",
-    };
+    const context: BuildContext = Object.freeze({
+      config: deepFreeze(loaded.config),
+      configPath: configResolution.path,
+      paths: deepFreeze(pathResult.paths),
+      projectRoot,
+      signal,
+    });
+    return { context, diagnostics: [], ok: true, outcome: "success" };
   } catch {
     return failure("internal-failure", [createDiagnostic("INTERNAL_ERROR")]);
   }
@@ -229,6 +230,20 @@ function pathDiagnostic(
     case "wrong-type":
       return createDiagnostic("CONFIG_PATH_INVALID", path);
   }
+}
+
+/**
+ * Freezes a validated JSON snapshot in place, recursively. The loader only
+ * ever hands over plain objects, arrays, and primitives that were rebuilt from
+ * a bounded JSON frame, so there are no prototypes, accessors, or cycles to
+ * consider here.
+ */
+function deepFreeze<T>(value: T): DeepReadonly<T> {
+  if (typeof value === "object" && value !== null) {
+    Object.freeze(value);
+    for (const entry of Object.values(value)) deepFreeze(entry);
+  }
+  return value as DeepReadonly<T>;
 }
 
 function cancelled(): ValidationResult {

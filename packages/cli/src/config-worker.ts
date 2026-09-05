@@ -1,50 +1,35 @@
+import { writeSync } from "node:fs";
 import { registerHooks } from "node:module";
-import { parentPort, workerData } from "node:worker_threads";
+import { exit } from "node:process";
+import { setInterval as holdProcessOpen } from "node:timers";
 
-import { specraConfigSchema } from "@specra/config";
+import { redactIssuePath, specraConfigSchema } from "@specra/config";
 
 const MAX_CONFIG_BYTES = 1_048_576;
 const MAX_CONFIG_DEPTH = 64;
 const MAX_CONFIG_NODES = 20_000;
-const SAFE_PATH_SEGMENTS = new Set([
-  "baseUrl",
-  "branding",
-  "docs",
-  "environments",
-  "favicon",
-  "label",
-  "logo",
-  "mode",
-  "name",
-  "openapi",
-  "playground",
-  "schemaVersion",
-]);
 
-interface ConfigWorkerData {
+interface ConfigHostData {
   readonly configPackageUrl: string;
   readonly configUrl: string;
 }
 
-type WorkerFailureCategory =
+type ProcessFailureCategory =
   "invalid" | "load-failed" | "not-serializable" | "unsupported";
 
-type WorkerResponse =
+type ProcessResponse =
   | { readonly configJson: string; readonly type: "success" }
   | {
-      readonly category: WorkerFailureCategory;
+      readonly category: ProcessFailureCategory;
       readonly issuePaths?: readonly string[];
       readonly type: "failure";
     };
 
-const port = parentPort;
-if (port === null) throw new Error("Config worker requires a parent port.");
+void evaluateConfig(readHostData());
 
-void evaluateConfig();
-
-async function evaluateConfig(): Promise<void> {
+async function evaluateConfig(data: ConfigHostData | undefined): Promise<void> {
   try {
-    if (!isWorkerData(workerData)) {
+    if (data === undefined) {
       post({ category: "load-failed", type: "failure" });
       return;
     }
@@ -52,13 +37,13 @@ async function evaluateConfig(): Promise<void> {
     registerHooks({
       resolve(specifier, context, nextResolve) {
         if (specifier === "@specra/config") {
-          return { shortCircuit: true, url: workerData.configPackageUrl };
+          return { shortCircuit: true, url: data.configPackageUrl };
         }
         return nextResolve(specifier, context);
       },
     });
 
-    const loaded: unknown = await import(workerData.configUrl);
+    const loaded: unknown = await import(data.configUrl);
     if (!isModuleNamespace(loaded) || !("default" in loaded)) {
       post({ category: "invalid", issuePaths: ["default"], type: "failure" });
       return;
@@ -81,7 +66,9 @@ async function evaluateConfig(): Promise<void> {
     const parsed = specraConfigSchema.safeParse(candidate);
     if (!parsed.success) {
       const issuePaths = [
-        ...new Set(parsed.error.issues.map((issue) => safePath(issue.path))),
+        ...new Set(
+          parsed.error.issues.map((issue) => redactIssuePath(issue.path)),
+        ),
       ].sort(compareCodeUnits);
       post({ category: "invalid", issuePaths, type: "failure" });
       return;
@@ -98,16 +85,22 @@ async function evaluateConfig(): Promise<void> {
   }
 }
 
-function post(response: WorkerResponse): void {
-  port?.postMessage(response);
+function readHostData(): ConfigHostData | undefined {
+  const [, , configPackageUrl, configUrl, ...extra] = process.argv;
+  return extra.length === 0 &&
+    typeof configPackageUrl === "string" &&
+    typeof configUrl === "string"
+    ? { configPackageUrl, configUrl }
+    : undefined;
 }
 
-function isWorkerData(value: unknown): value is ConfigWorkerData {
-  return (
-    isPlainRecord(value) &&
-    typeof value.configPackageUrl === "string" &&
-    typeof value.configUrl === "string"
-  );
+function post(response: ProcessResponse): void {
+  try {
+    writeSync(3, `${JSON.stringify(response)}\n`);
+    holdProcessOpen(() => undefined, 2_147_483_647);
+  } catch {
+    exit(1);
+  }
 }
 
 function isModuleNamespace(value: unknown): value is Record<string, unknown> {
@@ -191,18 +184,6 @@ function isBoundedJsonValue(value: unknown): boolean {
   } catch {
     return false;
   }
-}
-
-function safePath(pathSegments: readonly PropertyKey[]): string {
-  if (pathSegments.length === 0) return "config";
-  return pathSegments
-    .map((segment) => {
-      if (typeof segment === "number") return "[]";
-      return typeof segment === "string" && SAFE_PATH_SEGMENTS.has(segment)
-        ? segment
-        : "*";
-    })
-    .join(".");
 }
 
 function compareCodeUnits(left: string, right: string): number {

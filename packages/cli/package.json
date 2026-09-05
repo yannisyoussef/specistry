@@ -4,6 +4,9 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
+  "engines": {
+    "node": ">=24.20.0 <25"
+  },
   "bin": {
     "specra": "./dist/bin.js"
   },
@@ -23,6 +26,7 @@
   "scripts": {
     "prebuild": "node ../../scripts/clean-package-dist.mjs",
     "build": "tsc -p tsconfig.build.json && node ../../scripts/ensure-cli-bin.mjs",
+    "prepack": "node ../../scripts/refuse-direct-pack.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

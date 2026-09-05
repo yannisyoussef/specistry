@@ -26,8 +26,8 @@ Each slice is a deployable or author-visible vertical increment. Its work item m
 - **Objective/scope:** deliver the first author workflow: `specra validate`, programmatic build context, config loading/diagnostics, project-root confinement, and deterministic artifact directories. Reserve `dev`/`build` command surfaces for the next ingest-to-reader integration.
 - **Non-goals:** documentation scoring, contract diffing, content rendering, or full OpenAPI normalization.
 - **Architecture impact:** creates a thin orchestration package over stable ports; it coordinates packages but owns no parser/content/rendering semantics.
-- **Acceptance:** a sample project loads trusted `specra.config.ts` in an isolated worker, emits only validated serializable config, validates paths without symlink escape, supports human and JSON diagnostics, deterministic exit codes, cancellation, and `--help`.
-- **Tests/security:** CLI subprocess/golden diagnostics, Windows/POSIX path cases, malicious config/path/symlink cases, environment-secret redaction, worker timeout, and clean-room package test.
+- **Acceptance:** a sample project loads trusted `specra.config.ts` in an isolated process, emits only validated serializable config, validates paths without symlink escape, supports human and JSON diagnostics, deterministic exit codes, cancellation, and `--help`.
+- **Tests/security:** CLI subprocess/golden diagnostics, Windows/POSIX path cases, malicious config/path/symlink cases, environment-secret redaction, config-process timeout, and clean-room package test.
 - **Docs/DoD:** command/config reference and troubleshooting are complete; executable config trust is explicit.
 - **Dependencies/risks/reviewers:** SPEC-001; risks are build-code authority and CLI contract churn; Product/DX, security, QA, and architecture reviewers.
 

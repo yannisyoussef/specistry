@@ -1,4 +1,5 @@
 import {
+  access,
   mkdir,
   mkdtemp,
   realpath,
@@ -43,6 +44,72 @@ describe("validateProject", () => {
       path.join(canonicalProject, ARTIFACT_DIRECTORY),
     );
     expect(first.context.paths).toEqual(second.context.paths);
+  });
+
+  it("returns a deeply frozen validated snapshot that mutation cannot drift", async () => {
+    const project = await createProject(
+      `export default {
+        schemaVersion: 1,
+        name: "Frozen",
+        openapi: ["./openapi.yaml"],
+        docs: "./docs",
+        branding: { logo: "./openapi.yaml" },
+        environments: { production: { baseUrl: "https://api.example.com" } },
+      };`,
+    );
+    const result = await validateProject({ cwd: project });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const { context } = result;
+    const before = JSON.stringify(context.config);
+    const openapiBefore = [...context.paths.openapi];
+
+    for (const value of [
+      context,
+      context.config,
+      context.config.branding,
+      context.config.environments,
+      context.config.environments.production,
+      context.config.openapi,
+      context.config.playground,
+      context.paths,
+      context.paths.branding,
+      context.paths.openapi,
+    ]) {
+      expect(Object.isFrozen(value)).toBe(true);
+    }
+
+    expect(() => {
+      // @ts-expect-error -- the public snapshot type is deeply readonly.
+      context.config.name = "Mutated";
+    }).toThrow(TypeError);
+    expect(() => {
+      // @ts-expect-error -- nested records are readonly too.
+      context.config.environments.production.baseUrl = "https://evil.example";
+    }).toThrow(TypeError);
+    expect(() => {
+      // @ts-expect-error -- nested arrays are readonly tuples of the snapshot.
+      context.config.openapi.push("../escape.yaml");
+    }).toThrow(TypeError);
+    expect(() => {
+      // @ts-expect-error -- confined paths cannot be replaced after derivation.
+      context.paths.openapi[0] = "/outside/openapi.yaml";
+    }).toThrow(TypeError);
+    expect(() => {
+      // @ts-expect-error -- the context itself is a frozen record.
+      context.config = { ...context.config, docs: "../outside" };
+    }).toThrow(TypeError);
+    expect(() => {
+      Object.assign(context.config.environments, {
+        staging: { baseUrl: "https://staging.example" },
+      });
+    }).toThrow(TypeError);
+    expect(Reflect.deleteProperty(context.config, "docs")).toBe(false);
+    expect(context.config.docs).toBe("./docs");
+
+    expect(JSON.stringify(context.config)).toBe(before);
+    expect(context.paths.openapi).toEqual(openapiBefore);
+    expect(context.config.name).toBe("Frozen");
   });
 
   it("returns stable categories for missing, broken, invalid, and unsupported config", async () => {
@@ -95,7 +162,7 @@ describe("validateProject", () => {
     ]);
   });
 
-  it("contains worker process exit and excessive output failures", async () => {
+  it("contains config process exit and excessive output failures", async () => {
     const exits = await createProject("process.exit(9); export default {};");
     await expectCodes(validateProject({ cwd: exits }), ["CONFIG_LOAD_FAILED"]);
 
@@ -107,13 +174,28 @@ describe("validateProject", () => {
     ]);
   });
 
-  it("terminates hanging workers on timeout and cancellation", async () => {
+  it("hard-stops native blocking work on timeout and supports cancellation", async () => {
     const project = await createProject("while (true) {};");
     const started = performance.now();
     await expectCodes(validateProject({ configTimeoutMs: 100, cwd: project }), [
       "CONFIG_TIMEOUT",
     ]);
-    expect(performance.now() - started).toBeLessThan(2_000);
+    expect(performance.now() - started).toBeLessThan(3_000);
+
+    // The native block sleeps well past the assertion bound: a termination
+    // that waited for it would take at least four seconds, so finishing under
+    // three proves the stop is hard rather than merely fast.
+    const nativeBlock = await createProject(
+      `import { execFileSync } from "node:child_process";
+       execFileSync(process.execPath, ["-e", "setTimeout(() => {}, 4000)"]);
+       export default { schemaVersion: 1, name: "Late", openapi: "./openapi.yaml" };`,
+    );
+    const nativeStarted = performance.now();
+    await expectCodes(
+      validateProject({ configTimeoutMs: 100, cwd: nativeBlock }),
+      ["CONFIG_TIMEOUT"],
+    );
+    expect(performance.now() - nativeStarted).toBeLessThan(3_000);
 
     const controller = new AbortController();
     const validation = validateProject({
@@ -123,6 +205,54 @@ describe("validateProject", () => {
     });
     setTimeout(() => controller.abort(), 50);
     await expectCodes(validation, ["CANCELLED"]);
+  });
+
+  it("reports out-of-range programmatic timeouts as internal failures", async () => {
+    const project = await createProject();
+    for (const configTimeoutMs of [99, 60_001, 1.5, Number.NaN]) {
+      const result = await validateProject({ configTimeoutMs, cwd: project });
+      expect(result.ok).toBe(false);
+      if (result.ok) continue;
+      expect(result.outcome).toBe("internal-failure");
+      expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+        "INTERNAL_ERROR",
+      ]);
+    }
+  });
+
+  it("does not re-evaluate parent NODE_OPTIONS in the config process", async () => {
+    const project = await createProject();
+    const previous = process.env.NODE_OPTIONS;
+    process.env.NODE_OPTIONS = "--require=/definitely/not/specra.cjs";
+    try {
+      await expect(validateProject({ cwd: project })).resolves.toEqual(
+        expect.objectContaining({ ok: true }),
+      );
+    } finally {
+      if (previous === undefined) delete process.env.NODE_OPTIONS;
+      else process.env.NODE_OPTIONS = previous;
+    }
+  });
+
+  it("terminates ordinary descendants after a successful config result", async () => {
+    const project = await makeTemporaryDirectory();
+    const marker = path.join(project, "orphan-marker");
+    await mkdir(path.join(project, "docs"));
+    await writeFile(path.join(project, "openapi.yaml"), "openapi: 3.1.0\n");
+    await writeFile(
+      path.join(project, "specra.config.ts"),
+      `import { spawn } from "node:child_process";
+       spawn(process.execPath, ["-e", ${JSON.stringify(
+         `setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(marker)}, "orphan"), 400)`,
+       )}], { stdio: "ignore" });
+       export default { schemaVersion: 1, name: "Contained", openapi: "./openapi.yaml" };`,
+    );
+
+    await expect(validateProject({ cwd: project })).resolves.toEqual(
+      expect.objectContaining({ ok: true }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 650));
+    await expect(access(marker)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("rejects traversal, absolute Windows paths, missing paths, and wrong types", async () => {
@@ -243,6 +373,21 @@ describe("validateProject", () => {
       expect(result.diagnostics).toContainEqual(
         expect.objectContaining({
           code: "CONFIG_PATH_OUTSIDE_ROOT",
+          path: "artifacts",
+        }),
+      );
+    }
+  });
+
+  it("rejects a regular file blocking the artifact directory", async () => {
+    const project = await createProject();
+    await writeFile(path.join(project, ".specra"), "not a directory");
+    const result = await validateProject({ cwd: project });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "CONFIG_PATH_INVALID",
           path: "artifacts",
         }),
       );

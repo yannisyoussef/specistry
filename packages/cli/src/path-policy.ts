@@ -126,7 +126,7 @@ export async function resolveFutureProjectPath(
     if (!isPathWithin(projectRoot, realAncestor)) {
       return { kind: "outside", ok: false };
     }
-    if (ancestor === candidate && !(await stat(realAncestor)).isDirectory()) {
+    if (!(await stat(realAncestor)).isDirectory()) {
       return { kind: "wrong-type", ok: false };
     }
     const tail = path.relative(ancestor, candidate);
@@ -143,9 +143,7 @@ function isMissing(error: unknown): boolean {
   return (
     error instanceof Error &&
     "code" in error &&
-    new Set(["ENOENT", "ENOTDIR"]).has(
-      (error as Error & { code?: string }).code ?? "",
-    )
+    (error as Error & { code?: string }).code === "ENOENT"
   );
 }
 

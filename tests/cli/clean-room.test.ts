@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -9,9 +16,16 @@ const repositoryRoot = process.cwd();
 
 describe("CLI clean-room package", () => {
   it("installs the packed executable and validates outside the monorepo", async () => {
-    const cleanRoom = await mkdtemp(path.join(tmpdir(), "specra-clean-room-"));
+    // npm's packer keys the staged root by the path it is given but its
+    // bundled children by realpath. A symlinked temporary directory (macOS
+    // `/var` -> `/private/var`) therefore silently drops every bundled
+    // dependency, so the clean room must be canonical before staging.
+    const cleanRoom = await realpath(
+      await mkdtemp(path.join(tmpdir(), "specra-clean-room-")),
+    );
     try {
       const packages = path.join(cleanRoom, "packages");
+      const staged = path.join(cleanRoom, "staged-cli");
       const project = path.join(cleanRoom, "project");
       await mkdir(packages);
       await mkdir(path.join(project, "docs"), { recursive: true });
@@ -26,11 +40,19 @@ describe("CLI clean-room package", () => {
         JSON.stringify({ name: "clean-room", private: true, version: "1.0.0" }),
       );
 
+      const staging = command(
+        process.execPath,
+        [path.join(repositoryRoot, "scripts", "stage-cli-package.mjs"), staged],
+        cleanRoom,
+      );
+      expect(staging.status, staging.stderr).toBe(0);
+      expect(staging.stdout.trim()).toBe(staged);
+
       const packed = command(
         "npm",
         [
           "pack",
-          path.join(repositoryRoot, "packages/cli"),
+          staged,
           "--pack-destination",
           packages,
           "--ignore-scripts",
@@ -43,10 +65,36 @@ describe("CLI clean-room package", () => {
         {
           readonly filename: string;
           readonly files: readonly { readonly path: string }[];
+          readonly bundled: readonly string[];
+          readonly entryCount: number;
         },
       ];
       expect(packResult[0].files.map((file) => file.path)).toEqual(
         expect.arrayContaining(["dist/bin.js", "dist/index.d.ts"]),
+      );
+      const packedPaths = packResult[0].files.map((file) => file.path);
+      expect(
+        packedPaths.every(
+          (packedPath) =>
+            !path.isAbsolute(packedPath) &&
+            !packedPath.split("/").includes(".."),
+        ),
+      ).toBe(true);
+      expect(
+        packedPaths.filter((packedPath) =>
+          packedPath.endsWith("zod/package.json"),
+        ),
+        JSON.stringify({
+          bundled: packResult[0].bundled,
+          entryCount: packResult[0].entryCount,
+          sample: packedPaths.slice(-10),
+        }),
+      ).toEqual(["node_modules/zod/package.json"]);
+      const stagedManifest = JSON.parse(
+        await readFile(path.join(staged, "package.json"), "utf8"),
+      ) as { readonly dependencies: Readonly<Record<string, string>> };
+      expect([...packResult[0].bundled].sort()).toEqual(
+        Object.keys(stagedManifest.dependencies).sort(),
       );
       const tarball = path.join(packages, packResult[0].filename);
 
@@ -63,6 +111,17 @@ describe("CLI clean-room package", () => {
         project,
       );
       expect(installed.status, installed.stderr).toBe(0);
+      expect(installed.stderr).toBe("");
+
+      const installedManifest = JSON.parse(
+        await readFile(
+          path.join(project, "node_modules", "@specra", "cli", "package.json"),
+          "utf8",
+        ),
+      );
+      expect(installedManifest.engines).toEqual({
+        node: ">=24.20.0 <25",
+      });
 
       const executable = path.join(
         project,

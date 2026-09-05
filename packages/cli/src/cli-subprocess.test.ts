@@ -52,10 +52,15 @@ describe("packaged specra executable", () => {
   it("keeps successful and failed JSON isolated on stdout", async () => {
     const valid = await createProject(
       `import { defineConfig } from "@specra/config";
-       console.log("worker noise that must not reach stdout");
+       import { writeSync } from "node:fs";
+       console.log("config noise that must not reach stdout");
+       writeSync(1, process.env.SPEC_TEST_SECRET ?? "raw stdout noise");
+       writeSync(2, "raw stderr noise");
        export default defineConfig({ schemaVersion: 1, name: "Example", openapi: "./openapi.yaml" });`,
     );
-    const success = run(["validate", "--json"], valid);
+    const success = run(["validate", "--json"], valid, {
+      SPEC_TEST_SECRET: "SPEC-RAW-FD-CANARY",
+    });
     expect(success.status).toBe(EXIT_CODES.success);
     expect(success.stderr).toBe("");
     expect(JSON.parse(success.stdout)).toEqual({
@@ -107,7 +112,7 @@ describe("packaged specra executable", () => {
     expect(result.stderr).toContain(message);
   });
 
-  it("redacts environment secrets and worker error details", async () => {
+  it("redacts environment secrets and config-process error details", async () => {
     const secret = "SPEC-CANARY-do-not-print-4f927e";
     const project = await createProject(
       "throw new Error(process.env.SPEC_TEST_SECRET);",
@@ -122,8 +127,8 @@ describe("packaged specra executable", () => {
     expect(result.stdout).not.toContain("SPEC_TEST_SECRET");
 
     const spoofed = await createProject(
-      `import { parentPort } from "node:worker_threads";
-       parentPort?.postMessage({ type: "failure", category: "invalid", issuePaths: [process.env.SPEC_TEST_SECRET] });
+      `import { writeSync } from "node:fs";
+       writeSync(3, JSON.stringify({ type: "failure", category: "invalid", issuePaths: [process.env.SPEC_TEST_SECRET] }) + "\\n");
        while (true) {};`,
     );
     const spoofedResult = run(["validate", "--json"], spoofed, {
@@ -132,6 +137,17 @@ describe("packaged specra executable", () => {
     expect(spoofedResult.status).toBe(EXIT_CODES.validationFailure);
     expect(spoofedResult.stdout).toContain("CONFIG_LOAD_FAILED");
     expect(spoofedResult.stdout).not.toContain(secret);
+
+    const emptySpoof = await createProject(
+      `import { writeSync } from "node:fs";
+       writeSync(3, JSON.stringify({ type: "failure", category: "invalid", issuePaths: [] }) + "\\n");
+       while (true) {};`,
+    );
+    const emptyResult = run(["validate", "--json"], emptySpoof);
+    expect(emptyResult.status).toBe(EXIT_CODES.validationFailure);
+    expect(JSON.parse(emptyResult.stdout).diagnostics).toEqual([
+      expect.objectContaining({ code: "CONFIG_LOAD_FAILED", path: "config" }),
+    ]);
   });
 
   it("neutralizes terminal control characters from the project name", async () => {

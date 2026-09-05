@@ -9,8 +9,12 @@ import {
 
 describe("CLI presentation", () => {
   it("neutralizes terminal controls and bidirectional formatting", () => {
-    expect(sanitizeTerminal("safe\u001b]8;;bad\u0007\r\n\u202eevil")).toBe(
-      "safe\\u001b]8;;bad\\u0007\\u000d\\u000a\\u202eevil",
+    expect(
+      sanitizeTerminal(
+        "safe\u001b]8;;bad\u0007\r\n\u061c\u200e\u200f\u2028\u2029\u202eevil",
+      ),
+    ).toBe(
+      "safe\\u001b]8;;bad\\u0007\\u000d\\u000a\\u061c\\u200e\\u200f\\u2028\\u2029\\u202eevil",
     );
   });
 

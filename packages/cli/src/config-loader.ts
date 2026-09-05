@@ -1,14 +1,23 @@
-import { Worker } from "node:worker_threads";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import path from "node:path";
+import type { Readable } from "node:stream";
+import { fileURLToPath } from "node:url";
 
-import { parseConfig, type SpecraConfig } from "@specra/config";
+import {
+  isRedactedIssuePath,
+  parseConfig,
+  type SpecraConfig,
+} from "@specra/config";
 
 import type { DiagnosticCode } from "./contracts.js";
 
-const MAX_WORKER_OUTPUT_BYTES = 65_536;
+const MAX_PROCESS_OUTPUT_BYTES = 65_536;
 const MAX_CONFIG_BYTES = 1_048_576;
+const MAX_PROTOCOL_BYTES = MAX_CONFIG_BYTES + 32_768;
 const MAX_ISSUE_PATHS = 128;
-const SAFE_ISSUE_PATH =
-  /^(?:branding(?:\.(?:favicon|logo))?|config|default|docs|environments(?:\.\*(?:\.(?:baseUrl|label))?)?|name|openapi(?:\.\[\])?|playground(?:\.mode)?|schemaVersion)$/;
+// The host labels a missing default export itself; every other label must be
+// one the schema authority could have produced.
+const HOST_ISSUE_PATHS = new Set(["default"]);
 
 interface ConfigLoadOptions {
   readonly configUrl: URL;
@@ -24,7 +33,7 @@ export type ConfigLoadResult =
       readonly ok: false;
     };
 
-type WorkerResponse =
+type ProcessResponse =
   | { readonly configJson: string; readonly type: "success" }
   | {
       readonly category:
@@ -33,71 +42,106 @@ type WorkerResponse =
       readonly type: "failure";
     };
 
-type WorkerFailureCategory = Extract<
-  WorkerResponse,
+type ProcessFailureCategory = Extract<
+  ProcessResponse,
   { readonly type: "failure" }
 >["category"];
 
-export async function loadConfigInWorker(
+export async function loadConfigIsolated(
   options: ConfigLoadOptions,
 ): Promise<ConfigLoadResult> {
   if (options.signal.aborted) return { code: "CANCELLED", ok: false };
 
-  let worker: Worker;
+  let child: ChildProcess;
   try {
-    const workerUrl = new URL(
+    const hostUrl = new URL(
       import.meta.url.endsWith(".ts")
         ? "../dist/config-worker.js"
         : "./config-worker.js",
       import.meta.url,
     );
-    worker = new Worker(workerUrl, {
-      execArgv: [],
-      resourceLimits: {
-        codeRangeSizeMb: 16,
-        maxOldGenerationSizeMb: 64,
-        maxYoungGenerationSizeMb: 16,
-        stackSizeMb: 4,
+    child = spawn(
+      process.execPath,
+      [
+        "--max-old-space-size=64",
+        "--max-semi-space-size=16",
+        "--stack-size=4096",
+        fileURLToPath(hostUrl),
+        import.meta.resolve("@specra/config"),
+        options.configUrl.href,
+      ],
+      {
+        detached: process.platform !== "win32",
+        env: configProcessEnvironment(),
+        stdio: ["ignore", "pipe", "pipe", "pipe"],
+        windowsHide: true,
       },
-      stderr: true,
-      stdout: true,
-      workerData: {
-        configPackageUrl: import.meta.resolve("@specra/config"),
-        configUrl: options.configUrl.href,
-      },
-    });
+    );
   } catch {
     return { code: "CONFIG_LOAD_FAILED", ok: false };
   }
 
   return await new Promise<ConfigLoadResult>((resolve) => {
+    const control = child.stdio[3] as Readable | null;
+    if (control === null || child.stdout === null || child.stderr === null) {
+      terminateProcessTree(child);
+      resolve({ code: "CONFIG_LOAD_FAILED", ok: false });
+      return;
+    }
+    const controlStream = control;
+
     let outputBytes = 0;
+    let protocolBytes = 0;
+    let protocol = Buffer.alloc(0);
     let settled = false;
     const timeout = setTimeout(() => {
-      void finish({ code: "CONFIG_TIMEOUT", ok: false });
+      finish({ code: "CONFIG_TIMEOUT", ok: false });
     }, options.timeoutMs);
 
     const onAbort = (): void => {
-      void finish({ code: "CANCELLED", ok: false });
+      finish({ code: "CANCELLED", ok: false });
     };
     options.signal.addEventListener("abort", onAbort, { once: true });
     if (options.signal.aborted) {
-      void finish({ code: "CANCELLED", ok: false });
+      finish({ code: "CANCELLED", ok: false });
       return;
     }
 
     const countOutput = (chunk: Buffer | string): void => {
       outputBytes += Buffer.byteLength(chunk);
-      if (outputBytes > MAX_WORKER_OUTPUT_BYTES) {
-        void finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+      if (outputBytes > MAX_PROCESS_OUTPUT_BYTES) {
+        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
       }
     };
-    worker.stdout?.on("data", countOutput);
-    worker.stderr?.on("data", countOutput);
+    const collectProtocol = (chunk: Buffer): void => {
+      protocolBytes += chunk.byteLength;
+      if (protocolBytes > MAX_PROTOCOL_BYTES) {
+        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+        return;
+      }
+      protocol = Buffer.concat([protocol, chunk], protocolBytes);
+      const terminator = protocol.indexOf(0x0a);
+      if (terminator === -1) return;
+      if (terminator !== protocol.byteLength - 1) {
+        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+        return;
+      }
+      handleResponse(parseProcessResponse(protocol.subarray(0, terminator)));
+    };
+    child.stdout.on("data", countOutput);
+    child.stderr.on("data", countOutput);
+    controlStream.on("data", collectProtocol);
 
-    worker.once("message", (message: unknown) => {
-      if (!isWorkerResponse(message)) {
-        void finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+    child.once("error", () => {
+      finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+    });
+    child.once("close", () => {
+      if (!settled) finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+    });
+
+    function handleResponse(message: ProcessResponse | undefined): void {
+      if (message === undefined) {
+        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
         return;
       }
       if (message.type === "failure") {
@@ -105,7 +149,7 @@ export async function loadConfigInWorker(
           message.issuePaths === undefined
             ? undefined
             : [...new Set(message.issuePaths)].sort(compareCodeUnits);
-        void finish({
+        finish({
           code: categoryCode(message.category),
           ...(issuePaths === undefined ? {} : { issuePaths }),
           ok: false,
@@ -115,39 +159,81 @@ export async function loadConfigInWorker(
       try {
         const parsed: unknown = JSON.parse(message.configJson);
         const config = parseConfig(parsed);
-        void finish({ config, ok: true });
+        finish({ config, ok: true });
       } catch {
-        void finish({ code: "CONFIG_LOAD_FAILED", ok: false });
+        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
       }
-    });
-    worker.once("error", () => {
-      void finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-    });
-    worker.once("exit", () => {
-      if (!settled) void finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-    });
+    }
 
-    async function finish(result: ConfigLoadResult): Promise<void> {
+    function finish(result: ConfigLoadResult): void {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
       options.signal.removeEventListener("abort", onAbort);
-      worker.stdout?.removeListener("data", countOutput);
-      worker.stderr?.removeListener("data", countOutput);
-      try {
-        await worker.terminate();
-      } catch {
-        if (result.ok) {
-          resolve({ code: "CONFIG_LOAD_FAILED", ok: false });
-          return;
-        }
-      }
+      child.stdout?.removeListener("data", countOutput);
+      child.stderr?.removeListener("data", countOutput);
+      controlStream.removeListener("data", collectProtocol);
+      terminateProcessTree(child);
       resolve(result);
     }
   });
 }
 
-function isWorkerResponse(value: unknown): value is WorkerResponse {
+function parseProcessResponse(bytes: Buffer): ProcessResponse | undefined {
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_PROTOCOL_BYTES) {
+    return undefined;
+  }
+  try {
+    const value: unknown = JSON.parse(bytes.toString("utf8"));
+    return isProcessResponse(value) ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function terminateProcessTree(child: ChildProcess): void {
+  const pid = child.pid;
+  if (pid !== undefined && process.platform === "win32") {
+    const systemRoot = process.env.SystemRoot ?? "C:\\Windows";
+    const result = spawnSync(
+      path.join(systemRoot, "System32", "taskkill.exe"),
+      ["/pid", String(pid), "/t", "/f"],
+      {
+        stdio: "ignore",
+        timeout: 1_000,
+        windowsHide: true,
+      },
+    );
+    if (result.error === undefined && result.status === 0) return;
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      // The child may have exited while taskkill was running.
+    }
+    return;
+  }
+  if (pid !== undefined) {
+    try {
+      process.kill(-pid, "SIGKILL");
+      return;
+    } catch {
+      // The group can already be gone or unavailable; fall back to the child.
+    }
+  }
+  try {
+    child.kill("SIGKILL");
+  } catch {
+    // Termination races are expected after early process failure.
+  }
+}
+
+function configProcessEnvironment(): NodeJS.ProcessEnv {
+  const environment = { ...process.env };
+  delete environment.NODE_OPTIONS;
+  return environment;
+}
+
+function isProcessResponse(value: unknown): value is ProcessResponse {
   if (typeof value !== "object" || value === null || !("type" in value)) {
     return false;
   }
@@ -172,9 +258,12 @@ function isWorkerResponse(value: unknown): value is WorkerResponse {
   if (!("issuePaths" in value) || value.issuePaths === undefined) return true;
   return (
     Array.isArray(value.issuePaths) &&
+    value.issuePaths.length > 0 &&
     value.issuePaths.length <= MAX_ISSUE_PATHS &&
     value.issuePaths.every(
-      (entry) => typeof entry === "string" && SAFE_ISSUE_PATH.test(entry),
+      (entry) =>
+        typeof entry === "string" &&
+        (HOST_ISSUE_PATHS.has(entry) || isRedactedIssuePath(entry)),
     )
   );
 }
@@ -187,7 +276,7 @@ function hasOnlyKeys(value: object, allowedKeys: readonly string[]): boolean {
   );
 }
 
-function categoryCode(category: WorkerFailureCategory): DiagnosticCode {
+function categoryCode(category: ProcessFailureCategory): DiagnosticCode {
   switch (category) {
     case "invalid":
       return "CONFIG_INVALID";

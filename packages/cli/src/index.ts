@@ -8,8 +8,10 @@ export {
 export type {
   BuildContext,
   BuildPaths,
+  DeepReadonly,
   Diagnostic,
   DiagnosticCode,
+  ValidatedConfig,
   ValidationOptions,
   ValidationResult,
 } from "./contracts.js";

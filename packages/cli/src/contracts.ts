@@ -44,8 +44,27 @@ export interface BuildPaths {
   };
 }
 
+/**
+ * Recursively marks every property and array element of a JSON-shaped value as
+ * `readonly`. It is intended for data snapshots only: functions are passed
+ * through unchanged, and class instances such as `Date` or `Map` are not
+ * modelled. The orchestrator deep-freezes the runtime values it types this
+ * way, so callers can neither drift the snapshot away from the confined paths
+ * derived from it at compile time nor at runtime.
+ */
+export type DeepReadonly<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends (infer Element)[]
+    ? readonly DeepReadonly<Element>[]
+    : T extends object
+      ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
+      : T;
+
+/** Validated config v1 as an immutable snapshot inside a `BuildContext`. */
+export type ValidatedConfig = DeepReadonly<SpecraConfig>;
+
 export interface BuildContext {
-  readonly config: SpecraConfig;
+  readonly config: ValidatedConfig;
   readonly configPath: string;
   readonly paths: BuildPaths;
   readonly projectRoot: string;

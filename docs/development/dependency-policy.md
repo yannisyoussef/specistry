@@ -17,7 +17,7 @@ Pnpm may record exact, reviewable `minimumReleaseAgeExclude` entries when a newl
 | Next.js + React         | Server-first routing/rendering baseline with static and Node deployment paths; selected in ADR-006                    |
 | `yaml`                  | Focused YAML 1.2 parser with alias controls; JSON remains accepted as YAML-compatible input; not a validator/resolver |
 | Zod                     | Strict runtime validation and useful path-aware errors for the public config boundary                                 |
-| Node Worker Threads     | Native bounded/cancellable trusted-config lifecycle; avoids a CLI/process framework dependency                        |
+| Node child processes    | Native bounded/cancellable trusted-config lifecycle and process-group containment; avoids a CLI framework dependency  |
 | Vitest                  | ESM/TypeScript-aligned semantic tests and V8 coverage                                                                 |
 | ESLint + Next config    | TypeScript/React correctness and framework rules                                                                      |
 | Prettier + markdownlint | Deterministic source and documentation formatting                                                                     |

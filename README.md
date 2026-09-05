@@ -54,7 +54,7 @@ The future published executable name is `specra`. See the [CLI reference](docs/c
 | `pnpm test:e2e`           | Run Chromium browser and accessibility smoke tests               |
 | `pnpm test:security`      | Run the malicious-input foundation tests                         |
 | `pnpm test:performance`   | Run the performance smoke fixture                                |
-| `pnpm check:architecture` | Enforce critical dependency directions                           |
+| `pnpm check:architecture` | Enforce dependency directions, manifest edges, and opaque loads  |
 | `pnpm check:dependencies` | Enforce exact dependency and private-package manifest policy     |
 | `pnpm check:licenses`     | Reject denied production dependency licenses                     |
 | `pnpm check:secrets`      | Reject likely committed secrets without printing their values    |
@@ -83,7 +83,7 @@ Development integrates through `develop`; reviewed, green promotion pull request
 - Rendering code cannot depend on raw OpenAPI parser objects.
 - Canonical schema recursion uses IDs, so the model remains serializable.
 - OpenAPI parsing is bounded and YAML aliases are denied. Remote references remain inert strings during parsing; any future retrieval is denied without an exact HTTPS-origin policy and additional resolver controls.
-- `specra.config.ts` is trusted build code evaluated in a bounded, cancellable Worker Thread. The worker is operational isolation, not a malicious-code sandbox.
+- `specra.config.ts` is trusted build code evaluated in a bounded, cancellable child process. The process is operational isolation, not a malicious-code sandbox.
 - `specra validate` checks config v1, canonical project-root confinement, symlinks, source-path existence/types, and the deterministic `.specra/artifacts` policy. It does not claim OpenAPI semantic validity.
 - The future playground contract requires memory-only credentials by default; Phase 0 ships no playground or server proxy.
 - Critical dependency boundaries, accessibility smoke coverage, malicious-input controls, and production-license policy run in CI.
