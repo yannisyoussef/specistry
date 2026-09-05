@@ -29,17 +29,18 @@ if (
 }
 
 const cliDirectory = path.join(repositoryRoot, "packages", "cli");
-const configDirectory = path.join(repositoryRoot, "packages", "config");
 const cliManifest = JSON.parse(
   await readFile(path.join(cliDirectory, "package.json"), "utf8"),
-);
-const configManifest = JSON.parse(
-  await readFile(path.join(configDirectory, "package.json"), "utf8"),
 );
 // The staged tree is assembled explicitly rather than by copying whatever
 // `node_modules` contains. When the CLI gains a dependency, extend this script
 // and the clean-room bundled-dependency assertion together.
-const stagedDependencies = ["@specra/config", "zod"];
+const stagedDependencies = [
+  "@specra/config",
+  "@specra/model",
+  "@specra/openapi",
+  "zod",
+];
 const declaredDependencies = Object.keys(cliManifest.dependencies ?? {}).sort();
 if (
   declaredDependencies.length !== stagedDependencies.length ||
@@ -52,20 +53,44 @@ if (
 const zodDirectory = await realpath(
   path.join(cliDirectory, "node_modules", "zod"),
 );
+// yaml is the adapter's dependency, staged beside it so the bundled tree
+// resolves it without declaring a parser dependency on the CLI itself.
+const yamlDirectory = await realpath(
+  path.join(repositoryRoot, "packages", "openapi", "node_modules", "yaml"),
+);
+const workspacePackages = ["config", "model", "openapi"];
+const manifests = Object.fromEntries(
+  await Promise.all(
+    workspacePackages.map(async (name) => [
+      name,
+      JSON.parse(
+        await readFile(
+          path.join(repositoryRoot, "packages", name, "package.json"),
+          "utf8",
+        ),
+      ),
+    ]),
+  ),
+);
 
 await mkdir(destination);
 await cp(path.join(cliDirectory, "dist"), path.join(destination, "dist"), {
   recursive: true,
 });
-await mkdir(path.join(destination, "node_modules", "@specra", "config"), {
+for (const name of workspacePackages) {
+  const target = path.join(destination, "node_modules", "@specra", name);
+  await mkdir(target, { recursive: true });
+  await cp(
+    path.join(repositoryRoot, "packages", name, "dist"),
+    path.join(target, "dist"),
+    { recursive: true },
+  );
+}
+await cp(zodDirectory, path.join(destination, "node_modules", "zod"), {
+  dereference: true,
   recursive: true,
 });
-await cp(
-  path.join(configDirectory, "dist"),
-  path.join(destination, "node_modules", "@specra", "config", "dist"),
-  { recursive: true },
-);
-await cp(zodDirectory, path.join(destination, "node_modules", "zod"), {
+await cp(yamlDirectory, path.join(destination, "node_modules", "yaml"), {
   dereference: true,
   recursive: true,
 });
@@ -82,18 +107,31 @@ const stagedCliManifest = {
   exports: cliManifest.exports,
   files: cliManifest.files,
   dependencies: {
-    "@specra/config": configManifest.version,
+    "@specra/config": manifests.config.version,
+    "@specra/model": manifests.model.version,
+    "@specra/openapi": manifests.openapi.version,
     zod: cliManifest.dependencies.zod,
   },
 };
-const stagedConfigManifest = {
-  name: configManifest.name,
-  version: configManifest.version,
-  private: configManifest.private,
-  license: configManifest.license,
-  type: configManifest.type,
-  exports: configManifest.exports,
-  dependencies: configManifest.dependencies,
+const stagedWorkspaceManifest = (name) => {
+  const manifest = manifests[name];
+  const dependencies = Object.fromEntries(
+    Object.entries(manifest.dependencies ?? {}).map(([dependency, range]) => [
+      dependency,
+      range === "workspace:*"
+        ? manifests[dependency.replace("@specra/", "")].version
+        : range,
+    ]),
+  );
+  return {
+    name: manifest.name,
+    version: manifest.version,
+    private: manifest.private,
+    license: manifest.license,
+    type: manifest.type,
+    exports: manifest.exports,
+    dependencies,
+  };
 };
 
 await Promise.all([
@@ -101,9 +139,11 @@ await Promise.all([
     path.join(destination, "package.json"),
     `${JSON.stringify(stagedCliManifest, null, 2)}\n`,
   ),
-  writeFile(
-    path.join(destination, "node_modules", "@specra", "config", "package.json"),
-    `${JSON.stringify(stagedConfigManifest, null, 2)}\n`,
+  ...workspacePackages.map((name) =>
+    writeFile(
+      path.join(destination, "node_modules", "@specra", name, "package.json"),
+      `${JSON.stringify(stagedWorkspaceManifest(name), null, 2)}\n`,
+    ),
   ),
 ]);
 

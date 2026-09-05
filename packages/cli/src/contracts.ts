@@ -1,9 +1,33 @@
 import type { SpecraConfig } from "@specra/config";
+import {
+  ARTIFACT_DOCUMENTATION_FILENAME,
+  ARTIFACT_MANIFEST_FILENAME,
+  ARTIFACT_MANIFEST_FORMAT,
+} from "@specra/model";
+import type {
+  IngestionSourceRecord,
+  IngestionStatistics,
+  SourceDiagnosticCode,
+} from "@specra/openapi";
 
 export const DEFAULT_CONFIG_TIMEOUT_MS = 5_000;
 export const MIN_CONFIG_TIMEOUT_MS = 100;
 export const MAX_CONFIG_TIMEOUT_MS = 60_000;
+export const DEFAULT_SOURCE_TIMEOUT_MS = 30_000;
+export const MIN_SOURCE_TIMEOUT_MS = 100;
+export const MAX_SOURCE_TIMEOUT_MS = 600_000;
 export const ARTIFACT_DIRECTORY = ".specra/artifacts";
+export const ARTIFACT_FORMAT_VERSION = ARTIFACT_MANIFEST_FORMAT;
+export { ARTIFACT_DOCUMENTATION_FILENAME, ARTIFACT_MANIFEST_FILENAME };
+/**
+ * One canonical artifact of at most 10,000,000 code units, each up to three
+ * UTF-8 bytes and doubled by JSON string escaping in the worst case, plus
+ * envelope slack. A model-valid artifact therefore always fits the frame.
+ */
+export const MAX_INGESTION_FRAME_BYTES = 64 * 1_024 * 1_024;
+export const MAX_INGESTION_REQUEST_BYTES = 128 * 1_024;
+/** Configured OpenAPI documents per project; each becomes one service. */
+export const MAX_INGESTION_ENTRIES = 64;
 
 export const EXIT_CODES = {
   success: 0,
@@ -14,6 +38,9 @@ export const EXIT_CODES = {
 } as const;
 
 export type DiagnosticCode =
+  | SourceDiagnosticCode
+  | "ARTIFACT_INVALID"
+  | "ARTIFACT_WRITE_FAILED"
   | "CANCELLED"
   | "CONFIG_INVALID"
   | "CONFIG_LOAD_FAILED"
@@ -24,14 +51,24 @@ export type DiagnosticCode =
   | "CONFIG_PATH_OUTSIDE_ROOT"
   | "CONFIG_TIMEOUT"
   | "CONFIG_UNSUPPORTED"
+  | "INGESTION_FAILED"
+  | "INGESTION_TIMEOUT"
   | "INTERNAL_ERROR"
   | "PROJECT_ROOT_INVALID";
 
+export type DiagnosticSeverity = "error" | "warning";
+
+/**
+ * A CLI diagnostic. `path` uses the unified grammar `scope[#pointer]` where
+ * scope is `config`, `cli`, `artifact`, or `source/<project-relative path>`
+ * and pointer is an RFC 6901 JSON pointer; it never contains machine paths or
+ * source values.
+ */
 export interface Diagnostic {
   readonly code: DiagnosticCode;
   readonly message: string;
   readonly path?: string;
-  readonly severity: "error";
+  readonly severity: DiagnosticSeverity;
 }
 
 export interface BuildPaths {
@@ -73,20 +110,66 @@ export interface BuildContext {
 
 export interface ValidationOptions {
   readonly configTimeoutMs?: number;
+  readonly sourceTimeoutMs?: number;
   readonly cwd?: string;
   readonly root?: string;
   readonly signal?: AbortSignal;
 }
 
-export type ValidationResult =
+export interface SourceSummary {
+  /** Project-relative POSIX path of an acquired document. */
+  readonly path: string;
+  readonly bytes: number;
+  readonly sha256: string;
+}
+
+/** What ingestion read and produced; never contains machine paths. */
+export interface IngestionSummary {
+  readonly sources: readonly SourceSummary[];
+  readonly statistics: IngestionStatistics;
+}
+
+export type ValidationOutcome =
+  "cancelled" | "internal-failure" | "success" | "validation-failure";
+
+export interface FailureResult {
+  readonly diagnostics: readonly Diagnostic[];
+  readonly ok: false;
+  readonly outcome: Exclude<ValidationOutcome, "success">;
+}
+
+/** Result of `createBuildContext`: configuration and paths only, no ingestion. */
+export type ContextResult =
   | {
       readonly context: BuildContext;
-      readonly diagnostics: readonly [];
       readonly ok: true;
       readonly outcome: "success";
     }
-  | {
-      readonly diagnostics: readonly Diagnostic[];
-      readonly ok: false;
-      readonly outcome: "cancelled" | "internal-failure" | "validation-failure";
-    };
+  | FailureResult;
+
+export interface ValidationSuccess {
+  readonly context: BuildContext;
+  /** Warnings only; a successful result never carries an error. */
+  readonly diagnostics: readonly Diagnostic[];
+  readonly ingestion: IngestionSummary;
+  readonly ok: true;
+  readonly outcome: "success";
+}
+
+export type ValidationResult = ValidationSuccess | FailureResult;
+
+export interface ArtifactSummary {
+  /** Fixed project-relative artifact directory. */
+  readonly directory: string;
+  /** Artifact-relative file names in canonical order. */
+  readonly files: readonly string[];
+  readonly bytes: number;
+}
+
+export type BuildSuccess = ValidationSuccess & {
+  readonly artifacts: ArtifactSummary;
+};
+
+export type BuildResult = BuildSuccess | FailureResult;
+
+export type { IngestionSourceRecord, IngestionStatistics };

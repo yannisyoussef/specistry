@@ -1,0 +1,9 @@
+components:
+  schemas:
+    Address:
+      type: object
+      properties:
+        city:
+          type: string
+        country:
+          $ref: "deeper/country.yaml#/Country"

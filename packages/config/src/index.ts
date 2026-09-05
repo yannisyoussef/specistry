@@ -75,8 +75,8 @@ const MAX_ISSUE_PATH_LENGTH = 256;
 /**
  * Redacts a schema issue path into a value-free label derived from the schema
  * itself: schema keys are kept, user-chosen record keys become `*`, array
- * positions become `[]`, and anything the schema does not describe becomes
- * `*`. An empty path is the whole `config`.
+ * positions keep their numeric index, and anything the schema does not
+ * describe becomes `*`. An empty path is the whole `config`.
  */
 export function redactIssuePath(path: readonly PropertyKey[]): string {
   if (path.length === 0) return "config";
@@ -132,7 +132,7 @@ function describeSegment(
     return { label: "*", next: inner.valueType as z.ZodType };
   }
   if (inner instanceof z.ZodArray && typeof segment === "number") {
-    return { label: "[]", next: inner.element as z.ZodType };
+    return { label: String(segment), next: inner.element as z.ZodType };
   }
   return { label: "*", next: undefined };
 }
@@ -159,7 +159,10 @@ function matchesLabels(
     return label === "*" && matchesLabels(inner.valueType as z.ZodType, rest);
   }
   if (inner instanceof z.ZodArray) {
-    return label === "[]" && matchesLabels(inner.element as z.ZodType, rest);
+    return (
+      /^(?:0|[1-9]\d*)$/.test(label) &&
+      matchesLabels(inner.element as z.ZodType, rest)
+    );
   }
   return false;
 }

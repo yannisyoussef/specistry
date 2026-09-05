@@ -5,5 +5,5 @@
     "MD033": false,
     "MD041": false,
   },
-  "ignores": ["**/node_modules/**", "**/.next/**"],
+  "ignores": ["**/node_modules/**", "**/.next/**", ".agent/**", "prompts/**"],
 }

@@ -1,0 +1,13 @@
+openapi: 3.1.0
+info: { title: Duplicates, version: 1.0.0 }
+paths:
+  /a:
+    get:
+      operationId: sameId
+      responses:
+        "200": { description: ok }
+  /b:
+    get:
+      operationId: sameId
+      responses:
+        "200": { description: ok }

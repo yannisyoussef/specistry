@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: Pet Store
+  version: 1.0.0
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      responses:
+        "200":
+          description: A page of pets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pet"
+components:
+  schemas:
+    Pet:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+        nickname:
+          type: string
+          nullable: true
+        weight:
+          type: number
+          minimum: 0
+          exclusiveMinimum: true
+        broken:
+          type: number
+          exclusiveMinimum: true
+        legacyExamples:
+          type: string
+          examples: [a]
+        legacyConst:
+          type: string
+          const: fixed
+        sibling:
+          $ref: "#/components/schemas/Pet"
+          description: Ignored in 3.0

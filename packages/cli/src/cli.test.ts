@@ -39,7 +39,7 @@ describe("runCli", () => {
     const project = await createProject();
     const human = await invoke(["validate"], project);
     expect(human.code).toBe(EXIT_CODES.success);
-    expect(human.stdout).toContain("configuration is valid");
+    expect(human.stdout).toContain("project is valid");
     expect(human.stderr).toBe("");
 
     const json = await invoke(["validate", "--json"], project);
@@ -96,7 +96,10 @@ async function invoke(
 async function createProject(): Promise<string> {
   const project = await makeTemporaryDirectory();
   await mkdir(path.join(project, "docs"));
-  await writeFile(path.join(project, "openapi.yaml"), "openapi: 3.1.0\n");
+  await writeFile(
+    path.join(project, "openapi.yaml"),
+    "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n",
+  );
   await writeFile(
     path.join(project, "specra.config.ts"),
     "export default { schemaVersion: 1, name: 'Example', openapi: './openapi.yaml' };",

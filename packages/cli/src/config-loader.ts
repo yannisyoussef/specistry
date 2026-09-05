@@ -1,23 +1,16 @@
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import path from "node:path";
-import type { Readable } from "node:stream";
-import { fileURLToPath } from "node:url";
-
 import {
   isRedactedIssuePath,
   parseConfig,
   type SpecraConfig,
 } from "@specra/config";
 
+import { hostModuleUrl, runBoundedHost } from "./bounded-host.js";
 import type { DiagnosticCode } from "./contracts.js";
 
 const MAX_PROCESS_OUTPUT_BYTES = 65_536;
 const MAX_CONFIG_BYTES = 1_048_576;
 const MAX_PROTOCOL_BYTES = MAX_CONFIG_BYTES + 32_768;
 const MAX_ISSUE_PATHS = 128;
-// After the child exits, a frame it wrote may still sit in the pipe; wait
-// briefly for it rather than for every descendant to release the pipe ends.
-const EXIT_GRACE_MS = 100;
 // The host labels a missing default export itself; every other label must be
 // one the schema authority could have produced.
 const HOST_ISSUE_PATHS = new Set(["default"]);
@@ -53,163 +46,46 @@ type ProcessFailureCategory = Extract<
 export async function loadConfigIsolated(
   options: ConfigLoadOptions,
 ): Promise<ConfigLoadResult> {
-  if (options.signal.aborted) return { code: "CANCELLED", ok: false };
-
-  let child: ChildProcess;
+  const outcome = await runBoundedHost({
+    args: [import.meta.resolve("@specra/config"), options.configUrl.href],
+    hostModule: hostModuleUrl("config-worker.js", import.meta.url),
+    maxFrameBytes: MAX_PROTOCOL_BYTES,
+    maxOutputBytes: MAX_PROCESS_OUTPUT_BYTES,
+    memoryMiB: 64,
+    signal: options.signal,
+    stackKiB: 4096,
+    timeoutMs: options.timeoutMs,
+  });
+  if (!outcome.ok) {
+    return {
+      code:
+        outcome.reason === "timeout"
+          ? "CONFIG_TIMEOUT"
+          : outcome.reason === "cancelled"
+            ? "CANCELLED"
+            : "CONFIG_LOAD_FAILED",
+      ok: false,
+    };
+  }
+  const message = parseProcessResponse(outcome.frame);
+  if (message === undefined) return { code: "CONFIG_LOAD_FAILED", ok: false };
+  if (message.type === "failure") {
+    const issuePaths =
+      message.issuePaths === undefined
+        ? undefined
+        : [...new Set(message.issuePaths)].sort(compareCodeUnits);
+    return {
+      code: categoryCode(message.category),
+      ...(issuePaths === undefined ? {} : { issuePaths }),
+      ok: false,
+    };
+  }
   try {
-    const hostUrl = new URL(
-      import.meta.url.endsWith(".ts")
-        ? "../dist/config-worker.js"
-        : "./config-worker.js",
-      import.meta.url,
-    );
-    child = spawn(
-      process.execPath,
-      [
-        "--max-old-space-size=64",
-        "--max-semi-space-size=16",
-        "--stack-size=4096",
-        fileURLToPath(hostUrl),
-        import.meta.resolve("@specra/config"),
-        options.configUrl.href,
-      ],
-      {
-        detached: process.platform !== "win32",
-        env: configProcessEnvironment(),
-        stdio: ["ignore", "pipe", "pipe", "pipe"],
-        windowsHide: true,
-      },
-    );
+    const parsed: unknown = JSON.parse(message.configJson);
+    return { config: parseConfig(parsed), ok: true };
   } catch {
     return { code: "CONFIG_LOAD_FAILED", ok: false };
   }
-
-  return await new Promise<ConfigLoadResult>((resolve) => {
-    const control = child.stdio[3] as Readable | null;
-    if (control === null || child.stdout === null || child.stderr === null) {
-      terminateProcessTree(child);
-      resolve({ code: "CONFIG_LOAD_FAILED", ok: false });
-      return;
-    }
-    const controlStream = control;
-
-    let outputBytes = 0;
-    let protocolBytes = 0;
-    let protocol = Buffer.alloc(0);
-    let settled = false;
-    let exited = false;
-    let controlEnded = false;
-    let exitGrace: NodeJS.Timeout | undefined;
-    const timeout = setTimeout(() => {
-      finish({ code: "CONFIG_TIMEOUT", ok: false });
-    }, options.timeoutMs);
-
-    const onAbort = (): void => {
-      finish({ code: "CANCELLED", ok: false });
-    };
-    options.signal.addEventListener("abort", onAbort, { once: true });
-    if (options.signal.aborted) {
-      finish({ code: "CANCELLED", ok: false });
-      return;
-    }
-
-    const countOutput = (chunk: Buffer | string): void => {
-      outputBytes += Buffer.byteLength(chunk);
-      if (outputBytes > MAX_PROCESS_OUTPUT_BYTES) {
-        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-      }
-    };
-    const collectProtocol = (chunk: Buffer): void => {
-      protocolBytes += chunk.byteLength;
-      if (protocolBytes > MAX_PROTOCOL_BYTES) {
-        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-        return;
-      }
-      protocol = Buffer.concat([protocol, chunk], protocolBytes);
-      const terminator = protocol.indexOf(0x0a);
-      if (terminator === -1) return;
-      if (terminator !== protocol.byteLength - 1) {
-        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-        return;
-      }
-      handleResponse(parseProcessResponse(protocol.subarray(0, terminator)));
-    };
-    child.stdout.on("data", countOutput);
-    child.stderr.on("data", countOutput);
-    controlStream.on("data", collectProtocol);
-
-    child.once("error", () => {
-      finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-    });
-    // Settle on process exit, not on stream close: a descendant that inherited
-    // the pipes would otherwise hold this promise open for its own lifetime.
-    // The control channel can end before or after the exit event, so both
-    // orders settle as soon as the other half is observed, and a descendant
-    // holding the channel open is bounded by the grace period.
-    const settleAfterExit = (): void => {
-      if (exited && controlEnded) {
-        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-      }
-    };
-    controlStream.once("end", () => {
-      controlEnded = true;
-      settleAfterExit();
-    });
-    child.once("exit", () => {
-      if (settled) return;
-      exited = true;
-      exitGrace = setTimeout(() => {
-        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-      }, EXIT_GRACE_MS);
-      settleAfterExit();
-    });
-
-    function handleResponse(message: ProcessResponse | undefined): void {
-      if (message === undefined) {
-        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-        return;
-      }
-      if (message.type === "failure") {
-        const issuePaths =
-          message.issuePaths === undefined
-            ? undefined
-            : [...new Set(message.issuePaths)].sort(compareCodeUnits);
-        finish({
-          code: categoryCode(message.category),
-          ...(issuePaths === undefined ? {} : { issuePaths }),
-          ok: false,
-        });
-        return;
-      }
-      try {
-        const parsed: unknown = JSON.parse(message.configJson);
-        const config = parseConfig(parsed);
-        finish({ config, ok: true });
-      } catch {
-        finish({ code: "CONFIG_LOAD_FAILED", ok: false });
-      }
-    }
-
-    function finish(result: ConfigLoadResult): void {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      clearTimeout(exitGrace);
-      options.signal.removeEventListener("abort", onAbort);
-      child.stdout?.removeListener("data", countOutput);
-      child.stderr?.removeListener("data", countOutput);
-      controlStream.removeListener("data", collectProtocol);
-      terminateProcessTree(child);
-      // Release this side of every pipe so descendants that inherited the
-      // other side cannot keep the caller's process alive, and let the parent
-      // exit without waiting on the killed child handle.
-      child.stdout?.destroy();
-      child.stderr?.destroy();
-      controlStream.destroy();
-      child.unref();
-      resolve(result);
-    }
-  });
 }
 
 function parseProcessResponse(bytes: Buffer): ProcessResponse | undefined {
@@ -222,48 +98,6 @@ function parseProcessResponse(bytes: Buffer): ProcessResponse | undefined {
   } catch {
     return undefined;
   }
-}
-
-function terminateProcessTree(child: ChildProcess): void {
-  const pid = child.pid;
-  if (pid !== undefined && process.platform === "win32") {
-    const systemRoot = process.env.SystemRoot ?? "C:\\Windows";
-    const result = spawnSync(
-      path.join(systemRoot, "System32", "taskkill.exe"),
-      ["/pid", String(pid), "/t", "/f"],
-      {
-        stdio: "ignore",
-        timeout: 1_000,
-        windowsHide: true,
-      },
-    );
-    if (result.error === undefined && result.status === 0) return;
-    try {
-      child.kill("SIGKILL");
-    } catch {
-      // The child may have exited while taskkill was running.
-    }
-    return;
-  }
-  if (pid !== undefined) {
-    try {
-      process.kill(-pid, "SIGKILL");
-      return;
-    } catch {
-      // The group can already be gone or unavailable; fall back to the child.
-    }
-  }
-  try {
-    child.kill("SIGKILL");
-  } catch {
-    // Termination races are expected after early process failure.
-  }
-}
-
-function configProcessEnvironment(): NodeJS.ProcessEnv {
-  const environment = { ...process.env };
-  delete environment.NODE_OPTIONS;
-  return environment;
 }
 
 function isProcessResponse(value: unknown): value is ProcessResponse {

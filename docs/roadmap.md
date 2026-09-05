@@ -33,7 +33,7 @@ Each slice is a deployable or author-visible vertical increment. Its work item m
 
 ## SPEC-003 — OpenAPI ingestion
 
-- **Objective/scope:** parse, resolve, validate, and normalize OpenAPI 3.0/3.1 into canonical artifacts; wire `specra build`/`dev` through that pipeline.
+- **Objective/scope:** parse, resolve, validate, and normalize OpenAPI 3.0/3.1 into canonical artifacts; wire `specra validate`/`build` through that pipeline. `dev` stays reserved until SPEC-004 gives it a reader to serve.
 - **Non-goals:** polished API routes, remote refs by default, AsyncAPI/GraphQL, or runtime conformance.
 - **Architecture impact:** selects an adapter-private resolver/validator behind one mandatory acquisition policy; raw models end at the adapter.
 - **Acceptance:** the [dialect map](architecture/openapi-dialects.md) and fixture matrix map correctly; local cycles terminate; invalid refs diagnose; remote retrieval stays off unless every hardened policy test passes; output bytes are deterministic; 10 MiB/10k-operation budgets are measured.

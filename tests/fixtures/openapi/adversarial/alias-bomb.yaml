@@ -1,0 +1,6 @@
+openapi: 3.1.0
+info: { title: Bomb, version: 1.0.0 }
+a: &a [x, x, x, x, x, x, x, x, x]
+b: &b [*a, *a, *a, *a, *a, *a, *a, *a, *a]
+c: &c [*b, *b, *b, *b, *b, *b, *b, *b, *b]
+paths: {}

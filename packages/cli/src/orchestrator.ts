@@ -2,21 +2,43 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 import type { SpecraConfig } from "@specra/config";
+import { DEFAULT_INGESTION_LIMITS } from "@specra/openapi";
 
+import { toDocumentId } from "./acquisition.js";
+import { removeStaleArtifacts, writeArtifacts } from "./artifacts.js";
 import { loadConfigIsolated } from "./config-loader.js";
 import {
   ARTIFACT_DIRECTORY,
   DEFAULT_CONFIG_TIMEOUT_MS,
+  DEFAULT_SOURCE_TIMEOUT_MS,
   MAX_CONFIG_TIMEOUT_MS,
+  MAX_SOURCE_TIMEOUT_MS,
   MIN_CONFIG_TIMEOUT_MS,
+  MIN_SOURCE_TIMEOUT_MS,
   type BuildContext,
   type BuildPaths,
+  MAX_INGESTION_ENTRIES,
+  type BuildResult,
+  type ContextResult,
   type DeepReadonly,
   type Diagnostic,
+  type FailureResult,
+  type IngestionSummary,
   type ValidationOptions,
   type ValidationResult,
 } from "./contracts.js";
-import { createDiagnostic, sortDiagnostics } from "./diagnostics.js";
+import {
+  artifactPath,
+  cliPath,
+  configPath,
+  createDiagnostic,
+  sortDiagnostics,
+  sourcePath,
+} from "./diagnostics.js";
+import {
+  runIngestionIsolated,
+  type IngestionOutcome,
+} from "./ingestion-loader.js";
 import {
   resolveExistingProjectPath,
   resolveFutureProjectPath,
@@ -26,14 +48,97 @@ import {
 
 const CONFIG_FILENAME = "specra.config.ts";
 
+/**
+ * Loads and confines the project without touching OpenAPI sources. Public
+ * consumers use it to compose their own commands; `validateProject` and
+ * `buildProject` build on it.
+ */
 export async function createBuildContext(
   options: ValidationOptions = {},
+): Promise<ContextResult> {
+  return await buildContext(options);
+}
+
+/** Validates configuration, paths, and the real OpenAPI sources. */
+export async function validateProject(
+  options: ValidationOptions = {},
 ): Promise<ValidationResult> {
+  const contextResult = await buildContext(options);
+  if (!contextResult.ok) return contextResult;
+  const ingested = await ingest(contextResult.context, options);
+  if (!ingested.ok) return ingested;
+  return {
+    context: contextResult.context,
+    diagnostics: ingested.diagnostics,
+    ingestion: ingested.ingestion,
+    ok: true,
+    outcome: "success",
+  };
+}
+
+/**
+ * Validates, then writes the canonical artifact atomically to the fixed
+ * `.specra/artifacts` directory. A failed build removes any previous artifact
+ * directory so stale output can never masquerade as the current input.
+ */
+export async function buildProject(
+  options: ValidationOptions = {},
+): Promise<BuildResult> {
+  const contextResult = await buildContext(options);
+  if (!contextResult.ok) return contextResult;
+  const context = contextResult.context;
+  const ingested = await ingest(context, options);
+  if (!ingested.ok) {
+    if (ingested.outcome === "validation-failure") {
+      await removeStaleArtifacts(
+        context.projectRoot,
+        context.paths.artifactRoot,
+      );
+    }
+    return ingested;
+  }
+  const written = await writeArtifacts({
+    artifactRoot: context.paths.artifactRoot,
+    documentationJson: ingested.artifactJson,
+    ingestion: ingested.ingestion,
+    project: {
+      id: ingested.projectId,
+      name: context.config.name,
+    },
+    projectRoot: context.projectRoot,
+    warnings: ingested.diagnostics.length,
+  });
+  if (!written.ok) {
+    return failure("internal-failure", [
+      createDiagnostic("ARTIFACT_WRITE_FAILED", artifactPath("")),
+    ]);
+  }
+  return {
+    artifacts: written.artifacts,
+    context,
+    diagnostics: ingested.diagnostics,
+    ingestion: ingested.ingestion,
+    ok: true,
+    outcome: "success",
+  };
+}
+
+async function buildContext(
+  options: ValidationOptions,
+): Promise<ContextResult> {
   const signal = options.signal ?? new AbortController().signal;
   if (signal.aborted) return cancelled();
 
   const timeoutMs = options.configTimeoutMs ?? DEFAULT_CONFIG_TIMEOUT_MS;
-  if (!isValidTimeout(timeoutMs)) {
+  const sourceTimeoutMs = options.sourceTimeoutMs ?? DEFAULT_SOURCE_TIMEOUT_MS;
+  if (
+    !isValidTimeout(timeoutMs, MIN_CONFIG_TIMEOUT_MS, MAX_CONFIG_TIMEOUT_MS) ||
+    !isValidTimeout(
+      sourceTimeoutMs,
+      MIN_SOURCE_TIMEOUT_MS,
+      MAX_SOURCE_TIMEOUT_MS,
+    )
+  ) {
     return failure("internal-failure", [createDiagnostic("INTERNAL_ERROR")]);
   }
 
@@ -42,7 +147,7 @@ export async function createBuildContext(
     const projectRoot = await resolveProjectRoot(options.root ?? ".", cwd);
     if (projectRoot === undefined) {
       return failure("validation-failure", [
-        createDiagnostic("PROJECT_ROOT_INVALID", "root"),
+        createDiagnostic("PROJECT_ROOT_INVALID", cliPath("/root")),
       ]);
     }
     if (signal.aborted) return cancelled();
@@ -69,13 +174,13 @@ export async function createBuildContext(
     });
     if (!loaded.ok) {
       if (loaded.code === "CANCELLED") return cancelled();
-      const paths =
+      const labels =
         loaded.issuePaths === undefined || loaded.issuePaths.length === 0
           ? ["config"]
           : loaded.issuePaths;
       return failure(
         "validation-failure",
-        paths.map((path) => createDiagnostic(loaded.code, path)),
+        labels.map((label) => createDiagnostic(loaded.code, configPath(label))),
       );
     }
     if (signal.aborted) return cancelled();
@@ -93,16 +198,105 @@ export async function createBuildContext(
       projectRoot,
       signal,
     });
-    return { context, diagnostics: [], ok: true, outcome: "success" };
+    return { context, ok: true, outcome: "success" };
   } catch {
     return failure("internal-failure", [createDiagnostic("INTERNAL_ERROR")]);
   }
 }
 
-export async function validateProject(
-  options: ValidationOptions = {},
-): Promise<ValidationResult> {
-  return await createBuildContext(options);
+type IngestOutcome =
+  | {
+      readonly artifactJson: string;
+      readonly diagnostics: readonly Diagnostic[];
+      readonly ingestion: IngestionSummary;
+      readonly ok: true;
+      readonly projectId: string;
+    }
+  | FailureResult;
+
+async function ingest(
+  context: BuildContext,
+  options: ValidationOptions,
+): Promise<IngestOutcome> {
+  const configured = Array.isArray(context.config.openapi)
+    ? context.config.openapi
+    : [context.config.openapi];
+  const entries: string[] = [];
+  if (configured.length > MAX_INGESTION_ENTRIES) {
+    return failure("validation-failure", [
+      createDiagnostic("CONFIG_PATH_INVALID", configPath("openapi")),
+    ]);
+  }
+  for (const [index, configuredPath] of configured.entries()) {
+    const id = toDocumentId(configuredPath);
+    if (id === undefined) {
+      return failure("validation-failure", [
+        createDiagnostic(
+          "CONFIG_PATH_INVALID",
+          configPath(configured.length === 1 ? "openapi" : `openapi.${index}`),
+        ),
+      ]);
+    }
+    entries.push(id);
+  }
+  const loaded = await runIngestionIsolated({
+    entries,
+    limits: DEFAULT_INGESTION_LIMITS,
+    project: { name: context.config.name },
+    projectRoot: context.projectRoot,
+    signal: context.signal,
+    timeoutMs: options.sourceTimeoutMs ?? DEFAULT_SOURCE_TIMEOUT_MS,
+  });
+  if (!loaded.ok) {
+    if (loaded.reason === "cancelled") return cancelled();
+    return failure("validation-failure", [
+      createDiagnostic(
+        loaded.reason === "timeout" ? "INGESTION_TIMEOUT" : "INGESTION_FAILED",
+        entries[0] === undefined ? undefined : sourcePath(entries[0], ""),
+      ),
+    ]);
+  }
+  const outcome = loaded.outcome;
+  const diagnostics = mapIngestionDiagnostics(outcome);
+  const ingestion: IngestionSummary = {
+    sources: outcome.sources.map((source) => ({
+      bytes: source.bytes,
+      path: source.id,
+      sha256: source.sha256,
+    })),
+    statistics: outcome.statistics,
+  };
+  if (
+    !outcome.ok ||
+    outcome.artifact === undefined ||
+    outcome.artifactJson === undefined
+  ) {
+    return { diagnostics, ok: false, outcome: "validation-failure" };
+  }
+  return {
+    artifactJson: outcome.artifactJson,
+    diagnostics,
+    ingestion,
+    ok: true,
+    projectId: outcome.artifact.model.project.id,
+  };
+}
+
+/** Projects host diagnostics onto the unified CLI path grammar, sorted. */
+export function mapIngestionDiagnostics(
+  outcome: Pick<IngestionOutcome, "artifactDiagnostics" | "diagnostics">,
+): readonly Diagnostic[] {
+  return sortDiagnostics([
+    ...outcome.diagnostics.map((diagnostic) =>
+      createDiagnostic(
+        diagnostic.code,
+        sourcePath(diagnostic.document, diagnostic.pointer),
+      ),
+    ),
+    ...outcome.artifactDiagnostics.map((diagnostic) =>
+      createDiagnostic("ARTIFACT_INVALID", artifactPath(diagnostic.path)),
+    ),
+  ]);
 }
 
 type ConfiguredPathsResult =
@@ -119,7 +313,7 @@ async function resolveConfiguredPaths(
     : [config.openapi];
   const openapi = await Promise.all(
     openapiInput.map(async (configuredPath, index) => {
-      const label = openapiInput.length === 1 ? "openapi" : `openapi[${index}]`;
+      const label = openapiInput.length === 1 ? "openapi" : `openapi.${index}`;
       return await resolvePath(
         projectRoot,
         configuredPath,
@@ -129,6 +323,18 @@ async function resolveConfiguredPaths(
       );
     }),
   );
+  // The same document listed twice would become two services with one
+  // identity; reject it as a configuration error rather than a source one.
+  const seenDocuments = new Set<string>();
+  openapiInput.forEach((configuredPath, index) => {
+    const id = toDocumentId(configuredPath) ?? configuredPath;
+    if (seenDocuments.has(id)) {
+      diagnostics.push(
+        createDiagnostic("CONFIG_PATH_INVALID", configPath(`openapi.${index}`)),
+      );
+    }
+    seenDocuments.add(id);
+  });
   const docs = await resolvePath(
     projectRoot,
     config.docs,
@@ -168,7 +374,7 @@ async function resolveConfiguredPaths(
         artifact.kind === "outside"
           ? "CONFIG_PATH_OUTSIDE_ROOT"
           : "CONFIG_PATH_INVALID",
-        "artifacts",
+        artifactPath(""),
       ),
     );
   }
@@ -213,7 +419,7 @@ async function resolvePath(
     expected,
   );
   if (result.ok) return result.path;
-  diagnostics.push(pathDiagnostic(result, label));
+  diagnostics.push(pathDiagnostic(result, configPath(label)));
   return undefined;
 }
 
@@ -246,21 +452,21 @@ function deepFreeze<T>(value: T): DeepReadonly<T> {
   return value as DeepReadonly<T>;
 }
 
-function cancelled(): ValidationResult {
+function cancelled(): FailureResult {
   return failure("cancelled", [createDiagnostic("CANCELLED")]);
 }
 
 function failure(
   outcome: "cancelled" | "internal-failure" | "validation-failure",
   diagnostics: readonly Diagnostic[],
-): ValidationResult {
+): FailureResult {
   return { diagnostics: sortDiagnostics(diagnostics), ok: false, outcome };
 }
 
-function isValidTimeout(value: number): boolean {
-  return (
-    Number.isInteger(value) &&
-    value >= MIN_CONFIG_TIMEOUT_MS &&
-    value <= MAX_CONFIG_TIMEOUT_MS
-  );
+function isValidTimeout(
+  value: number,
+  minimum: number,
+  maximum: number,
+): boolean {
+  return Number.isInteger(value) && value >= minimum && value <= maximum;
 }

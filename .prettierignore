@@ -3,3 +3,8 @@ coverage
 dist
 node_modules
 pnpm-lock.yaml
+tests/fixtures/openapi/adversarial/malformed.json
+tests/fixtures/openapi/adversarial/malformed.yaml
+# Local-only agent working directories (excluded from git via .git/info/exclude)
+.agent
+prompts

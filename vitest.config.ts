@@ -1,10 +1,15 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
     coverage: {
       autoAttachSubprocess: true,
-      exclude: ["packages/cli/src/bin.ts", "packages/cli/src/config-worker.ts"],
+      exclude: [
+        "packages/cli/src/bin.ts",
+        "packages/cli/src/config-worker.ts",
+        "packages/cli/src/ingestion-host.ts",
+        "**/*.test-helper.ts",
+      ],
       include: ["packages/*/src/**/*.ts"],
       provider: "v8",
       reporter: ["text", "json-summary"],
@@ -22,6 +27,7 @@ export default defineConfig({
       },
     },
     environment: "node",
+    exclude: [...configDefaults.exclude, "tests/performance/**"],
     include: ["packages/**/*.test.ts", "tests/**/*.test.{ts,tsx}"],
     reporters: ["default"],
     testTimeout: 10_000,

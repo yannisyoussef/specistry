@@ -1,0 +1,69 @@
+openapi: 3.1.0
+info: { title: Reference chains, version: 1.0.0 }
+paths:
+  /cycle:
+    get:
+      operationId: cycle
+      parameters:
+        - $ref: "#/components/parameters/A"
+      responses:
+        "200":
+          $ref: "#/components/responses/R1"
+        "201": { description: created }
+  /long:
+    get:
+      operationId: long
+      parameters:
+        - $ref: "#/components/parameters/H1"
+      responses:
+        "200": { description: ok }
+  /scalar:
+    get:
+      operationId: scalar
+      parameters:
+        - $ref: "#/components/parameters/Scalar"
+      responses:
+        "200": { description: ok }
+components:
+  parameters:
+    A: { $ref: "#/components/parameters/B" }
+    B: { $ref: "#/components/parameters/A" }
+    Scalar: { $ref: "#/info/title" }
+    H1: { $ref: "#/components/parameters/H2" }
+    H2: { $ref: "#/components/parameters/H3" }
+    H3: { $ref: "#/components/parameters/H4" }
+    H4: { $ref: "#/components/parameters/H5" }
+    H5: { $ref: "#/components/parameters/H6" }
+    H6: { $ref: "#/components/parameters/H7" }
+    H7: { $ref: "#/components/parameters/H8" }
+    H8: { $ref: "#/components/parameters/H9" }
+    H9: { $ref: "#/components/parameters/H10" }
+    H10: { $ref: "#/components/parameters/H11" }
+    H11: { $ref: "#/components/parameters/H12" }
+    H12: { $ref: "#/components/parameters/H13" }
+    H13: { $ref: "#/components/parameters/H14" }
+    H14: { $ref: "#/components/parameters/H15" }
+    H15: { $ref: "#/components/parameters/H16" }
+    H16: { $ref: "#/components/parameters/H17" }
+    H17: { $ref: "#/components/parameters/H18" }
+    H18: { $ref: "#/components/parameters/H19" }
+    H19: { $ref: "#/components/parameters/H20" }
+    H20: { $ref: "#/components/parameters/H21" }
+    H21: { $ref: "#/components/parameters/H22" }
+    H22: { $ref: "#/components/parameters/H23" }
+    H23: { $ref: "#/components/parameters/H24" }
+    H24: { $ref: "#/components/parameters/H25" }
+    H25: { $ref: "#/components/parameters/H26" }
+    H26: { $ref: "#/components/parameters/H27" }
+    H27: { $ref: "#/components/parameters/H28" }
+    H28: { $ref: "#/components/parameters/H29" }
+    H29: { $ref: "#/components/parameters/H30" }
+    H30: { $ref: "#/components/parameters/H31" }
+    H31: { $ref: "#/components/parameters/H32" }
+    H32: { $ref: "#/components/parameters/H33" }
+    H33: { $ref: "#/components/parameters/H34" }
+    H34: { $ref: "#/components/parameters/H35" }
+    H35: { in: query, name: deep, schema: { type: string } }
+  responses:
+    R1: { $ref: "#/components/responses/R2" }
+    R2: { $ref: "#/components/responses/R1" }

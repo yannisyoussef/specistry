@@ -1,7 +1,12 @@
 import { parseArguments } from "./arguments.js";
-import { EXIT_CODES, type ValidationResult } from "./contracts.js";
-import { validateProject } from "./orchestrator.js";
 import {
+  EXIT_CODES,
+  type BuildResult,
+  type ValidationResult,
+} from "./contracts.js";
+import { buildProject, validateProject } from "./orchestrator.js";
+import {
+  BUILD_HELP,
   formatHumanResult,
   formatJsonResult,
   formatUsageError,
@@ -25,28 +30,34 @@ export async function runCli(
     case "root-help":
       io.stdout.write(ROOT_HELP);
       return EXIT_CODES.success;
-    case "validate-help":
-      io.stdout.write(VALIDATE_HELP);
+    case "command-help":
+      io.stdout.write(parsed.command === "build" ? BUILD_HELP : VALIDATE_HELP);
       return EXIT_CODES.success;
     case "usage-error":
       io.stderr.write(formatUsageError(parsed.message));
       return EXIT_CODES.usage;
-    case "validate": {
-      const result = await validateProject({
+    case "command": {
+      const options = {
         configTimeoutMs: parsed.configTimeoutMs,
         cwd: io.cwd,
         root: parsed.root,
         signal: io.signal,
-      });
+        sourceTimeoutMs: parsed.sourceTimeoutMs,
+      };
+      const result =
+        parsed.command === "build"
+          ? await buildProject(options)
+          : await validateProject(options);
       if (parsed.json) io.stdout.write(formatJsonResult(result));
-      else if (result.ok) io.stdout.write(formatHumanResult(result));
-      else io.stderr.write(formatHumanResult(result));
+      else if (result.ok) {
+        io.stdout.write(formatHumanResult(result, parsed.command));
+      } else io.stderr.write(formatHumanResult(result, parsed.command));
       return exitCode(result);
     }
   }
 }
 
-function exitCode(result: ValidationResult): number {
+function exitCode(result: BuildResult | ValidationResult): number {
   switch (result.outcome) {
     case "success":
       return EXIT_CODES.success;

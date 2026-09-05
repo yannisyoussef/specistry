@@ -22,7 +22,13 @@ const boundaries = new Map([
     { allowed: new Set(["@specra/model"]), constrained: true },
   ],
   ["@specra/config", { allowed: new Set(), constrained: true }],
-  ["@specra/cli", { allowed: new Set(["@specra/config"]), constrained: true }],
+  [
+    "@specra/cli",
+    {
+      allowed: new Set(["@specra/config", "@specra/model", "@specra/openapi"]),
+      constrained: true,
+    },
+  ],
   [
     "@specra/web",
     {
@@ -33,20 +39,36 @@ const boundaries = new Map([
 ]);
 // Reviewed exceptions, keyed by repository-relative path. The trusted-config
 // host exists to load the consumer's `specra.config.ts` (ADR-008) and may
-// contain exactly the number of opaque loads recorded here; the loader is the
-// only production module allowed to cross a process boundary.
+// contain exactly the number of opaque loads recorded here; the bounded host
+// runner is the only production module allowed to cross a process boundary.
 const opaqueLoadExceptions = new Map([
   ["packages/cli/src/config-worker.ts", 1],
 ]);
-const processBoundaryExceptions = new Set([
-  "packages/cli/src/config-loader.ts",
-]);
+const processBoundaryExceptions = new Set(["packages/cli/src/bounded-host.ts"]);
 const processBoundaryModules = new Set(
   ["child_process", "cluster", "vm", "worker_threads"].flatMap((name) => [
     name,
     `node:${name}`,
   ]),
 );
+// Filesystem and network access is the CLI's responsibility: the adapter,
+// model, and config packages receive bytes through explicit ports and must
+// not open files or sockets themselves, so no hidden source loader can exist.
+const ioBoundaryModules = new Set(
+  [
+    "dgram",
+    "dns",
+    "dns/promises",
+    "fs",
+    "fs/promises",
+    "http",
+    "http2",
+    "https",
+    "net",
+    "tls",
+  ].flatMap((name) => [name, `node:${name}`]),
+);
+const ioBoundaryPackages = new Set(["@specra/cli"]);
 const manifestSections = [
   "dependencies",
   "devDependencies",
@@ -120,9 +142,24 @@ for (const component of components) {
         !isProcessBoundaryAllowed(file)
       ) {
         violations.push(
-          `${relativeFile} imports process-boundary module '${specifier}' outside the reviewed loader exception.`,
+          `${relativeFile} imports process-boundary module '${specifier}' outside the reviewed bounded-host exception.`,
         );
       }
+      if (
+        boundary.constrained &&
+        production &&
+        (ioBoundaryModules.has(specifier) || specifier === "undici") &&
+        !ioBoundaryPackages.has(component.name)
+      ) {
+        violations.push(
+          `${relativeFile} imports I/O module '${specifier}'; only the CLI may touch the filesystem or network.`,
+        );
+      }
+    }
+    if (boundary.constrained && production && analysis.usesNetworkFetch) {
+      violations.push(
+        `${relativeFile} calls the global fetch inside the ${component.name} package boundary.`,
+      );
     }
     if (boundary.constrained && production && analysis.usesBrowserGlobal) {
       violations.push(
@@ -167,6 +204,32 @@ if (
   violations.push(
     "Architecture checker self-test failed for dependency-free model imports.",
   );
+}
+if (
+  !ioBoundaryModules.has("node:fs/promises") ||
+  !ioBoundaryModules.has("dns") ||
+  !ioBoundaryModules.has("node:https") ||
+  ioBoundaryModules.has("node:crypto") ||
+  !ioBoundaryPackages.has("@specra/cli") ||
+  ioBoundaryPackages.has("@specra/openapi")
+) {
+  violations.push(
+    "Architecture checker self-test failed for the I/O boundary module set.",
+  );
+}
+const fetchCases = [
+  ['await fetch("https://example.test");', true],
+  ["const fetch = () => 1; fetch();", false],
+  ['import { fetch } from "./client.js"; fetch();', false],
+];
+for (const [source, usesNetworkFetch] of fetchCases) {
+  if (
+    analyzeSource(source, "self-test.ts").usesNetworkFetch !== usesNetworkFetch
+  ) {
+    violations.push(
+      `Architecture checker fetch self-test failed for: ${source}`,
+    );
+  }
 }
 const astCases = [
   ['const name = "react"; import(name); globalThis["win" + "dow"];', 1, true],
@@ -219,7 +282,7 @@ if (cliComponent !== undefined && modelComponent !== undefined) {
     ...manifestViolations(
       {
         dependencies: { "@specra/config": "workspace:*" },
-        devDependencies: { "@specra/openapi": "workspace:*" },
+        devDependencies: { "@specra/web": "workspace:*" },
       },
       cliComponent,
     ),
@@ -310,7 +373,7 @@ if (
   allowedOpaqueLoads(path.join(root, "packages/cli/src/orchestrator.ts")) !==
     0 ||
   !isProcessBoundaryAllowed(
-    path.join(root, "packages/cli/src/config-loader.ts"),
+    path.join(root, "packages/cli/src/bounded-host.ts"),
   ) ||
   isProcessBoundaryAllowed(path.join(root, "packages/config/src/index.ts"))
 ) {
@@ -454,6 +517,7 @@ function analyzeSource(source, file) {
   const specifiers = [];
   let opaqueRuntimeLoads = 0;
   let usesBrowserGlobal = false;
+  let usesNetworkFetch = false;
   const sourceFile = ts.createSourceFile(
     file,
     source,
@@ -538,6 +602,14 @@ function analyzeSource(source, file) {
     if (ts.isIdentifier(node) && referencesGlobal(node)) {
       usesBrowserGlobal = true;
     }
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "fetch" &&
+      checker.getSymbolAtLocation(node.expression) === undefined
+    ) {
+      usesNetworkFetch = true;
+    }
     if (ts.isBindingElement(node)) {
       const key = node.propertyName ?? node.name;
       const declaration = node.parent.parent;
@@ -579,7 +651,12 @@ function analyzeSource(source, file) {
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
-  return { opaqueRuntimeLoads, specifiers, usesBrowserGlobal };
+  return {
+    opaqueRuntimeLoads,
+    specifiers,
+    usesBrowserGlobal,
+    usesNetworkFetch,
+  };
 }
 
 function isPropertyName(node) {
@@ -612,7 +689,7 @@ function isModelImportAllowed(importer, specifier) {
 }
 
 function isProductionSource(file) {
-  return !/\.test\.[cm]?[jt]sx?$/.test(file);
+  return !/\.test(?:-helper)?\.[cm]?[jt]sx?$/.test(file);
 }
 
 async function sourceFiles(directory, packageRoot = true) {

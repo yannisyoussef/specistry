@@ -1,0 +1,25 @@
+openapi: 3.1.0
+info: { title: Events, version: 1.0.0 }
+webhooks:
+  petCreated:
+    post:
+      responses:
+        "200": { description: ok }
+paths:
+  /subscribe:
+    post:
+      operationId: subscribe
+      callbacks:
+        onEvent:
+          "{$request.body#/url}":
+            post:
+              responses:
+                "200": { description: ok }
+      responses:
+        "200":
+          description: ok
+          links:
+            next:
+              operationId: subscribe
+        "201":
+          description: ok too

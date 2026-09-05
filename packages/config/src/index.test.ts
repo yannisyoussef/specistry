@@ -93,7 +93,8 @@ describe("issue path redaction", () => {
     "environments.*.label",
     "name",
     "openapi",
-    "openapi.[]",
+    "openapi.0",
+    "openapi.12",
     "playground",
     "playground.mode",
     "schemaVersion",
@@ -101,7 +102,7 @@ describe("issue path redaction", () => {
 
   it("keeps schema keys, redacts user keys, and marks array positions", () => {
     expect(redactIssuePath([])).toBe("config");
-    expect(redactIssuePath(["openapi", 3])).toBe("openapi.[]");
+    expect(redactIssuePath(["openapi", 3])).toBe("openapi.3");
     expect(redactIssuePath(["environments", "prod-secret", "baseUrl"])).toBe(
       "environments.*.baseUrl",
     );
@@ -123,7 +124,8 @@ describe("issue path redaction", () => {
       "",
       "*",
       "unknown",
-      "openapi.0",
+      "openapi.[]",
+      "openapi.01",
       "environments.production",
       "environments.*.token",
       "name.*",
@@ -148,7 +150,7 @@ describe("issue path redaction", () => {
       redactIssuePath(issue.path),
     );
     expect(labels).toEqual(
-      expect.arrayContaining(["environments.*.baseUrl", "name", "openapi.[]"]),
+      expect.arrayContaining(["environments.*.baseUrl", "name", "openapi.1"]),
     );
     expect(labels.join(" ")).not.toContain("hunter2");
     expect(labels.every((label) => isRedactedIssuePath(label))).toBe(true);
