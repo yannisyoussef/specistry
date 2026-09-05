@@ -11,3 +11,4 @@ ADRs record decisions that constrain multiple slices or security boundaries. Sta
 | [ADR-005](005-playground-networking-and-credentials.md)      | Playground networking and credentials          | ACCEPTED |
 | [ADR-006](006-frontend-rendering-and-deployment.md)          | Frontend rendering and deployment              | ACCEPTED |
 | [ADR-007](007-testing-ci-and-supply-chain.md)                | Testing, CI, and supply-chain foundations      | ACCEPTED |
+| [ADR-008](008-cli-orchestration-and-config-execution.md)     | CLI orchestration and config execution         | ACCEPTED |

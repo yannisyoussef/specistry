@@ -1,8 +1,8 @@
 # Specra
 
-Specra is a self-hosted, product-agnostic developer documentation platform. It will transform API specifications, authored guidance, and project configuration into an accessible developer experience while keeping source formats, rendering, and deployment independently evolvable.
+Specra is a self-hosted, product-agnostic developer documentation platform. It transforms API specifications, authored guidance, and project configuration into an accessible developer experience while keeping source formats, rendering, and deployment independently evolvable.
 
-This repository currently contains **SPEC-000 — Specra Engineering Foundation**. It intentionally does not contain a complete API reference, search engine, playground, content renderer, or CLI.
+The repository currently contains the engineering foundation, canonical model v1, and the SPEC-002 thin validation CLI/orchestrator. It intentionally does not yet contain OpenAPI normalization, a complete API reference, search, playground, or content rendering.
 
 ## Requirements
 
@@ -30,6 +30,16 @@ pnpm dev
 
 Then open `http://localhost:3000`.
 
+To exercise the built CLI:
+
+```bash
+pnpm build
+./packages/cli/dist/bin.js --help
+./packages/cli/dist/bin.js validate --root /path/to/consumer/project
+```
+
+The future published executable name is `specra`. See the [CLI reference](docs/cli.md) for its current scope, programmatic API, diagnostics, and exit contract.
+
 ## Commands
 
 | Command                   | Purpose                                                          |
@@ -50,13 +60,12 @@ Then open `http://localhost:3000`.
 | `pnpm check:secrets`      | Reject likely committed secrets without printing their values    |
 | `pnpm check`              | Run the local fast quality gate                                  |
 
-The future public CLI remains `specra`; it is not implemented in Phase 0.
-
 ## Repository map
 
 ```text
 specra/
 ├── apps/web/                 Reader application shell
+├── packages/cli/             Thin CLI and reusable orchestration context
 ├── packages/config/          Validated consumer configuration contract
 ├── packages/model/           Framework-neutral canonical documentation model
 ├── packages/openapi/         OpenAPI source/parser boundary and ingestion policy
@@ -65,7 +74,7 @@ specra/
 └── docs/                     Product, architecture, security, ADRs, and roadmap
 ```
 
-Start with the [architecture entry point](docs/architecture/README.md), [product definition](docs/product-definition.md), [configuration reference](docs/configuration.md), [threat model](docs/security/threat-model.md), [deployment requirements](docs/deployment.md), [roadmap](docs/roadmap.md), and [SPEC-000 review record](docs/reviews/spec-000.md). Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Start with the [architecture entry point](docs/architecture/README.md), [product definition](docs/product-definition.md), [CLI reference](docs/cli.md), [configuration reference](docs/configuration.md), [threat model](docs/security/threat-model.md), [deployment requirements](docs/deployment.md), and [roadmap](docs/roadmap.md). Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 Development integrates through `develop`; reviewed, green promotion pull requests move releases to the production branch, `master`. The complete branch and hotfix workflow is documented in [CONTRIBUTING.md](CONTRIBUTING.md#branch-workflow).
 
@@ -74,7 +83,8 @@ Development integrates through `develop`; reviewed, green promotion pull request
 - Rendering code cannot depend on raw OpenAPI parser objects.
 - Canonical schema recursion uses IDs, so the model remains serializable.
 - OpenAPI parsing is bounded and YAML aliases are denied. Remote references remain inert strings during parsing; any future retrieval is denied without an exact HTTPS-origin policy and additional resolver controls.
-- `specra.config.ts` is treated as trusted build code, never untrusted data.
+- `specra.config.ts` is trusted build code evaluated in a bounded, cancellable Worker Thread. The worker is operational isolation, not a malicious-code sandbox.
+- `specra validate` checks config v1, canonical project-root confinement, symlinks, source-path existence/types, and the deterministic `.specra/artifacts` policy. It does not claim OpenAPI semantic validity.
 - The future playground contract requires memory-only credentials by default; Phase 0 ships no playground or server proxy.
 - Critical dependency boundaries, accessibility smoke coverage, malicious-input controls, and production-license policy run in CI.
 

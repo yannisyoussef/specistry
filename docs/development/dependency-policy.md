@@ -17,6 +17,7 @@ Pnpm may record exact, reviewable `minimumReleaseAgeExclude` entries when a newl
 | Next.js + React         | Server-first routing/rendering baseline with static and Node deployment paths; selected in ADR-006                    |
 | `yaml`                  | Focused YAML 1.2 parser with alias controls; JSON remains accepted as YAML-compatible input; not a validator/resolver |
 | Zod                     | Strict runtime validation and useful path-aware errors for the public config boundary                                 |
+| Node Worker Threads     | Native bounded/cancellable trusted-config lifecycle; avoids a CLI/process framework dependency                        |
 | Vitest                  | ESM/TypeScript-aligned semantic tests and V8 coverage                                                                 |
 | ESLint + Next config    | TypeScript/React correctness and framework rules                                                                      |
 | Prettier + markdownlint | Deterministic source and documentation formatting                                                                     |
@@ -24,6 +25,8 @@ Pnpm may record exact, reviewable `minimumReleaseAgeExclude` entries when a newl
 | Playwright              | Chromium HTTP-header, keyboard, reflow, metadata, and axe browser smoke coverage                                      |
 
 No OpenAPI resolver/validator is selected until SPEC-003 evaluates current candidates against the corpus, OpenAPI 3.1 semantics, remote-reference controls, maintenance, license, and parser-model leakage.
+
+SPEC-002 intentionally adds no CLI framework: one command and three options do not justify another production dependency. The packed private CLI bundles the existing `@specra/config` and Zod runtime so its executable can be installed and exercised without workspace symlinks; Zod remains the single config-schema implementation.
 
 ## Enforcement and response
 

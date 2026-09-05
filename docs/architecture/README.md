@@ -23,7 +23,8 @@ The consuming product controls sources, deployment, approved API origins, and re
 
 ```mermaid
 flowchart TB
-  Config["Config loader + validator"] --> Orchestrator["Build / dev orchestrator"]
+  CLI["specra CLI"] --> Orchestrator["Programmatic orchestration"]
+  Config["Isolated config loader + validator"] --> Orchestrator
   Content["Controlled MDX/content compiler"] --> Orchestrator
   OpenAPI["OpenAPI adapter"] --> Model["Canonical documentation model"]
   Model --> Orchestrator
@@ -37,20 +38,21 @@ flowchart TB
   Web -. "future explicit deployment" .-> Proxy["Hardened dedicated proxy"]
 ```
 
-Components shown without packages are planned boundaries, not Phase 0 code.
+The CLI, config loader, and initial orchestration context are implemented by SPEC-002. Other components shown without packages remain planned boundaries.
 
 ## Repository and package boundaries
 
-The repository is a pnpm monorepo without a separate build orchestrator. At this scale, pnpm's topological recursive commands provide enough ordering and cache-neutral simplicity.
+The repository is a pnpm monorepo with a thin author-workflow orchestrator. Pnpm's topological recursive commands remain sufficient for building the workspace itself.
 
 | Boundary           | Current responsibility                                                 | May depend on                                                                |
 | ------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `packages/model`   | Canonical serializable contracts and invariants                        | TypeScript/platform types only                                               |
 | `packages/openapi` | Source parsing boundary, limits, reference policy; later normalization | `model`, focused parser/resolver libraries                                   |
 | `packages/config`  | Serializable public configuration schema and defaults                  | focused validation libraries                                                 |
+| `packages/cli`     | CLI parsing/presentation, config worker, path policy, build context    | `config`; later slices may add only implemented orchestration ports          |
 | `apps/web`         | Next.js reader shell and future rendering composition                  | canonical/rendering contracts, UI/content/search ports; never parser objects |
 
-Future packages earn their existence when their slice begins: `content`, `search`, `snippets`, `ui`, and `cli` are expected candidates. `core` is not created because an orchestrator with a stable responsibility does not yet exist.
+Future packages earn their existence when their slice begins: `content`, `search`, `snippets`, and `ui` remain expected candidates. The concrete orchestration responsibility now lives with `cli`; a generic `core` package is still unjustified.
 
 ## Dependency direction
 
@@ -66,12 +68,32 @@ flowchart BT
   Web --> FutureContent
   Web --> FutureSearch
   Web --> FutureSnippets
-  FutureCLI["future CLI"] --> Config
-  FutureCLI --> OpenAPI
-  FutureCLI --> FutureContent
+  CLI["CLI / orchestration"] --> Config
+  CLI -. "SPEC-003" .-> OpenAPI
+  CLI -. "later" .-> FutureContent
 ```
 
 The model never depends on React, Next.js, parsers, config, or a source adapter. The reader never imports raw source representations. `scripts/check-architecture.mjs` enforces the critical subset now; a workspace graph tool can replace it when graph complexity justifies one.
+
+## SPEC-002 orchestration flow
+
+```mermaid
+flowchart TD
+  User["Author or CI"] --> Args["Thin argument routing"]
+  Args --> Validate["validateProject / createBuildContext"]
+  Validate --> Root["Canonical project root + path policy"]
+  Validate --> Worker["Fresh trusted-config Worker Thread"]
+  Worker --> Schema["@specra/config schema v1"]
+  Schema --> Boundary["Bounded JSON result"]
+  Boundary --> Validate
+  Validate --> Context["BuildContext + ordered diagnostics"]
+  Context --> Presenter["Human or JSON presenter"]
+  Presenter --> User
+```
+
+The CLI owns only argument parsing, routing, presentation, signals, and exit projection. Programmatic orchestration owns root selection, worker lifecycle, path confinement, deterministic diagnostics, and the initial artifact context. It writes no terminal output and does not exit the process. `BuildContext` contains validated config, canonical roots/resolved source paths, `.specra/artifacts`, and an `AbortSignal`; it contains no OpenAPI parser, content compiler, renderer, or web object.
+
+Config evaluation uses a fresh Worker Thread with bounded time, captured output, resource hints, forced termination, and a validated protocol. This limits accidental hangs and contamination but does not remove trusted code's filesystem, environment, network, or process-user authority. Only schema-v1 JSON data is accepted by the parent, and it is validated on both sides of the boundary.
 
 ## Data flow and model ownership
 
@@ -116,7 +138,7 @@ OpenAPI-specific features such as callbacks are normalized into future canonical
 
 ## Build-time responsibilities
 
-- Load a trusted local TypeScript config in an isolated build worker, then validate and convert it to serializable data.
+- Load trusted local erasable-TypeScript config in an isolated worker lifecycle, then validate and convert it to bounded serializable data. This SPEC-002 responsibility is implemented.
 - Read local sources within the configured project root; enforce byte, depth, key, example, and reference budgets.
 - Resolve local references with cycle-aware graph traversal; remote retrieval requires explicit host and scheme policy.
 - Validate OpenAPI and normalize deterministically to a versioned canonical artifact plus diagnostics.
@@ -125,6 +147,8 @@ OpenAPI-specific features such as callbacks are normalized into future canonical
 - Pre-highlight code and partition large model payloads by route/schema where practical.
 
 Builds fail closed for errors and threshold breaches. Warnings are machine-readable and may be promoted by project policy.
+
+SPEC-002 establishes `.specra/artifacts` as the deterministic project-relative artifact root. `validate` resolves but never creates or cleans it. Existing source paths use canonical real paths; a not-yet-created artifact tail is proven against its nearest existing real ancestor. Every future filesystem access must revalidate immediately before use because point-in-time checks cannot eliminate symlink replacement races.
 
 ## Runtime responsibilities
 
@@ -160,15 +184,17 @@ The build output is reproducible from locked source and dependencies. Consumers 
 
 Security headers are a deployment invariant, not merely framework configuration. The Node deployment emits them from Next.js; static hosts and CDNs must reproduce the same effective policy from generated deployment metadata and are verified against a deployed artifact. See [deployment requirements](../deployment.md).
 
-| Failure                           | Behavior                                                       | Mitigation                                                         |
-| --------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Invalid or oversized source       | Build fails with redacted stable diagnostics                   | Limits, source pointers, author correction                         |
-| Recursive/cyclic schema           | Registry references preserve cycles without recursion overflow | Iterative traversal and expansion budgets                          |
-| Search-index build fails          | Build fails; no silently stale index                           | Deterministic index contract and tests                             |
-| Optional search chunk unavailable | Reading/navigation continue; search reports unavailable        | Lazy isolated asset and error boundary                             |
-| Target API unavailable            | Playground reports bounded network failure                     | Timeout, cancellation, no automatic retry of mutations             |
-| Config execution compromised      | Build-worker authority may be compromised                      | Trusted-only rule, isolated CI, data-only mode for untrusted input |
-| CDN/server outage                 | Portal unavailable                                             | Consumer deployment redundancy and immutable artifact rollback     |
+| Failure                           | Behavior                                                       | Mitigation                                                                |
+| --------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Invalid or oversized source       | Build fails with redacted stable diagnostics                   | Limits, source pointers, author correction                                |
+| Recursive/cyclic schema           | Registry references preserve cycles without recursion overflow | Iterative traversal and expansion budgets                                 |
+| Search-index build fails          | Build fails; no silently stale index                           | Deterministic index contract and tests                                    |
+| Optional search chunk unavailable | Reading/navigation continue; search reports unavailable        | Lazy isolated asset and error boundary                                    |
+| Target API unavailable            | Playground reports bounded network failure                     | Timeout, cancellation, no automatic retry of mutations                    |
+| Config execution hangs/leaks      | Build availability or environment values are exposed           | Timeout/cancel, output/result limits, value-free errors, terminate worker |
+| Trusted config is malicious       | Build-user filesystem/network authority may be compromised     | Trusted-only rule, least-privilege CI, data-only untrusted mode           |
+| Path changes after validation     | Later read/write follows a replaced symlink                    | Revalidate at use, fail closed, keep artifact operations root-fixed       |
+| CDN/server outage                 | Portal unavailable                                             | Consumer deployment redundancy and immutable artifact rollback            |
 
 ## Architecture evolution
 
