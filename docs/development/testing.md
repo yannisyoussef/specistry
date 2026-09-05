@@ -10,14 +10,14 @@ Tests assert semantics, invariants, diagnostics, security boundaries, and user b
 | ----------------------- | --------------------------------------------------------------- | ------------------------------------------------------------ |
 | Unit                    | Model invariants, config defaults, reference classification     | Running                                                      |
 | Parser/resolver         | YAML/JSON errors, refs, cycles, OpenAPI dialects                | Parser boundary running; full resolver in SPEC-003           |
-| Normalization           | Determinism and semantic mappings                               | Contract designed; begins SPEC-001/002                       |
+| Normalization           | Determinism and semantic mappings                               | Model v1 semantics, permutation/round-trip tests running     |
 | Security                | limits, aliases, remote refs, script-looking values, redaction  | Running foundation cases                                     |
 | Architecture            | forbidden package dependencies and raw-model leakage            | Running                                                      |
 | Component/accessibility | rendering states, keyboard behavior, axe                        | Foundation page running                                      |
 | Integration             | config → source → canonical artifact → routes                   | Planned with ingestion slice                                 |
 | Browser E2E             | HTTP headers, metadata, keyboard skip flow, axe, 320 px reflow  | Chromium foundation smoke running                            |
 | Visual regression       | stable representative states and themes                         | Strategy defined; baselines start with API reader            |
-| Performance             | large/pathological parsing, rendering, index and bundle budgets | Ingestion smoke running; corpora grow per slice              |
+| Performance             | large/pathological parsing, rendering, index and bundle budgets | Ingestion plus 5,000-schema model smoke running              |
 | Build/examples          | application, CLI, TestInbox and edge examples                   | App build running; examples start when model ingestion works |
 
 ## Fixture corpus
