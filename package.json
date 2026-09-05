@@ -29,7 +29,7 @@
     "pretest:performance": "pnpm --filter @specra/cli... build",
     "test:performance": "vitest run --config vitest.performance.config.ts",
     "test:security": "vitest run tests/security",
-    "pretypecheck": "pnpm --filter @specra/config build",
+    "pretypecheck": "pnpm --filter @specra/cli... build",
     "typecheck": "pnpm --recursive --if-present run typecheck"
   },
   "devDependencies": {
