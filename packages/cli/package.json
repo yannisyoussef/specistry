@@ -1,0 +1,35 @@
+{
+  "name": "@specra/cli",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "bin": {
+    "specra": "./dist/bin.js"
+  },
+  "bundleDependencies": [
+    "@specra/config",
+    "zod"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "node ../../scripts/clean-package-dist.mjs",
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/ensure-cli-bin.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@specra/config": "workspace:*",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3"
+  }
+}

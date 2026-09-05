@@ -8,16 +8,19 @@ const components = [
   { directory: "packages/model", name: "model" },
   { directory: "packages/openapi", name: "openapi" },
   { directory: "packages/config", name: "config" },
+  { directory: "packages/cli", name: "cli" },
   { directory: "apps/web", name: "web" },
 ];
 const allowed = new Map([
   ["model", new Set()],
   ["config", new Set()],
+  ["cli", new Set(["config"])],
   ["openapi", new Set(["model"])],
   ["web", new Set(["config", "model"])],
 ]);
 const packageComponents = new Map([
   ["@specra/config", "config"],
+  ["@specra/cli", "cli"],
   ["@specra/model", "model"],
   ["@specra/openapi", "openapi"],
 ]);
