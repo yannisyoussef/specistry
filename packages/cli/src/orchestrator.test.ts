@@ -186,16 +186,23 @@ describe("validateProject", () => {
   });
 
   it("contains config process exit and excessive output failures", async () => {
+    // Both outcomes are decided by the host's exit or its output cap, which
+    // fire within milliseconds of the child starting. The generous timeout
+    // only keeps a slow, instrumented child start on a loaded CI runner from
+    // turning either case into CONFIG_TIMEOUT; it never lengthens the test.
+    const configTimeoutMs = 30_000;
     const exits = await createProject("process.exit(9); export default {};");
-    await expectCodes(validateProject({ cwd: exits }), ["CONFIG_LOAD_FAILED"]);
+    await expectCodes(validateProject({ configTimeoutMs, cwd: exits }), [
+      "CONFIG_LOAD_FAILED",
+    ]);
 
     const noisy = await createProject(
       "while (true) console.log('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');",
     );
-    await expectCodes(validateProject({ configTimeoutMs: 5_000, cwd: noisy }), [
+    await expectCodes(validateProject({ configTimeoutMs, cwd: noisy }), [
       "CONFIG_LOAD_FAILED",
     ]);
-  });
+  }, 60_000);
 
   it("hard-stops native blocking work on timeout and supports cancellation", async () => {
     const project = await createProject("while (true) {};");
