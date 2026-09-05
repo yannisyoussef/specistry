@@ -366,6 +366,13 @@ export type SchemaNode =
   | UnknownSchema;
 
 export interface SchemaMetadata {
+  /**
+   * Source-independent display identity of a reusable definition, such as a
+   * component key or a definition file name, set by adapters on registry
+   * nodes. Presentation only: identity is the `SchemaId`, and names are not
+   * required to be unique. Additive in model v1 (SPEC-005, ADR-011).
+   */
+  readonly name?: string;
   readonly title?: string;
   readonly description?: string;
   readonly deprecated?: boolean;

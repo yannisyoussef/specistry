@@ -25,6 +25,7 @@ import {
   type ParameterId,
   type ProjectId,
   type SchemaId,
+  type SchemaNode,
   type SecuritySchemeId,
   type ServerId,
   type ServiceId,
@@ -322,6 +323,7 @@ function artifactFixture(): DocumentationArtifact {
                 Node: {
                   additionalProperties: false,
                   kind: "object",
+                  name: "Node",
                   properties: {
                     children: {
                       items: { kind: "ref", schemaId: nodeId },
@@ -472,6 +474,42 @@ describe("canonical model contract", () => {
       constValue: { mode: "strict" },
       enumValues: [{ mode: "strict" }, ["fallback"]],
     });
+  });
+
+  it("carries an optional, non-unique display name on registry schemas", () => {
+    const artifact = artifactFixture();
+    const schemas = artifact.model.versions[0]?.services[0]?.schemas;
+    expect(schemas?.Node).toMatchObject({ kind: "object", name: "Node" });
+    // The name is presentation only: identity stays the registry ID, so the
+    // same name on two entries is valid and an absent name is valid.
+    expect(schemas?.Branch?.name).toBeUndefined();
+    expect(validateDocumentationModel(artifact.model)).toEqual([]);
+    const roundTrip = parseDocumentationArtifact(
+      serializeDocumentationArtifact(artifact),
+    );
+    expect(roundTrip.model.versions[0]?.services[0]?.schemas.Node?.name).toBe(
+      "Node",
+    );
+    const duplicateNames = withSchema(artifact, "Leaf", {
+      ...schemas!.Leaf!,
+      name: "Node",
+    });
+    expect(validateDocumentationModel(duplicateNames.model)).toEqual([]);
+    const emptyName = withSchema(artifact, "Node", {
+      ...schemas!.Node!,
+      name: "",
+    });
+    expect(
+      validateDocumentationModel(emptyName.model).map((issue) => [
+        issue.code,
+        issue.location?.path,
+      ]),
+    ).toEqual([["INVALID_SCHEMA", "/versions/0/services/0/schemas/Node/name"]]);
+    const numericName = withSchema(artifact, "Node", {
+      ...schemas!.Node!,
+      name: 7 as unknown as string,
+    });
+    expect(validateDocumentationModel(numericName.model)).toHaveLength(1);
   });
 
   it("represents direct, indirect, array, and composed recursion through registry IDs", () => {
@@ -1269,3 +1307,29 @@ describe("validation and diagnostics", () => {
 });
 
 void (null as unknown as DiagnosticId);
+
+/** Returns a copy of the fixture with one registry schema replaced. */
+function withSchema(
+  artifact: DocumentationArtifact,
+  id: string,
+  node: SchemaNode,
+): DocumentationArtifact {
+  const version = artifact.model.versions[0];
+  const service = version?.services[0];
+  if (version === undefined || service === undefined)
+    throw new Error("fixture");
+  return {
+    ...artifact,
+    model: {
+      ...artifact.model,
+      versions: [
+        {
+          ...version,
+          services: [
+            { ...service, schemas: { ...service.schemas, [id]: node } },
+          ],
+        },
+      ],
+    },
+  };
+}

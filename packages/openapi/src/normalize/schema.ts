@@ -878,7 +878,43 @@ function componentName(
     location.slice(location.indexOf("#")),
   );
   if (match?.[1] === undefined) return undefined;
-  return match[1].replaceAll("~1", "/").replaceAll("~0", "~");
+  return unescapePointerSegment(match[1]);
+}
+
+/**
+ * Source-independent display name of a registry definition (model v1 additive
+ * `name`): the key of a components/`$defs`/`definitions` entry, a top-level
+ * key of a definitions document, or the file name of a whole-document
+ * reference. Sub-schemas reached through deeper pointers stay unnamed and are
+ * described by their shape instead.
+ */
+export function definitionName(location: SourceLocation): string | undefined {
+  const segments = location.pointer
+    .split("/")
+    .slice(1)
+    .map(unescapePointerSegment);
+  if (segments.length === 0) {
+    const file = location.document.split("/").at(-1) ?? "";
+    const stem = file.replace(/\.(?:json|ya?ml)$/i, "");
+    return stem.length === 0 ? undefined : stem;
+  }
+  const last = segments.at(-1);
+  if (last === undefined || last.length === 0) return undefined;
+  if (segments.length === 1) return last;
+  const parent = segments.slice(0, -1);
+  const container = parent.at(-1);
+  if (container === "$defs" || container === "definitions") return last;
+  if (
+    parent.length === 2 &&
+    parent[0] === "components" &&
+    parent[1] === "schemas"
+  )
+    return last;
+  return undefined;
+}
+
+function unescapePointerSegment(segment: string): string {
+  return segment.replaceAll("~1", "/").replaceAll("~0", "~");
 }
 
 function collectMetadata(

@@ -112,6 +112,7 @@ Keyword-only schemas never imply a type. Multi-type schemas distribute `enum` va
 
 - Operation ids follow the model contract: a URL-safe `operationId` is used directly, other ids hash deterministically, and operations without an id hash their method and exact path.
 - Schema registry ids derive from the project-relative source path plus the JSON pointer of the definition, so they are stable across machines and independent of traversal order.
+- Registry entries also carry a display `name`: the `components.schemas` key, a `$defs`/`definitions` key, the top-level key of a definitions-only document, or the file name (without extension) of a whole-document reference. Schemas referenced through deeper pointers (for example a property inside a component) have no name and are described by their shape.
 - A collision ledger claims every canonical identity with its exact source identity. Two distinct source entities that normalize to one canonical id fail with `SOURCE_IDENTITY_COLLISION` at both locations; the same operation declared twice fails with `SOURCE_DUPLICATE_OPERATION_ID`; the same document configured twice fails at the configuration entry (`CONFIG_PATH_INVALID`). Reordering the source never changes which entity wins because nothing wins: collisions are errors.
 
 ## Limits

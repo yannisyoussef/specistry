@@ -323,6 +323,7 @@ describe("ingestOpenApi", () => {
     ).toEqual({
       kind: "composition",
       mode: "anyOf",
+      name: "LegacyNullable",
       variants: [
         { kind: "scalar", type: "string" },
         { kind: "scalar", type: "null" },
@@ -337,6 +338,7 @@ describe("ingestOpenApi", () => {
     ).toEqual({
       constraints: { exclusiveMinimum: 0 },
       kind: "scalar",
+      name: "LegacyExclusiveMinimum",
       type: "number",
     });
 
@@ -480,11 +482,13 @@ components:
     expect(schema(result, "nested/deeper/country.yaml", "/Country")).toEqual({
       enumValues: ["CA", "US"],
       kind: "scalar",
+      name: "Country",
       type: "string",
     });
     const tree = schema(result, "root.yaml", "/components/schemas/Tree");
     expect(tree).toEqual({
       kind: "ref",
+      name: "Tree",
       schemaId: createSchemaId("root.yaml", "/components/schemas/Node"),
     });
     const left = schema(result, "root.yaml", "/components/schemas/Left");
@@ -492,6 +496,14 @@ components:
       kind: "ref",
       schemaId: createSchemaId("root.yaml", "/components/schemas/Right"),
     });
+    // Display names: component keys, top-level keys of definition documents,
+    // and file stems for whole-document references; never OpenAPI paths.
+    expect(user?.name).toBe("user");
+    expect(address?.name).toBe("Address");
+    expect(tree).toMatchObject({ name: "Tree" });
+    expect(Object.values(api.schemas).map((entry) => entry.name)).not.toContain(
+      undefined,
+    );
     expect(validateDocumentationArtifact(result.artifact)).toEqual([]);
   });
 
@@ -724,6 +736,7 @@ components:
     expect(codes(polymorphism)).toEqual([]);
     const pet = schema(polymorphism, "api.yaml", "/components/schemas/Pet");
     expect(pet).toEqual({
+      name: "Pet",
       discriminator: {
         mapping: {
           cat: createSchemaId("api.yaml", "/components/schemas/Cat"),
@@ -811,22 +824,25 @@ components:
     expect(inline.ok).toBe(true);
     expect(schema(inline, "openapi.yaml", "/components/schemas/Bare")).toEqual({
       kind: "any",
+      name: "Bare",
     });
     expect(
       schema(inline, "openapi.yaml", "/components/schemas/Described"),
-    ).toEqual({ description: "free-form", kind: "any" });
+    ).toEqual({ description: "free-form", kind: "any", name: "Described" });
     expect(
       schema(inline, "openapi.yaml", "/components/schemas/EnumOnly"),
     ).toEqual({
       applicableTypes: [],
       enumValues: [1, "two", null],
       kind: "type-less",
+      name: "EnumOnly",
     });
     expect(
       schema(inline, "openapi.yaml", "/components/schemas/Keywords"),
     ).toEqual({
       applicableTypes: ["integer", "number", "string"],
       kind: "type-less",
+      name: "Keywords",
       numeric: { minimum: 0 },
       string: { minLength: 1, pattern: "^a" },
     });
@@ -834,6 +850,7 @@ components:
       {
         kind: "composition",
         mode: "anyOf",
+        name: "Multi",
         variants: [
           { enumValues: ["a"], kind: "scalar", type: "string" },
           { enumValues: [1], kind: "scalar", type: "integer" },
@@ -852,12 +869,18 @@ components:
     const bareId = createSchemaId("openapi.yaml", "/components/schemas/Bare");
     expect(
       schema(inline, "openapi.yaml", "/components/schemas/Titled"),
-    ).toEqual({ kind: "ref", schemaId: bareId, title: "Alias" });
+    ).toEqual({
+      kind: "ref",
+      name: "Titled",
+      schemaId: bareId,
+      title: "Alias",
+    });
     expect(
       schema(inline, "openapi.yaml", "/components/schemas/Sibling"),
     ).toEqual({
       kind: "composition",
       mode: "allOf",
+      name: "Sibling",
       variants: [
         { kind: "ref", schemaId: bareId },
         {

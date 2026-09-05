@@ -8,7 +8,7 @@ import { isRecord } from "../parse.js";
 import { joinPointer, parsePointer, resolvePointer } from "../pointer.js";
 import { NormalizeContext, child, optionalString } from "./context.js";
 import { normalizePaths } from "./operations.js";
-import { normalizeSchema } from "./schema.js";
+import { definitionName, normalizeSchema } from "./schema.js";
 import { normalizeSecuritySchemes } from "./security.js";
 import { normalizeServers } from "./servers.js";
 
@@ -151,6 +151,10 @@ function drainSchemaQueue(ctx: NormalizeContext): void {
           schemaId: pending.schemaId,
           serviceId: ctx.serviceId,
         });
-    ctx.registry.set(pending.schemaId, node);
+    const name = definitionName(pending.location);
+    ctx.registry.set(
+      pending.schemaId,
+      name === undefined || node.name !== undefined ? node : { ...node, name },
+    );
   }
 }
