@@ -4,6 +4,7 @@ import {
 } from "@specra/model";
 import {
   SOURCE_DIAGNOSTIC_MESSAGES,
+  SOURCE_DIAGNOSTIC_SEVERITY,
   type IngestionLimits,
   type IngestionSourceRecord,
   type IngestionStatistics,
@@ -81,9 +82,11 @@ export async function runIngestionIsolated(
       request.hostModule ?? hostModuleUrl("ingestion-host.js", import.meta.url),
     maxFrameBytes: MAX_INGESTION_FRAME_BYTES,
     maxOutputBytes: MAX_PROCESS_OUTPUT_BYTES,
-    memoryMiB: 1_024,
+    // Matches the documented 2 GiB evidence ceiling: two in-budget documents
+    // of ~9 MiB and ~480k nodes each need more than 1 GiB of parser heap.
+    memoryMiB: 2_048,
     signal: request.signal,
-    stackKiB: 8_192,
+    stackKiB: 4_096,
     timeoutMs: request.timeoutMs,
   });
   if (!result.ok) return result;
@@ -164,10 +167,14 @@ export function parseIngestionFrame(
   } catch {
     return undefined;
   }
+  // `parseDocumentationArtifact` validates and canonicalizes, so the host
+  // must have produced exactly these bytes; anything else is a spoof.
+  const artifactJson = JSON.stringify(artifact);
+  if (artifactJson !== value.artifactJson) return undefined;
   return {
     artifact,
     artifactDiagnostics,
-    artifactJson: value.artifactJson,
+    artifactJson,
     diagnostics,
     ok: true,
     sources,
@@ -187,7 +194,8 @@ function parseDiagnostics(
       !hasOnlyKeys(entry, ["code", "document", "pointer", "severity"]) ||
       typeof entry.code !== "string" ||
       !Object.hasOwn(SOURCE_DIAGNOSTIC_MESSAGES, entry.code) ||
-      (entry.severity !== "error" && entry.severity !== "warning") ||
+      entry.severity !==
+        SOURCE_DIAGNOSTIC_SEVERITY[entry.code as SourceDiagnosticCode] ||
       typeof entry.document !== "string" ||
       !isDocumentId(entry.document) ||
       !isPointer(entry.pointer)
@@ -198,7 +206,7 @@ function parseDiagnostics(
       code: entry.code as SourceDiagnosticCode,
       document: entry.document,
       pointer: entry.pointer as string,
-      severity: entry.severity,
+      severity: entry.severity as "error" | "warning",
     });
   }
   return diagnostics;

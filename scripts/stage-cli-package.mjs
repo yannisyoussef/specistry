@@ -39,7 +39,6 @@ const stagedDependencies = [
   "@specra/config",
   "@specra/model",
   "@specra/openapi",
-  "yaml",
   "zod",
 ];
 const declaredDependencies = Object.keys(cliManifest.dependencies ?? {}).sort();
@@ -54,8 +53,10 @@ if (
 const zodDirectory = await realpath(
   path.join(cliDirectory, "node_modules", "zod"),
 );
+// yaml is the adapter's dependency, staged beside it so the bundled tree
+// resolves it without declaring a parser dependency on the CLI itself.
 const yamlDirectory = await realpath(
-  path.join(cliDirectory, "node_modules", "yaml"),
+  path.join(repositoryRoot, "packages", "openapi", "node_modules", "yaml"),
 );
 const workspacePackages = ["config", "model", "openapi"];
 const manifests = Object.fromEntries(
@@ -109,7 +110,6 @@ const stagedCliManifest = {
     "@specra/config": manifests.config.version,
     "@specra/model": manifests.model.version,
     "@specra/openapi": manifests.openapi.version,
-    yaml: cliManifest.dependencies.yaml,
     zod: cliManifest.dependencies.zod,
   },
 };

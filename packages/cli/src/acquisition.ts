@@ -1,4 +1,5 @@
-import { readFile, stat } from "node:fs/promises";
+import { open, stat } from "node:fs/promises";
+import path from "node:path";
 
 import type { SourceAcquisition } from "@specra/openapi";
 
@@ -32,17 +33,49 @@ export function createProjectAcquisition(
       try {
         const metadata = await stat(resolved.path);
         if (metadata.size > maxBytes) return { ok: false, reason: "too-large" };
-        const bytes = await readFile(resolved.path);
-        if (bytes.byteLength > maxBytes) {
-          return { ok: false, reason: "too-large" };
-        }
-        return { ok: true, source: { bytes: new Uint8Array(bytes), id } };
+        const bytes = await readBounded(resolved.path, maxBytes);
+        if (bytes === undefined) return { ok: false, reason: "too-large" };
+        const canonicalId = path
+          .relative(projectRoot, resolved.path)
+          .split(path.sep)
+          .join("/");
+        return { ok: true, source: { bytes, canonicalId, id } };
       } catch {
         return { ok: false, reason: "invalid" };
       }
     },
     entry,
   };
+}
+
+/**
+ * Reads at most `maxBytes + 1` bytes so a file replaced with a larger one
+ * between the size check and the read fails closed without unbounded
+ * allocation.
+ */
+async function readBounded(
+  file: string,
+  maxBytes: number,
+): Promise<Uint8Array | undefined> {
+  const handle = await open(file, "r");
+  try {
+    const buffer = Buffer.alloc(maxBytes + 1);
+    let offset = 0;
+    while (offset < buffer.byteLength) {
+      const { bytesRead } = await handle.read(
+        buffer,
+        offset,
+        buffer.byteLength - offset,
+        offset,
+      );
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    if (offset > maxBytes) return undefined;
+    return new Uint8Array(buffer.subarray(0, offset));
+  } finally {
+    await handle.close();
+  }
 }
 
 /** Converts a validated configured path into the adapter's POSIX document id. */

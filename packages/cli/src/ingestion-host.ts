@@ -1,7 +1,6 @@
 import { createReadStream, writeSync } from "node:fs";
 import { exit } from "node:process";
 
-import { serializeDocumentationArtifact } from "@specra/model";
 import {
   ingestOpenApi,
   snapshotIngestionLimits,
@@ -47,10 +46,12 @@ async function main(): Promise<void> {
         createProjectAcquisition(request.projectRoot, entry),
       ),
     });
+    // `ingestOpenApi` returns a canonicalized, frozen artifact, so its JSON
+    // encoding is already the canonical byte form the parent revalidates.
     const artifactJson =
       result.artifact === undefined
         ? undefined
-        : serializeDocumentationArtifact(result.artifact);
+        : JSON.stringify(result.artifact);
     post({
       ...(artifactJson === undefined ? {} : { artifactJson }),
       artifactDiagnostics: result.artifactDiagnostics.map((diagnostic) => ({

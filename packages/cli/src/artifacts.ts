@@ -3,10 +3,16 @@ import { lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
-  ARTIFACT_DIRECTORY,
   ARTIFACT_DOCUMENTATION_FILENAME,
-  ARTIFACT_FORMAT_VERSION,
   ARTIFACT_MANIFEST_FILENAME,
+  ARTIFACT_MANIFEST_FORMAT,
+  DOCUMENT_MODEL_VERSION,
+  serializeArtifactManifest,
+  type ArtifactManifest,
+} from "@specra/model";
+
+import {
+  ARTIFACT_DIRECTORY,
   type ArtifactSummary,
   type IngestionSummary,
 } from "./contracts.js";
@@ -122,10 +128,14 @@ async function confinedArtifactRoot(
   );
   if (!resolved.ok || resolved.path !== artifactRoot) return undefined;
   if (!isPathWithin(projectRoot, resolved.path)) return undefined;
-  // The lexical entry itself must not be a symlink: writing through one would
-  // replace whatever the link points at, even when that target is confined.
-  const lexical = path.join(projectRoot, ...ARTIFACT_DIRECTORY.split("/"));
-  if ((await entryKind(lexical)) === "symlink") return undefined;
+  // No component of the lexical artifact path may be a symlink: writing
+  // through one would replace whatever the link points at, even when that
+  // target is confined.
+  const segments = ARTIFACT_DIRECTORY.split("/");
+  for (let depth = 1; depth <= segments.length; depth += 1) {
+    const lexical = path.join(projectRoot, ...segments.slice(0, depth));
+    if ((await entryKind(lexical)) === "symlink") return undefined;
+  }
   return resolved.path;
 }
 
@@ -142,12 +152,12 @@ async function entryKind(
 }
 
 function renderManifest(request: ArtifactWriteRequest): string {
-  const manifest = {
-    artifactFormat: ARTIFACT_FORMAT_VERSION,
+  const manifest: ArtifactManifest = {
+    artifactFormat: ARTIFACT_MANIFEST_FORMAT,
     diagnostics: { errors: 0, warnings: request.warnings },
     files: { documentation: ARTIFACT_DOCUMENTATION_FILENAME },
     generator: "specra",
-    modelVersion: 1,
+    modelVersion: DOCUMENT_MODEL_VERSION,
     project: { id: request.project.id, name: request.project.name },
     sources: request.ingestion.sources.map((source) => ({
       bytes: source.bytes,
@@ -156,17 +166,5 @@ function renderManifest(request: ArtifactWriteRequest): string {
     })),
     statistics: request.ingestion.statistics,
   };
-  return `${JSON.stringify(sortKeys(manifest), null, 2)}\n`;
-}
-
-function sortKeys(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortKeys);
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value)
-        .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-        .map(([key, item]) => [key, sortKeys(item)]),
-    );
-  }
-  return value;
+  return serializeArtifactManifest(manifest);
 }

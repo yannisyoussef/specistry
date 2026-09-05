@@ -1,5 +1,6 @@
 import {
   SOURCE_DIAGNOSTIC_MESSAGES,
+  SOURCE_DIAGNOSTIC_SEVERITY,
   comparePointers,
   escapeSegment,
 } from "@specra/openapi";
@@ -38,21 +39,25 @@ const messages: Readonly<Record<DiagnosticCode, string>> = {
     "The project root must resolve to an accessible directory.",
 };
 
-const WARNING_CODES = new Set<DiagnosticCode>([
-  "SOURCE_PARTIALLY_REPRESENTED",
-  "SOURCE_UNSUPPORTED_SEMANTIC",
-]);
-
 const SEVERITY_RANK: Readonly<Record<DiagnosticSeverity, number>> = {
   error: 0,
   warning: 1,
 };
 
+/** Severity is a property of the code; source codes defer to the adapter table. */
+export function severityOf(code: DiagnosticCode): DiagnosticSeverity {
+  return Object.hasOwn(SOURCE_DIAGNOSTIC_SEVERITY, code)
+    ? SOURCE_DIAGNOSTIC_SEVERITY[
+        code as keyof typeof SOURCE_DIAGNOSTIC_SEVERITY
+      ]
+    : "error";
+}
+
 export function createDiagnostic(
   code: DiagnosticCode,
   path?: string,
-  severity: DiagnosticSeverity = WARNING_CODES.has(code) ? "warning" : "error",
 ): Diagnostic {
+  const severity = severityOf(code);
   return path === undefined
     ? { code, message: messages[code], severity }
     : { code, message: messages[code], path, severity };

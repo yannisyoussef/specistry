@@ -17,9 +17,12 @@ import {
   MIN_SOURCE_TIMEOUT_MS,
   type BuildContext,
   type BuildPaths,
+  MAX_INGESTION_ENTRIES,
   type BuildResult,
+  type ContextResult,
   type DeepReadonly,
   type Diagnostic,
+  type FailureResult,
   type IngestionSummary,
   type ValidationOptions,
   type ValidationResult,
@@ -45,10 +48,6 @@ import {
 
 const CONFIG_FILENAME = "specra.config.ts";
 
-type ContextResult =
-  | { readonly context: BuildContext; readonly ok: true }
-  | Extract<ValidationResult, { readonly ok: false }>;
-
 /**
  * Loads and confines the project without touching OpenAPI sources. Public
  * consumers use it to compose their own commands; `validateProject` and
@@ -56,19 +55,8 @@ type ContextResult =
  */
 export async function createBuildContext(
   options: ValidationOptions = {},
-): Promise<ValidationResult> {
-  const result = await buildContext(options);
-  if (!result.ok) return result;
-  return {
-    context: result.context,
-    diagnostics: [],
-    ingestion: {
-      sources: [],
-      statistics: { documents: 0, operations: 0, references: 0, schemas: 0 },
-    },
-    ok: true,
-    outcome: "success",
-  };
+): Promise<ContextResult> {
+  return await buildContext(options);
 }
 
 /** Validates configuration, paths, and the real OpenAPI sources. */
@@ -210,7 +198,7 @@ async function buildContext(
       projectRoot,
       signal,
     });
-    return { context, ok: true };
+    return { context, ok: true, outcome: "success" };
   } catch {
     return failure("internal-failure", [createDiagnostic("INTERNAL_ERROR")]);
   }
@@ -224,7 +212,7 @@ type IngestOutcome =
       readonly ok: true;
       readonly projectId: string;
     }
-  | Extract<ValidationResult, { readonly ok: false }>;
+  | FailureResult;
 
 async function ingest(
   context: BuildContext,
@@ -234,6 +222,11 @@ async function ingest(
     ? context.config.openapi
     : [context.config.openapi];
   const entries: string[] = [];
+  if (configured.length > MAX_INGESTION_ENTRIES) {
+    return failure("validation-failure", [
+      createDiagnostic("CONFIG_PATH_INVALID", configPath("openapi")),
+    ]);
+  }
   for (const [index, configuredPath] of configured.entries()) {
     const id = toDocumentId(configuredPath);
     if (id === undefined) {
@@ -298,7 +291,6 @@ export function mapIngestionDiagnostics(
       createDiagnostic(
         diagnostic.code,
         sourcePath(diagnostic.document, diagnostic.pointer),
-        diagnostic.severity,
       ),
     ),
     ...outcome.artifactDiagnostics.map((diagnostic) =>
@@ -331,6 +323,18 @@ async function resolveConfiguredPaths(
       );
     }),
   );
+  // The same document listed twice would become two services with one
+  // identity; reject it as a configuration error rather than a source one.
+  const seenDocuments = new Set<string>();
+  openapiInput.forEach((configuredPath, index) => {
+    const id = toDocumentId(configuredPath) ?? configuredPath;
+    if (seenDocuments.has(id)) {
+      diagnostics.push(
+        createDiagnostic("CONFIG_PATH_INVALID", configPath(`openapi.${index}`)),
+      );
+    }
+    seenDocuments.add(id);
+  });
   const docs = await resolvePath(
     projectRoot,
     config.docs,
@@ -448,14 +452,14 @@ function deepFreeze<T>(value: T): DeepReadonly<T> {
   return value as DeepReadonly<T>;
 }
 
-function cancelled(): Extract<ValidationResult, { readonly ok: false }> {
+function cancelled(): FailureResult {
   return failure("cancelled", [createDiagnostic("CANCELLED")]);
 }
 
 function failure(
   outcome: "cancelled" | "internal-failure" | "validation-failure",
   diagnostics: readonly Diagnostic[],
-): Extract<ValidationResult, { readonly ok: false }> {
+): FailureResult {
   return { diagnostics: sortDiagnostics(diagnostics), ok: false, outcome };
 }
 

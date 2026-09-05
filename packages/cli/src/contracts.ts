@@ -1,4 +1,9 @@
 import type { SpecraConfig } from "@specra/config";
+import {
+  ARTIFACT_DOCUMENTATION_FILENAME,
+  ARTIFACT_MANIFEST_FILENAME,
+  ARTIFACT_MANIFEST_FORMAT,
+} from "@specra/model";
 import type {
   IngestionSourceRecord,
   IngestionStatistics,
@@ -12,12 +17,17 @@ export const DEFAULT_SOURCE_TIMEOUT_MS = 30_000;
 export const MIN_SOURCE_TIMEOUT_MS = 100;
 export const MAX_SOURCE_TIMEOUT_MS = 600_000;
 export const ARTIFACT_DIRECTORY = ".specra/artifacts";
-export const ARTIFACT_FORMAT_VERSION = 1;
-export const ARTIFACT_MANIFEST_FILENAME = "manifest.json";
-export const ARTIFACT_DOCUMENTATION_FILENAME = "documentation.json";
-/** One canonical artifact (≤ 10,000,000 code units) plus frame envelope slack. */
-export const MAX_INGESTION_FRAME_BYTES = 48 * 1_024 * 1_024;
-export const MAX_INGESTION_REQUEST_BYTES = 64 * 1_024;
+export const ARTIFACT_FORMAT_VERSION = ARTIFACT_MANIFEST_FORMAT;
+export { ARTIFACT_DOCUMENTATION_FILENAME, ARTIFACT_MANIFEST_FILENAME };
+/**
+ * One canonical artifact of at most 10,000,000 code units, each up to three
+ * UTF-8 bytes and doubled by JSON string escaping in the worst case, plus
+ * envelope slack. A model-valid artifact therefore always fits the frame.
+ */
+export const MAX_INGESTION_FRAME_BYTES = 64 * 1_024 * 1_024;
+export const MAX_INGESTION_REQUEST_BYTES = 128 * 1_024;
+/** Configured OpenAPI documents per project; each becomes one service. */
+export const MAX_INGESTION_ENTRIES = 64;
 
 export const EXIT_CODES = {
   success: 0,
@@ -122,20 +132,31 @@ export interface IngestionSummary {
 export type ValidationOutcome =
   "cancelled" | "internal-failure" | "success" | "validation-failure";
 
-export type ValidationResult =
+export interface FailureResult {
+  readonly diagnostics: readonly Diagnostic[];
+  readonly ok: false;
+  readonly outcome: Exclude<ValidationOutcome, "success">;
+}
+
+/** Result of `createBuildContext`: configuration and paths only, no ingestion. */
+export type ContextResult =
   | {
       readonly context: BuildContext;
-      /** Warnings only; a successful result never carries an error. */
-      readonly diagnostics: readonly Diagnostic[];
-      readonly ingestion: IngestionSummary;
       readonly ok: true;
       readonly outcome: "success";
     }
-  | {
-      readonly diagnostics: readonly Diagnostic[];
-      readonly ok: false;
-      readonly outcome: Exclude<ValidationOutcome, "success">;
-    };
+  | FailureResult;
+
+export interface ValidationSuccess {
+  readonly context: BuildContext;
+  /** Warnings only; a successful result never carries an error. */
+  readonly diagnostics: readonly Diagnostic[];
+  readonly ingestion: IngestionSummary;
+  readonly ok: true;
+  readonly outcome: "success";
+}
+
+export type ValidationResult = ValidationSuccess | FailureResult;
 
 export interface ArtifactSummary {
   /** Fixed project-relative artifact directory. */
@@ -145,19 +166,10 @@ export interface ArtifactSummary {
   readonly bytes: number;
 }
 
-export type BuildResult =
-  | {
-      readonly artifacts: ArtifactSummary;
-      readonly context: BuildContext;
-      readonly diagnostics: readonly Diagnostic[];
-      readonly ingestion: IngestionSummary;
-      readonly ok: true;
-      readonly outcome: "success";
-    }
-  | {
-      readonly diagnostics: readonly Diagnostic[];
-      readonly ok: false;
-      readonly outcome: Exclude<ValidationOutcome, "success">;
-    };
+export type BuildSuccess = ValidationSuccess & {
+  readonly artifacts: ArtifactSummary;
+};
+
+export type BuildResult = BuildSuccess | FailureResult;
 
 export type { IngestionSourceRecord, IngestionStatistics };
