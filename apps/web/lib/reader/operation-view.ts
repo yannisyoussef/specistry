@@ -6,6 +6,7 @@ import type {
   Parameter,
   Response,
   ResponseHeader,
+  SchemaNode,
   SecurityScheme,
   ServerDefinition,
 } from "@specra/model";
@@ -15,8 +16,12 @@ import type {
   ReaderOperationSummary,
   ReaderService,
 } from "./projection";
-import { summarizeSchema, type SchemaSummary } from "./schema-summary";
-import { mediaTypeAnchor, responseAnchor } from "./slug";
+import {
+  createSchemaView,
+  type SchemaContext,
+  type SchemaView,
+} from "./schema-view";
+import { mediaTypeAnchor, responseAnchor, slugify } from "./slug";
 
 /**
  * Display-ready operation page data. The view keeps canonical semantics
@@ -44,6 +49,8 @@ export const PARAMETER_LOCATION_LABELS: Readonly<
 
 export interface ParameterRow {
   readonly name: string;
+  /** Row id, also the schema block anchor for the focused view. */
+  readonly anchor: string;
   readonly location: ParameterLocation;
   readonly required: boolean;
   readonly deprecated: boolean;
@@ -52,6 +59,17 @@ export interface ParameterRow {
   readonly constraints?: string;
   /** Present for `content`-typed parameters: the single media type. */
   readonly mediaType?: string;
+  /** The projected schema; parameters are always request context. */
+  readonly schema?: SchemaView;
+}
+
+/** A schema block on the page, addressable by anchor for the focused view. */
+export interface SchemaBlockRef {
+  readonly anchor: string;
+  readonly node: SchemaNode;
+  readonly context: SchemaContext;
+  /** Where the block sits, e.g. `Request body · application/json`. */
+  readonly title: string;
 }
 
 export interface ParameterGroupView {
@@ -73,7 +91,8 @@ export interface ExampleView {
 export interface MediaTypeView {
   readonly mediaType: string;
   readonly anchor: string;
-  readonly schema?: SchemaSummary;
+  readonly context: SchemaContext;
+  readonly schema?: SchemaView;
   readonly examples: readonly ExampleView[];
   readonly encodings: readonly {
     readonly propertyName: string;
@@ -90,9 +109,12 @@ export interface RequestBodyView {
 
 export interface ResponseHeaderView {
   readonly name: string;
+  readonly anchor: string;
   readonly description?: string;
   readonly deprecated: boolean;
   readonly type: string;
+  readonly constraints?: string;
+  readonly schema?: SchemaView;
 }
 
 export interface ResponseView {
@@ -137,6 +159,19 @@ export interface OperationView {
   readonly responses: readonly ResponseView[];
   readonly servers: readonly Pick<ServerDefinition, "label" | "url">[];
   readonly tags: readonly string[];
+  /** Every schema block on the page, for the focused schema view. */
+  readonly schemaBlocks: readonly SchemaBlockRef[];
+}
+
+/** Href of the focused view of one schema block, optionally at a locator. */
+export function schemaFocusHref(
+  operationHref: string,
+  anchor: string,
+  locator: string,
+): string {
+  return locator === ""
+    ? `${operationHref}?schema=${anchor}`
+    : `${operationHref}?schema=${anchor}&at=${locator}`;
 }
 
 export function createOperationView(input: {
@@ -148,19 +183,81 @@ export function createOperationView(input: {
 }): OperationView {
   const { group, model, operation, service, summary } = input;
   const registry = model.schemas;
+  const blocks: SchemaBlockRef[] = [];
+  const parameterGroups = groupParameters(operation.parameters, registry);
+  for (const group of parameterGroups) {
+    for (const row of group.rows) {
+      const node = parameterNode(
+        operation.parameters.find(
+          (parameter) =>
+            parameter.name === row.name && parameter.location === row.location,
+        ),
+      );
+      if (node !== undefined) {
+        blocks.push({
+          anchor: row.anchor,
+          context: "request",
+          node,
+          title: `${group.label} · ${row.name}`,
+        });
+      }
+    }
+  }
   const requestBody =
     operation.requestBody === undefined
       ? undefined
       : {
           anchor: "request-body",
-          media: operation.requestBody.content.map((content) =>
-            mediaView(content, "request-body", registry),
-          ),
+          media: operation.requestBody.content.map((content) => {
+            const view = mediaView(
+              content,
+              "request-body",
+              registry,
+              "request",
+            );
+            if (content.schema !== undefined) {
+              blocks.push({
+                anchor: view.anchor,
+                context: "request",
+                node: content.schema,
+                title: `Request body · ${content.mediaType}`,
+              });
+            }
+            return view;
+          }),
           required: operation.requestBody.required,
           ...(operation.requestBody.description === undefined
             ? {}
             : { description: operation.requestBody.description }),
         };
+  const responses = orderResponses(operation.responses).map((response) => {
+    const view = responseView(response, registry);
+    response.headers.forEach((header, index) => {
+      const node =
+        header.valueKind === "schema" ? header.schema : header.content.schema;
+      const anchor = view.headers[index]?.anchor;
+      if (node !== undefined && anchor !== undefined) {
+        blocks.push({
+          anchor,
+          context: "response",
+          node,
+          title: `Response ${view.statusLabel} · header ${header.name}`,
+        });
+      }
+    });
+    response.bodies.forEach((body, index) => {
+      const anchor = view.media[index]?.anchor;
+      if (body.schema !== undefined && anchor !== undefined) {
+        blocks.push({
+          anchor,
+          context: "response",
+          node: body.schema,
+          title: `Response ${view.statusLabel} · ${body.mediaType}`,
+        });
+      }
+    });
+    return view;
+  });
   const serverIds = new Set(operation.serverIds);
   return {
     ...(operation.contractId === undefined
@@ -172,12 +269,11 @@ export function createOperationView(input: {
       : { description: operation.description }),
     group,
     method: operation.method,
-    parameterGroups: groupParameters(operation.parameters, registry),
+    parameterGroups,
     path: operation.path,
     ...(requestBody === undefined ? {} : { requestBody }),
-    responses: orderResponses(operation.responses).map((response) =>
-      responseView(response, registry),
-    ),
+    responses,
+    schemaBlocks: blocks,
     security: securityView(operation, model.securitySchemes),
     servers: model.servers
       .filter((server) => serverIds.has(server.id))
@@ -209,11 +305,26 @@ function groupParameters(
   });
 }
 
+function parameterNode(
+  parameter: Parameter | undefined,
+): SchemaNode | undefined {
+  if (parameter === undefined) return undefined;
+  return parameter.valueKind === "content"
+    ? parameter.content.schema
+    : parameter.schema;
+}
+
 function parameterRow(
   parameter: Parameter,
   registry: ApiService["schemas"],
 ): ParameterRow {
-  const base = {
+  const node = parameterNode(parameter);
+  const schema =
+    node === undefined
+      ? undefined
+      : createSchemaView(node, { context: "request", registry });
+  return {
+    anchor: `parameters-${parameter.location}-${slugify(parameter.name, "parameter")}`,
     deprecated: parameter.deprecated,
     location: parameter.location,
     name: parameter.name,
@@ -221,28 +332,14 @@ function parameterRow(
     ...(parameter.description === undefined
       ? {}
       : { description: parameter.description }),
-  };
-  if (parameter.valueKind === "content") {
-    const schema =
-      parameter.content.schema === undefined
-        ? undefined
-        : summarizeSchema(parameter.content.schema, registry);
-    return {
-      ...base,
-      mediaType: parameter.content.mediaType,
-      type: schema?.type ?? "any",
-      ...(schema?.constraints === undefined
-        ? {}
-        : { constraints: schema.constraints }),
-    };
-  }
-  const schema = summarizeSchema(parameter.schema, registry);
-  return {
-    ...base,
-    type: schema.type,
-    ...(schema.constraints === undefined
+    ...(parameter.valueKind === "content"
+      ? { mediaType: parameter.content.mediaType }
+      : {}),
+    type: schema?.label ?? "any value",
+    ...(schema?.constraints === undefined
       ? {}
       : { constraints: schema.constraints }),
+    ...(schema === undefined ? {} : { schema }),
   };
 }
 
@@ -250,13 +347,15 @@ function mediaView(
   content: MediaTypeContent,
   prefix: string,
   registry: ApiService["schemas"],
+  context: SchemaContext,
 ): MediaTypeView {
   const schema =
     content.schema === undefined
       ? undefined
-      : summarizeSchema(content.schema, registry);
+      : createSchemaView(content.schema, { context, registry });
   return {
     anchor: mediaTypeAnchor(prefix, content.mediaType),
+    context,
     encodings: content.encodings.map((encoding) => ({
       detail:
         encoding.encodingKind === "content"
@@ -329,9 +428,11 @@ function responseView(
   return {
     anchor: responseAnchor(status),
     description: response.description,
-    headers: response.headers.map((header) => headerView(header, registry)),
+    headers: response.headers.map((header) =>
+      headerView(header, registry, responseAnchor(status)),
+    ),
     media: response.bodies.map((body) =>
-      mediaView(body, responseAnchor(status), registry),
+      mediaView(body, responseAnchor(status), registry, "response"),
     ),
     statusLabel,
     ...(statusText === undefined ? {} : { statusText }),
@@ -356,17 +457,23 @@ function responseTone(status: Response["status"]): ResponseView["tone"] {
 function headerView(
   header: ResponseHeader,
   registry: ApiService["schemas"],
+  prefix: string,
 ): ResponseHeaderView {
+  const node =
+    header.valueKind === "schema" ? header.schema : header.content.schema;
   const schema =
-    header.valueKind === "schema"
-      ? summarizeSchema(header.schema, registry)
-      : header.content.schema === undefined
-        ? undefined
-        : summarizeSchema(header.content.schema, registry);
+    node === undefined
+      ? undefined
+      : createSchemaView(node, { context: "response", registry });
   return {
+    anchor: `${prefix}-header-${slugify(header.name, "header")}`,
     deprecated: header.deprecated,
     name: header.name,
-    type: schema?.type ?? "any",
+    type: schema?.label ?? "any value",
+    ...(schema?.constraints === undefined
+      ? {}
+      : { constraints: schema.constraints }),
+    ...(schema === undefined ? {} : { schema }),
     ...(header.description === undefined
       ? {}
       : { description: header.description }),

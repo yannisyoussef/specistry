@@ -96,7 +96,8 @@ describe("operation page", () => {
     const body = screen.getByRole("region", { name: "Request body" });
     expect(body.textContent).toContain("application/json");
     expect(body.textContent).toContain("application/x-www-form-urlencoded");
-    expect(body.textContent).toContain("default 3600 · min 60 · max 86400");
+    expect(body.textContent).toContain("default 3600 · 60–86400");
+    expect(body.textContent).toContain("Request schema");
     expect(within(body).getAllByRole("figure")).toHaveLength(2);
     expect(body.querySelector(".example__code")?.textContent).toContain("{");
 

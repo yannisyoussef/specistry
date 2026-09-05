@@ -311,8 +311,9 @@ describe("edge artifact", () => {
     const query = view.parameterGroups[1];
     expect(query?.rows.find((row) => row.name === "p7")?.deprecated).toBe(true);
     expect(query?.rows.find((row) => row.name === "p8")).toMatchObject({
-      constraints: "one of alpha, beta, gamma",
+      anchor: "parameters-query-p8",
       required: true,
+      schema: { enumeration: { values: ["alpha", "beta", "gamma"] } },
       type: "string · enum",
     });
     expect(query?.rows.find((row) => row.name === "p6")?.type).toBe(
@@ -344,57 +345,68 @@ describe("edge artifact", () => {
     );
   });
 
-  it("summarizes every schema shape without inventing structure", () => {
+  it("projects every schema shape without inventing structure", () => {
     const view = operationTarget(index, edge, ["operations", "schema-shapes"]);
     const schema = view.responses[0]?.media[0]?.schema;
+    expect(schema?.kind).toBe("object");
+    if (schema?.kind !== "object") return;
     const types = Object.fromEntries(
-      (schema?.properties ?? []).map((property) => [
+      schema.properties.map((property) => [
         property.name,
-        property.type,
+        `${property.schema.kind}: ${property.schema.label}`,
       ]),
     );
     expect(types).toEqual({
-      anyValue: "any",
-      choice: "one of: object, string",
-      choices: "string · enum",
-      constant: "constant",
-      deep: "object",
-      map: "object",
-      merged: "object",
-      negated: "not string",
-      never: "never",
-      tuple: "tuple of 2 items",
-      typeless: "string",
-      union: "any of: string, integer, null",
-      unsupported: "object",
+      anyValue: "value: any value",
+      choice: "composition: one of 2",
+      choices: "value: string · enum",
+      constant: "value: unspecified type",
+      deep: "object: object",
+      map: "object: map of integer",
+      merged: "composition: all of 2",
+      negated: "not: not string",
+      never: "value: no value",
+      tuple: "tuple: tuple of 2 items",
+      typeless: "value: unspecified type",
+      union: "composition: any of 3",
+      unsupported: "object: object",
     });
     expect(
-      schema?.properties?.find((property) => property.name === "deep")?.nested,
-    ).toBe(true);
+      schema.properties.find((property) => property.name === "choices")?.schema
+        .enumeration?.values,
+    ).toEqual(["a", "b", "c"]);
     expect(
-      schema?.properties?.find((property) => property.name === "choices")
-        ?.constraints,
-    ).toBe("one of a, b, c");
+      schema.properties.find((property) => property.name === "constant")?.schema
+        .constraints,
+    ).toBe("always fixed");
     const recursive = operationTarget(index, edge, [
       "operations",
       "auth-alternatives",
     ]);
     const node = recursive.requestBody?.media[0]?.schema;
-    // Model v1 carries no component names, so references read as their shape;
-    // naming references is tracked for SPEC-005 alongside the schema renderer.
-    expect(node?.type).toBe("object");
-    expect(node?.description).toBe("Recursive node.");
+    // Registry entries carry their definition name (ADR-011), so references
+    // read by name and recursion is marked instead of expanded.
+    expect(node).toMatchObject({
+      kind: "object",
+      label: "Node",
+      name: "Node",
+      description: "Recursive node.",
+    });
+    if (node?.kind !== "object") return;
     expect(
-      node?.properties?.map((property) => [
+      node.properties.map((property) => [
         property.name,
-        property.type,
-        property.nested,
+        property.schema.label,
+        property.schema.kind,
       ]),
     ).toEqual([
-      ["value", "string", false],
-      ["children", "array of object", true],
-      ["parent", "object", true],
+      ["value", "string", "value"],
+      ["children", "array of Node", "array"],
+      ["parent", "Node", "cycle"],
     ]);
+    expect(recursive.schemaBlocks.map((block) => block.anchor)).toContain(
+      "request-body-application-json",
+    );
   });
 });
 
@@ -506,14 +518,20 @@ describe("operation view", () => {
       "application/json",
       "application/x-www-form-urlencoded",
     ]);
-    const ttl = view.requestBody?.media[0]?.schema?.properties?.find(
-      (property) => property.name === "ttl",
-    );
+    const body = view.requestBody?.media[0]?.schema;
+    const ttl =
+      body?.kind === "object"
+        ? body.properties.find((property) => property.name === "ttl")
+        : undefined;
     expect(ttl).toMatchObject({
-      constraints: "default 3600 · min 60 · max 86400",
       required: false,
-      type: "integer",
+      schema: { constraints: "default 3600 · 60–86400", label: "integer" },
     });
+    expect(view.requestBody?.media[0]).toMatchObject({
+      anchor: "request-body-application-json",
+      context: "request",
+    });
+    expect(view.responses[0]?.media[0]?.context).toBe("response");
     expect(
       view.responses.map((response) => [
         response.statusLabel,

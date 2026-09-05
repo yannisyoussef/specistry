@@ -8,6 +8,7 @@ import "@fontsource-variable/space-grotesk";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/reader.css";
+import "./styles/schema.css";
 
 import { Shell } from "../components/reader/shell";
 import { loadReaderArtifact } from "../lib/reader/artifact";
