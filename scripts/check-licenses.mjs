@@ -43,10 +43,12 @@ while (queue.length > 0) {
   const license = licenseExpression(manifest.license);
   if (license === "UNKNOWN" || isDenied(license))
     violations.push(`${manifest.name}@${manifest.version}: ${license}`);
-  const nodeModulesPath = packagePath
-    .split(path.sep)
-    .slice(0, -candidate.name.split("/").length)
-    .join(path.sep);
+  const nodeModulesPath = isWorkspacePackage(packagePath)
+    ? path.join(packagePath, "node_modules")
+    : packagePath
+        .split(path.sep)
+        .slice(0, -candidate.name.split("/").length)
+        .join(path.sep);
   enqueueDependencies(nodeModulesPath, manifest.dependencies, false);
   enqueueDependencies(nodeModulesPath, manifest.optionalDependencies, true);
 }
@@ -66,6 +68,12 @@ function enqueueDependencies(nodeModulesPath, dependencies, optional) {
   if (dependencies === undefined) return;
   for (const name of Object.keys(dependencies))
     queue.push({ name, nodeModulesPath, optional });
+}
+
+function isWorkspacePackage(packagePath) {
+  return ["apps", "packages"].some((group) =>
+    packagePath.startsWith(`${path.join(workspaceRoot, group)}${path.sep}`),
+  );
 }
 
 async function readManifest(manifestPath) {

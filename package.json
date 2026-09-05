@@ -21,11 +21,14 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0 && markdownlint-cli2 '**/*.md'",
+    "pretest": "pnpm --filter @specra/cli... build",
+    "pretest:coverage": "pnpm --filter @specra/cli... build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:performance": "vitest run tests/performance",
     "test:security": "vitest run tests/security",
+    "pretypecheck": "pnpm --filter @specra/config build",
     "typecheck": "pnpm --recursive --if-present run typecheck"
   },
   "devDependencies": {

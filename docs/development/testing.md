@@ -11,19 +11,20 @@ coverage.
 
 ## Layers
 
-| Layer                   | Ownership and examples                                          | Phase 0 state                                                |
-| ----------------------- | --------------------------------------------------------------- | ------------------------------------------------------------ |
-| Unit                    | Model invariants, config defaults, reference classification     | Running                                                      |
-| Parser/resolver         | YAML/JSON errors, refs, cycles, OpenAPI dialects                | Parser boundary running; full resolver in SPEC-003           |
-| Normalization           | Determinism and semantic mappings                               | Model v1 semantics, permutation/round-trip tests running     |
-| Security                | limits, aliases, remote refs, script-looking values, redaction  | Running foundation cases                                     |
-| Architecture            | forbidden package dependencies and raw-model leakage            | Running                                                      |
-| Component/accessibility | rendering states, keyboard behavior, axe                        | Foundation page running                                      |
-| Integration             | config → source → canonical artifact → routes                   | Planned with ingestion slice                                 |
-| Browser E2E             | HTTP headers, metadata, keyboard skip flow, axe, 320 px reflow  | Chromium foundation smoke running                            |
-| Visual regression       | stable representative states and themes                         | Strategy defined; baselines start with API reader            |
-| Performance             | large/pathological parsing, rendering, index and bundle budgets | Ingestion plus 5,000-schema model smoke running              |
-| Build/examples          | application, CLI, TestInbox and edge examples                   | App build running; examples start when model ingestion works |
+| Layer                   | Ownership and examples                                          | Phase 0 state                                            |
+| ----------------------- | --------------------------------------------------------------- | -------------------------------------------------------- |
+| Unit                    | Model invariants, config defaults, reference classification     | Running                                                  |
+| Parser/resolver         | YAML/JSON errors, refs, cycles, OpenAPI dialects                | Parser boundary running; full resolver in SPEC-003       |
+| Normalization           | Determinism and semantic mappings                               | Model v1 semantics, permutation/round-trip tests running |
+| Security                | limits, aliases, remote refs, script-looking values, redaction  | Running foundation cases                                 |
+| Architecture            | dependency map, manifest edges, opaque loads, raw-model leakage | Running                                                  |
+| Component/accessibility | rendering states, keyboard behavior, axe                        | Foundation page running                                  |
+| CLI/orchestration       | config process, root paths, diagnostics, exits, cancellation    | SPEC-002 subprocess/security tests running               |
+| Integration             | config → source → canonical artifact → routes                   | Planned with ingestion slice                             |
+| Browser E2E             | HTTP headers, metadata, keyboard skip flow, axe, 320 px reflow  | Chromium foundation smoke running                        |
+| Visual regression       | stable representative states and themes                         | Strategy defined; baselines start with API reader        |
+| Performance             | large/pathological parsing, rendering, index and bundle budgets | Ingestion plus 5,000-schema model smoke running          |
+| Build/examples          | application, CLI, TestInbox and edge examples                   | App and clean-room packed CLI running                    |
 
 ## Fixture corpus
 
@@ -33,7 +34,9 @@ Large generated fixtures declare deterministic construction parameters rather th
 
 ## CI grouping
 
-The fast job runs formatting, lint, types, semantic tests, architecture, security, dependency-manifest, license, and redacted secret checks. Build/coverage/audit and browser/axe jobs run after it. A dedicated frozen-install/manifest/license/audit dependency-policy job runs only for pull requests. Future visual shards begin when stable reader states exist; they do not block the fast feedback path.
+The fast job runs formatting, lint, types, semantic tests (including actual CLI subprocess and clean-room package execution), architecture, security, dependency-manifest, license, and redacted secret checks. The clean-room case stages a self-contained CLI tree under a canonical (real-path) temporary directory, asserts normalized non-escaping archive paths and one Zod copy, requires warning-free offline installation, checks the packed Node engine contract, and exercises both binary and programmatic APIs. The canonical directory matters: npm silently omits bundled dependencies when the staged root is reached through a symlink, which is the archive shape the topology assertion rejects. Build/coverage/audit and browser/axe jobs run after it. A dedicated frozen-install/manifest/license/audit dependency-policy job runs only for pull requests. Future visual shards begin when stable reader states exist; they do not block the fast feedback path.
+
+Coverage enforces an 80% statement/line, 75% branch, and 90% function repository floor plus stricter CLI package floors of 85% statements/lines, 75% branches, and 95% functions. `pnpm typecheck` builds `@specra/config` first because the CLI resolves that package's types through its built declarations, exactly as `pnpm test` builds the CLI and config before the focused CLI tests. The compiled executable shim and config-process host module are excluded from in-process source instrumentation because they run in subprocess realms; actual executable, config-process failure, timeout, cancellation, output, serialization, secret, and clean-room cases cover those boundaries behaviorally.
 
 ## Manual checks
 

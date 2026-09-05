@@ -30,7 +30,7 @@ How can Specra provide expressive authorship and `specra.config.ts` while keepin
 
 Authored content is data: parse Markdown/MDX syntax, reject raw HTML, imports, exports, and arbitrary expressions, and allow only registered Specra components with schema-validated JSON-like props. Includes resolve within the configured docs root with cycle and size limits. Advanced arbitrary components are not initially supported.
 
-Local `specra.config.ts` is trusted executable developer code. Load it only during build/dev in an isolated least-privilege worker, then validate with the versioned config schema and pass only serializable resolved data onward. Untrusted or hosted workflows accept a data-only JSON/YAML equivalent and never execute TS config.
+Local `specra.config.ts` is trusted executable developer code. Load it only during build/dev in an isolated least-privilege process, then validate with the versioned config schema and pass only serializable resolved data onward. Untrusted or hosted workflows accept a data-only JSON/YAML equivalent and never execute TS config.
 
 ## Rationale
 
