@@ -53,7 +53,7 @@ The future published executable name is `specra`. See the [CLI reference](docs/c
 | `pnpm test:coverage`      | Run tests and emit coverage summaries                            |
 | `pnpm test:e2e`           | Run Chromium browser and accessibility smoke tests               |
 | `pnpm test:security`      | Run the malicious-input foundation tests                         |
-| `pnpm test:performance`   | Run the performance smoke fixture                                |
+| `pnpm test:performance`   | Run fresh-process ingestion and model performance evidence       |
 | `pnpm check:architecture` | Enforce dependency directions, manifest edges, and opaque loads  |
 | `pnpm check:dependencies` | Enforce exact dependency and private-package manifest policy     |
 | `pnpm check:licenses`     | Reject denied production dependency licenses                     |
@@ -68,13 +68,13 @@ specra/
 ├── packages/cli/             Thin CLI and reusable orchestration context
 ├── packages/config/          Validated consumer configuration contract
 ├── packages/model/           Framework-neutral canonical documentation model
-├── packages/openapi/         OpenAPI source/parser boundary and ingestion policy
+├── packages/openapi/         OpenAPI 3.0/3.1 ingestion: bounded parse, confined refs, normalization
 ├── tests/                    Unit, security, accessibility, performance, and browser tests
 ├── scripts/                  Architecture, license, and secret-policy checks
 └── docs/                     Product, architecture, security, ADRs, and roadmap
 ```
 
-Start with the [architecture entry point](docs/architecture/README.md), [product definition](docs/product-definition.md), [CLI reference](docs/cli.md), [configuration reference](docs/configuration.md), [threat model](docs/security/threat-model.md), [deployment requirements](docs/deployment.md), and [roadmap](docs/roadmap.md). Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Start with the [architecture entry point](docs/architecture/README.md), [product definition](docs/product-definition.md), [CLI reference](docs/cli.md), [OpenAPI ingestion reference](docs/openapi.md), [configuration reference](docs/configuration.md), [threat model](docs/security/threat-model.md), [deployment requirements](docs/deployment.md), and [roadmap](docs/roadmap.md). Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 Development integrates through `develop`; reviewed, green promotion pull requests move releases to the production branch, `master`. The complete branch and hotfix workflow is documented in [CONTRIBUTING.md](CONTRIBUTING.md#branch-workflow).
 

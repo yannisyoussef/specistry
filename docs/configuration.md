@@ -31,21 +31,21 @@ export default defineConfig({
 
 ## Current fields and defaults
 
-| Field                       | Required/default        | Rules                                                                                                   |
-| --------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `schemaVersion`             | Required; currently `1` | Future incompatible config changes increment this value                                                 |
-| `name`                      | Required                | Trimmed, 1–120 characters                                                                               |
-| `openapi`                   | Required                | One project-relative path or a non-empty array; URLs, absolute paths, null bytes, and `..` are rejected |
-| `docs`                      | `./docs`                | Project-relative path under the same policy                                                             |
-| `branding.logo` / `favicon` | Omitted                 | Project-relative paths; asset validation arrives with authored content                                  |
-| `environments`              | `{}`                    | Named base URLs; HTTPS required except loopback HTTP; credentials, query, and fragment are forbidden    |
-| `playground.mode`           | `disabled`              | `browser` is reserved for the future browser-direct slice; parsing config does not implement execution  |
+| Field                       | Required/default        | Rules                                                                                                                                                                  |
+| --------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion`             | Required; currently `1` | Future incompatible config changes increment this value                                                                                                                |
+| `name`                      | Required                | Trimmed, 1–120 characters                                                                                                                                              |
+| `openapi`                   | Required                | One project-relative path or a non-empty array of at most 64 distinct entries; each entry becomes one service; URLs, absolute paths, null bytes, and `..` are rejected |
+| `docs`                      | `./docs`                | Project-relative path under the same policy                                                                                                                            |
+| `branding.logo` / `favicon` | Omitted                 | Project-relative paths; asset validation arrives with authored content                                                                                                 |
+| `environments`              | `{}`                    | Named base URLs; HTTPS required except loopback HTTP; credentials, query, and fragment are forbidden                                                                   |
+| `playground.mode`           | `disabled`              | `browser` is reserved for the future browser-direct slice; parsing config does not implement execution                                                                 |
 
-Objects are strict: unknown keys fail with path-aware validation issues. `specra validate` maps library issues to stable, value-free `CONFIG_INVALID` diagnostics; raw Zod errors, source values, exception text, and stacks are not the terminal/JSON contract.
+Objects are strict: unknown keys fail with path-aware validation issues. `specra validate` maps library issues to stable, value-free `CONFIG_INVALID` diagnostics whose paths use the unified grammar (`config#/environments/*/baseUrl`, `config#/openapi/1`); raw Zod errors, source values, exception text, and stacks are not the terminal/JSON contract. The OpenAPI documents themselves are validated by the ingestion pipeline described in the [OpenAPI ingestion reference](openapi.md).
 
 Paths first pass cross-platform lexical constraints, then orchestration canonicalizes the project root and resolves existing paths/symlinks beneath it. OpenAPI and branding paths must be files; `docs` must be a directory. Missing, wrong-type, absolute, traversing, or symlink-escaping paths fail closed. Environment base paths are allowed and operation paths will be resolved against a normalized trailing-slash base in the playground slice.
 
-The project root defaults to the invocation directory. `--root` accepts one relative or absolute host path; relative values resolve from the invocation directory. Specra does not search parent directories. The deterministic future artifact root is `.specra/artifacts`; validation resolves it through the nearest existing ancestor but does not create or delete it.
+The project root defaults to the invocation directory. `--root` accepts one relative or absolute host path; relative values resolve from the invocation directory. Specra does not search parent directories. The deterministic artifact root is `.specra/artifacts`; validation resolves it through the nearest existing ancestor but does not create or delete it, and `specra build` writes it atomically.
 
 ## Trust and migration
 
