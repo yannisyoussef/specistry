@@ -4,6 +4,11 @@
 
 Tests assert semantics, invariants, diagnostics, security boundaries, and user behavior. Snapshots are limited to stable serializations or visual baselines and never substitute for intent. Fixtures include realistic contracts and adversarial structures. Randomized tests use recorded seeds.
 
+SPEC-001 includes a committed canonical v1 golden artifact, a clean public-consumer
+type contract, a recorded-seed permutation test, compatibility rejection for future
+versions, hostile structure/limit cases, and broad/deep registry performance smoke
+coverage.
+
 ## Layers
 
 | Layer                   | Ownership and examples                                          | Phase 0 state                                                |

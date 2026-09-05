@@ -1,6 +1,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
+import ts from "typescript";
 
 const root = process.cwd();
 const components = [
@@ -20,15 +21,13 @@ const packageComponents = new Map([
   ["@specra/model", "model"],
   ["@specra/openapi", "openapi"],
 ]);
-const browserGlobalPattern =
-  /\b(?:document|localStorage|navigator|sessionStorage|window)\b/;
-
 const violations = [];
 for (const component of components) {
   const directory = path.join(root, component.directory);
   for (const file of await sourceFiles(directory)) {
     const source = await readFile(file, "utf8");
-    for (const specifier of importSpecifiers(source)) {
+    const analysis = analyzeSource(source, file);
+    for (const specifier of analysis.specifiers) {
       const dependency = dependencyComponent(file, specifier);
       if (
         dependency !== undefined &&
@@ -42,7 +41,7 @@ for (const component of components) {
       if (
         component.name === "model" &&
         isProductionSource(file) &&
-        !isModelImportAllowed(specifier)
+        !isModelImportAllowed(file, specifier)
       ) {
         violations.push(
           `${path.relative(root, file)} imports '${specifier}', but the canonical model must remain dependency-free.`,
@@ -52,10 +51,19 @@ for (const component of components) {
     if (
       component.name === "model" &&
       isProductionSource(file) &&
-      browserGlobalPattern.test(stripCommentsAndStrings(source))
+      analysis.usesBrowserGlobal
     ) {
       violations.push(
         `${path.relative(root, file)} uses a browser global in the canonical model boundary.`,
+      );
+    }
+    if (
+      component.name === "model" &&
+      isProductionSource(file) &&
+      analysis.hasOpaqueRuntimeLoad
+    ) {
+      violations.push(
+        `${path.relative(root, file)} uses opaque runtime loading in the canonical model boundary.`,
       );
     }
   }
@@ -82,10 +90,26 @@ if (
     "Architecture checker self-test failed to resolve a relative cross-boundary import.",
   );
 }
-if (isModelImportAllowed("react") || !isModelImportAllowed("node:util")) {
+const modelSelfTest = path.join(root, "packages/model/src/index.ts");
+if (
+  isModelImportAllowed(modelSelfTest, "react") ||
+  isModelImportAllowed(modelSelfTest, "node:util") ||
+  isModelImportAllowed(
+    modelSelfTest,
+    "../../../scripts/check-architecture.mjs",
+  ) ||
+  !isModelImportAllowed(modelSelfTest, "./types.js")
+) {
   violations.push(
     "Architecture checker self-test failed for dependency-free model imports.",
   );
+}
+const astSelfTest = analyzeSource(
+  'const name = "react"; import(name); globalThis["win" + "dow"];',
+  "self-test.ts",
+);
+if (!astSelfTest.hasOpaqueRuntimeLoad || !astSelfTest.usesBrowserGlobal) {
+  violations.push("Architecture checker AST self-test failed.");
 }
 
 if (violations.length > 0) {
@@ -113,36 +137,106 @@ function componentForPath(file) {
   return undefined;
 }
 
-function importSpecifiers(source) {
+function analyzeSource(source, file) {
   const specifiers = [];
-  const patterns = [
-    /\bfrom\s*["']([^"']+)["']/g,
-    /\bimport\s*\(\s*["']([^"']+)["']/g,
-    /\bimport\s*["']([^"']+)["']/g,
-  ];
-  for (const pattern of patterns) {
-    for (const match of source.matchAll(pattern)) {
-      if (match[1] !== undefined) specifiers.push(match[1]);
+  let hasOpaqueRuntimeLoad = false;
+  let usesBrowserGlobal = false;
+  const sourceFile = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const browserGlobals = new Set([
+    "document",
+    "localStorage",
+    "navigator",
+    "sessionStorage",
+    "window",
+  ]);
+  const visit = (node) => {
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier !== undefined &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      specifiers.push(node.moduleSpecifier.text);
     }
-  }
-  return specifiers;
+    if (ts.isCallExpression(node)) {
+      const runtimeLoad =
+        node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) &&
+          node.expression.text === "require");
+      if (runtimeLoad) {
+        const argument = node.arguments[0];
+        if (argument !== undefined && ts.isStringLiteral(argument))
+          specifiers.push(argument.text);
+        else hasOpaqueRuntimeLoad = true;
+      }
+    }
+    if (
+      ts.isIdentifier(node) &&
+      browserGlobals.has(node.text) &&
+      !isPropertyName(node)
+    ) {
+      usesBrowserGlobal = true;
+    }
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "globalThis" &&
+      browserGlobals.has(node.name.text)
+    ) {
+      usesBrowserGlobal = true;
+    }
+    if (
+      ts.isElementAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "globalThis" &&
+      browserGlobals.has(staticString(node.argumentExpression))
+    ) {
+      usesBrowserGlobal = true;
+    }
+    if (ts.isIdentifier(node) && node.text === "createRequire")
+      hasOpaqueRuntimeLoad = true;
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return { hasOpaqueRuntimeLoad, specifiers, usesBrowserGlobal };
 }
 
-function isModelImportAllowed(specifier) {
-  return specifier.startsWith(".") || specifier.startsWith("node:");
+function isPropertyName(node) {
+  const parent = node.parent;
+  return (
+    (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
+    ((ts.isPropertyAssignment(parent) || ts.isPropertyDeclaration(parent)) &&
+      parent.name === node)
+  );
+}
+
+function staticString(node) {
+  if (ts.isStringLiteral(node)) return node.text;
+  if (
+    ts.isBinaryExpression(node) &&
+    node.operatorToken.kind === ts.SyntaxKind.PlusToken
+  ) {
+    const left = staticString(node.left);
+    const right = staticString(node.right);
+    if (left !== undefined && right !== undefined) return left + right;
+  }
+  return undefined;
+}
+
+function isModelImportAllowed(importer, specifier) {
+  if (!specifier.startsWith(".")) return false;
+  const target = path.resolve(path.dirname(importer), specifier);
+  const modelSource = `${path.join(root, "packages/model/src")}${path.sep}`;
+  return `${target}${path.sep}`.startsWith(modelSource);
 }
 
 function isProductionSource(file) {
   return !/\.test\.[cm]?[jt]sx?$/.test(file);
-}
-
-function stripCommentsAndStrings(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\/\/.*$/gm, "")
-    .replace(/`(?:\\[\s\S]|[^`])*`/g, "")
-    .replace(/"(?:\\.|[^"\\])*"/g, "")
-    .replace(/'(?:\\.|[^'\\])*'/g, "");
 }
 
 async function sourceFiles(directory) {

@@ -1,4 +1,5 @@
 import { createDiagnostic } from "./diagnostics.js";
+import { canonicalizeMediaType } from "./media-type.js";
 import type {
   ApiService,
   CanonicalDiagnostic,
@@ -8,6 +9,7 @@ import type {
   JsonObject,
   JsonValue,
   MediaTypeContent,
+  MediaTypeEncoding,
   ModelLimits,
   Operation,
   Parameter,
@@ -21,6 +23,7 @@ import type {
 } from "./types.js";
 import {
   DEFAULT_MODEL_LIMITS,
+  snapshotModelLimits,
   hasModelErrors,
   validateDocumentationArtifact,
 } from "./validation.js";
@@ -70,6 +73,18 @@ export function parseDocumentationArtifact(
   serialized: string,
   limits: ModelLimits = DEFAULT_MODEL_LIMITS,
 ): DocumentationArtifact {
+  const safeLimits = snapshotModelLimits(limits);
+  if (
+    safeLimits === undefined ||
+    serialized.length > safeLimits.maxSerializedLength
+  ) {
+    throw new CanonicalModelError([
+      createDiagnostic({
+        code: "MODEL_LIMIT_EXCEEDED",
+        location: { path: "/" },
+      }),
+    ]);
+  }
   let value: unknown;
   try {
     value = JSON.parse(serialized) as unknown;
@@ -78,11 +93,11 @@ export function parseDocumentationArtifact(
       createDiagnostic({ code: "INVALID_MODEL", location: { path: "/" } }),
     ]);
   }
-  const diagnostics = validateDocumentationArtifact(value, limits);
+  const diagnostics = validateDocumentationArtifact(value, safeLimits);
   if (hasModelErrors(diagnostics)) throw new CanonicalModelError(diagnostics);
   return canonicalizeDocumentationArtifact(
     value as DocumentationArtifact,
-    limits,
+    safeLimits,
   );
 }
 
@@ -180,10 +195,27 @@ function canonicalRequestBody(requestBody: RequestBody): RequestBody {
 function canonicalMedia(media: MediaTypeContent): MediaTypeContent {
   return {
     ...media,
+    mediaType: canonicalizeMediaType(media.mediaType) ?? media.mediaType,
+    encodings: media.encodings
+      .map(canonicalEncoding)
+      .sort((left, right) =>
+        compareText(left.propertyName, right.propertyName),
+      ),
     examples: media.examples.map(canonicalExample),
     ...(media.schema === undefined
       ? {}
       : { schema: canonicalSchema(media.schema) }),
+  };
+}
+
+function canonicalEncoding(encoding: MediaTypeEncoding): MediaTypeEncoding {
+  return {
+    ...encoding,
+    headers: encoding.headers
+      .map(canonicalHeader)
+      .sort((left, right) =>
+        compareText(left.name.toLowerCase(), right.name.toLowerCase()),
+      ),
   };
 }
 
@@ -412,10 +444,7 @@ function sortRecord<T, U>(
 }
 
 function compareMedia(left: MediaTypeContent, right: MediaTypeContent): number {
-  return compareText(
-    left.mediaType.toLowerCase(),
-    right.mediaType.toLowerCase(),
-  );
+  return compareText(left.mediaType, right.mediaType);
 }
 
 function compareResponses(left: Response, right: Response): number {
@@ -439,9 +468,9 @@ function responseKey(response: Response): string {
 }
 
 function securityKey(requirement: SecurityRequirement): string {
-  return requirement.schemes
-    .map((use) => `${use.schemeId}:${use.scopes.join(",")}`)
-    .join("|");
+  return JSON.stringify(
+    requirement.schemes.map((use) => [use.schemeId, [...use.scopes]]),
+  );
 }
 
 function compareDiagnostics(

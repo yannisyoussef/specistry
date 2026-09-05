@@ -50,6 +50,7 @@ export type DiagnosticCode =
   | "SCHEMA_IGNORED_ANNOTATION"
   | "SCHEMA_INVALID_SEMANTIC"
   | "SCHEMA_PARTIALLY_REPRESENTED"
+  | "SCHEMA_UNRESOLVED_REFERENCE"
   | "SCHEMA_UNSUPPORTED_SEMANTIC";
 
 export interface DiagnosticLocation {
@@ -73,7 +74,9 @@ export interface CanonicalDiagnostic {
 export interface ModelLimits {
   readonly maxCollectionEntries: number;
   readonly maxDepth: number;
+  readonly maxDiagnostics: number;
   readonly maxNodes: number;
+  readonly maxSerializedLength: number;
   readonly maxStringLength: number;
 }
 
@@ -122,6 +125,8 @@ export interface ServerVariable {
 
 export interface Operation {
   readonly id: OperationId;
+  /** Exact source contract operation identifier, when one was declared. */
+  readonly contractId?: string;
   readonly method: HttpMethod;
   readonly path: string;
   readonly title: string;
@@ -142,7 +147,6 @@ export interface Operation {
 interface ParameterMetadata {
   readonly id: ParameterId;
   readonly name: string;
-  readonly location: "cookie" | "header" | "path" | "query";
   readonly description?: string;
   readonly required: boolean;
   readonly deprecated: boolean;
@@ -151,29 +155,60 @@ interface ParameterMetadata {
 
 export type Parameter = ParameterMetadata &
   (
-    | {
+    | ({
         readonly valueKind: "schema";
         readonly schema: SchemaNode;
-        readonly serialization: ParameterSerialization;
-      }
+      } & (
+        | {
+            readonly location: "query";
+            readonly serialization: QueryParameterSerialization;
+          }
+        | {
+            readonly location: "path";
+            readonly serialization: PathParameterSerialization;
+          }
+        | {
+            readonly location: "header";
+            readonly serialization: HeaderParameterSerialization;
+          }
+        | {
+            readonly location: "cookie";
+            readonly serialization: CookieParameterSerialization;
+          }
+      ))
     | {
         readonly valueKind: "content";
+        readonly location: "cookie" | "header" | "path" | "query";
         readonly content: MediaTypeContent;
       }
   );
 
-export interface ParameterSerialization {
-  readonly style:
-    | "deepObject"
-    | "form"
-    | "label"
-    | "matrix"
-    | "pipeDelimited"
-    | "simple"
-    | "spaceDelimited";
+export interface QueryParameterSerialization {
+  readonly style: "deepObject" | "form" | "pipeDelimited" | "spaceDelimited";
   readonly explode: boolean;
   readonly allowReserved: boolean;
 }
+
+export interface PathParameterSerialization {
+  readonly style: "label" | "matrix" | "simple";
+  readonly explode: boolean;
+}
+
+export interface HeaderParameterSerialization {
+  readonly style: "simple";
+  readonly explode: boolean;
+}
+
+export interface CookieParameterSerialization {
+  readonly style: "form";
+  readonly explode: boolean;
+}
+
+export type ParameterSerialization =
+  | QueryParameterSerialization
+  | PathParameterSerialization
+  | HeaderParameterSerialization
+  | CookieParameterSerialization;
 
 export interface RequestBody {
   readonly description?: string;
@@ -185,7 +220,31 @@ export interface MediaTypeContent {
   readonly mediaType: string;
   readonly schema?: SchemaNode;
   readonly examples: readonly Example[];
+  /** Per-property encoding instructions for multipart and form bodies. */
+  readonly encodings: readonly MediaTypeEncoding[];
 }
+
+interface MediaTypeEncodingMetadata {
+  readonly propertyName: string;
+  readonly headers: readonly ResponseHeader[];
+}
+
+export type MediaTypeEncoding = MediaTypeEncodingMetadata &
+  (
+    | {
+        readonly encodingKind: "content";
+        readonly contentType: string;
+      }
+    | {
+        readonly encodingKind: "serialization";
+        readonly serialization: {
+          readonly style:
+            "deepObject" | "form" | "pipeDelimited" | "spaceDelimited";
+          readonly explode: boolean;
+          readonly allowReserved: boolean;
+        };
+      }
+  );
 
 export type ResponseStatus =
   | { readonly kind: "code"; readonly code: number }
@@ -215,10 +274,10 @@ export type ResponseHeader = ResponseHeaderMetadata &
     | {
         readonly valueKind: "schema";
         readonly schema: SchemaNode;
-        readonly serialization: Pick<
-          ParameterSerialization,
-          "explode" | "style"
-        >;
+        readonly serialization: {
+          readonly explode: boolean;
+          readonly style: "simple";
+        };
       }
     | {
         readonly valueKind: "content";
@@ -353,7 +412,8 @@ export interface StringConstraints {
   readonly format?: string;
 }
 
-export type ScalarConstraints = NumericConstraints & StringConstraints;
+export type ScalarConstraints = NumericConstraints &
+  Omit<StringConstraints, "format">;
 
 export interface ObjectConstraints {
   readonly minProperties?: number;

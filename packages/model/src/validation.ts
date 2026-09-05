@@ -1,5 +1,10 @@
 import { createDiagnostic, DIAGNOSTIC_MESSAGES } from "./diagnostics.js";
-import { assertCanonicalId, createDiagnosticId } from "./identity.js";
+import {
+  assertCanonicalId,
+  createDiagnosticId,
+  createOperationId,
+} from "./identity.js";
+import { canonicalizeMediaType } from "./media-type.js";
 import {
   DOCUMENT_MODEL_VERSION,
   type CanonicalDiagnostic,
@@ -11,9 +16,16 @@ import {
 export const DEFAULT_MODEL_LIMITS: ModelLimits = Object.freeze({
   maxCollectionEntries: 100_000,
   maxDepth: 128,
+  maxDiagnostics: 10_000,
   maxNodes: 500_000,
+  maxSerializedLength: 10_000_000,
   maxStringLength: 1_000_000,
 });
+
+const DIAGNOSTIC_LIMITS = new WeakMap<
+  Map<string, CanonicalDiagnostic>,
+  number
+>();
 
 const SEVERITY_RANK = { error: 0, warning: 1, info: 2 } as const;
 const SCHEMA_TYPES: readonly SchemaInstanceType[] = [
@@ -26,64 +38,73 @@ const SCHEMA_TYPES: readonly SchemaInstanceType[] = [
   "string",
 ];
 
+interface SchemaDiagnosticLink {
+  readonly id: string;
+  readonly path: string;
+  readonly requiredCode?: DiagnosticCode;
+}
+
 export function validateDocumentationModel(
   value: unknown,
   limits: ModelLimits = DEFAULT_MODEL_LIMITS,
 ): readonly CanonicalDiagnostic[] {
-  return validateDocumentationModelInternal(value, limits);
+  return validateDocumentationModelInternal(value, limits, undefined, "");
 }
 
 function validateDocumentationModelInternal(
   value: unknown,
   limits: ModelLimits,
-  artifactLinks?: { id: string; path: string }[],
+  artifactLinks?: SchemaDiagnosticLink[],
+  modelPath = "",
 ): readonly CanonicalDiagnostic[] {
   const diagnostics = new Map<string, CanonicalDiagnostic>();
-  if (!validLimits(limits)) {
+  const safeLimits = snapshotModelLimits(limits);
+  if (safeLimits === undefined) {
     add(diagnostics, "MODEL_LIMIT_EXCEEDED", "/");
     return sorted(diagnostics.values());
   }
-  if (!validateSerializableStructure(value, limits, diagnostics)) {
+  DIAGNOSTIC_LIMITS.set(diagnostics, safeLimits.maxDiagnostics);
+  if (!validateSerializableStructure(value, safeLimits, diagnostics)) {
     return sorted(diagnostics.values());
   }
   if (!isRecord(value) || value.modelVersion !== DOCUMENT_MODEL_VERSION) {
-    add(diagnostics, "INVALID_MODEL", "/modelVersion");
+    add(diagnostics, "INVALID_MODEL", `${modelPath}/modelVersion`);
     return sorted(diagnostics.values());
   }
   if (!isRecord(value.project) || !isArray(value.versions)) {
-    add(diagnostics, "INVALID_MODEL", "/");
+    add(diagnostics, "INVALID_MODEL", modelPath || "/");
     return sorted(diagnostics.values());
   }
 
   validateKeys(
     value,
     ["modelVersion", "project", "versions"],
-    "/",
+    modelPath || "/",
     diagnostics,
   );
   validateKeys(
     value.project,
     ["canonicalUrl", "description", "id", "name"],
-    "/project",
+    `${modelPath}/project`,
     diagnostics,
   );
 
-  validateId(value.project.id, "/project/id", diagnostics);
-  requireString(value.project.name, "/project/name", diagnostics);
+  validateId(value.project.id, `${modelPath}/project/id`, diagnostics);
+  requireString(value.project.name, `${modelPath}/project/name`, diagnostics);
   validateOptionalString(
     value.project.description,
-    "/project/description",
+    `${modelPath}/project/description`,
     diagnostics,
   );
   validateOptionalString(
     value.project.canonicalUrl,
-    "/project/canonicalUrl",
+    `${modelPath}/project/canonicalUrl`,
     diagnostics,
   );
 
   const versionIds = new Set<string>();
   value.versions.forEach((versionValue, versionIndex) => {
-    const versionPath = `/versions/${versionIndex}`;
+    const versionPath = `${modelPath}/versions/${versionIndex}`;
     if (!isRecord(versionValue)) {
       add(diagnostics, "INVALID_MODEL", versionPath);
       return;
@@ -136,11 +157,13 @@ export function validateDocumentationArtifact(
     ];
   }
   const diagnostics = new Map<string, CanonicalDiagnostic>();
-  if (!validLimits(limits)) {
+  const safeLimits = snapshotModelLimits(limits);
+  if (safeLimits === undefined) {
     add(diagnostics, "MODEL_LIMIT_EXCEEDED", "/");
     return sorted(diagnostics.values());
   }
-  if (!validateSerializableStructure(value, limits, diagnostics)) {
+  DIAGNOSTIC_LIMITS.set(diagnostics, safeLimits.maxDiagnostics);
+  if (!validateSerializableStructure(value, safeLimits, diagnostics)) {
     return sorted(diagnostics.values());
   }
   validateKeys(
@@ -150,20 +173,21 @@ export function validateDocumentationArtifact(
     diagnostics,
     "INVALID_MODEL",
   );
-  const artifactLinks: { id: string; path: string }[] = [];
+  const artifactLinks: SchemaDiagnosticLink[] = [];
   for (const diagnostic of validateDocumentationModelInternal(
     value.model,
-    limits,
+    safeLimits,
     artifactLinks,
+    "/model",
   )) {
-    diagnostics.set(diagnostic.id, diagnostic);
+    addDiagnostic(diagnostics, diagnostic);
   }
   if (!isArray(value.diagnostics)) {
     add(diagnostics, "INVALID_DIAGNOSTIC", "/diagnostics");
     return sorted(diagnostics.values());
   }
 
-  const declaredIds = new Set<string>();
+  const declaredIds = new Map<string, DiagnosticCode>();
   value.diagnostics.forEach((diagnosticValue, index) => {
     const path = `/diagnostics/${index}`;
     if (!isRecord(diagnosticValue)) {
@@ -193,17 +217,28 @@ export function validateDocumentationArtifact(
     if (
       diagnosticValue.id !== expectedId ||
       diagnosticValue.message !== DIAGNOSTIC_MESSAGES[code] ||
-      !new Set(["error", "info", "warning"]).has(String(severity))
+      !new Set(["error", "info", "warning"]).has(String(severity)) ||
+      (!code.startsWith("SCHEMA_") && severity !== "error")
     ) {
       add(diagnostics, "INVALID_DIAGNOSTIC", path);
       return;
     }
-    checkDuplicate(declaredIds, expectedId, `${path}/id`, diagnostics);
+    if (declaredIds.has(expectedId))
+      add(diagnostics, "DUPLICATE_ID", `${path}/id`);
+    declaredIds.set(expectedId, code);
   });
 
   for (const link of artifactLinks) {
-    if (!declaredIds.has(link.id)) {
+    const linkedCode = declaredIds.get(link.id);
+    if (linkedCode === undefined) {
       add(diagnostics, "MISSING_DIAGNOSTIC", link.path);
+    } else if (!linkedCode.startsWith("SCHEMA_")) {
+      add(diagnostics, "INVALID_SCHEMA", link.path);
+    } else if (
+      link.requiredCode !== undefined &&
+      linkedCode !== link.requiredCode
+    ) {
+      add(diagnostics, "INVALID_SCHEMA", link.path);
     }
   }
   return sorted(diagnostics.values());
@@ -219,7 +254,7 @@ function validateServices(
   services: readonly unknown[],
   versionPath: string,
   diagnostics: Map<string, CanonicalDiagnostic>,
-  artifactLinks?: { id: string; path: string }[],
+  artifactLinks?: SchemaDiagnosticLink[],
 ): void {
   const serviceIds = new Set<string>();
   services.forEach((serviceValue, serviceIndex) => {
@@ -247,6 +282,11 @@ function validateServices(
       checkDuplicate(serviceIds, serviceValue.id, `${path}/id`, diagnostics);
     }
     requireString(serviceValue.name, `${path}/name`, diagnostics);
+    validateOptionalString(
+      serviceValue.description,
+      `${path}/description`,
+      diagnostics,
+    );
     if (
       !isArray(serviceValue.servers) ||
       !isArray(serviceValue.operations) ||
@@ -265,17 +305,17 @@ function validateServices(
       diagnostics,
     );
     const schemaIds = new Set(Object.keys(serviceValue.schemas));
-    [...schemaIds].sort(compareText).forEach((id, schemaIndex) => {
-      validateId(id, `${path}/schemas/${schemaIndex}/id`, diagnostics);
+    [...schemaIds].sort(compareText).forEach((id) => {
+      validateId(id, `${path}/schemas`, diagnostics);
     });
-    const diagnosticLinks: { id: string; path: string }[] = [];
+    const diagnosticLinks: SchemaDiagnosticLink[] = [];
     [...Object.entries(serviceValue.schemas)]
       .sort(([left], [right]) => compareText(left, right))
-      .forEach(([, schema], schemaIndex) => {
+      .forEach(([id, schema]) => {
         validateSchema(
           schema,
           schemaIds,
-          `${path}/schemas/${schemaIndex}`,
+          isValidId(id) ? `${path}/schemas/${id}` : `${path}/schemas`,
           diagnostics,
           diagnosticLinks,
         );
@@ -283,6 +323,7 @@ function validateServices(
     validateOperations(
       serviceValue.operations,
       schemaIds,
+      serviceValue.schemas,
       securityIds,
       serverIds,
       path,
@@ -317,8 +358,35 @@ function validatePages(
     requireString(pageValue.slug, `${path}/slug`, diagnostics);
     requireString(pageValue.title, `${path}/title`, diagnostics);
     requireString(pageValue.sourcePath, `${path}/sourcePath`, diagnostics);
+    validateOptionalString(
+      pageValue.description,
+      `${path}/description`,
+      diagnostics,
+    );
     if (!isArray(pageValue.headings)) {
       add(diagnostics, "INVALID_MODEL", `${path}/headings`);
+    } else {
+      pageValue.headings.forEach((heading, headingIndex) => {
+        const headingPath = `${path}/headings/${headingIndex}`;
+        if (!isRecord(heading)) {
+          add(diagnostics, "INVALID_MODEL", headingPath);
+          return;
+        }
+        validateKeys(
+          heading,
+          ["depth", "id", "text"],
+          headingPath,
+          diagnostics,
+        );
+        if (
+          !Number.isSafeInteger(heading.depth) ||
+          Number(heading.depth) < 1 ||
+          Number(heading.depth) > 6
+        )
+          add(diagnostics, "INVALID_MODEL", `${headingPath}/depth`);
+        requireString(heading.id, `${headingPath}/id`, diagnostics);
+        requireString(heading.text, `${headingPath}/text`, diagnostics);
+      });
     }
   });
 }
@@ -346,12 +414,17 @@ function validateServers(
     }
     requireString(serverValue.url, `${path}/url`, diagnostics);
     requireString(serverValue.label, `${path}/label`, diagnostics);
+    validateOptionalString(
+      serverValue.description,
+      `${path}/description`,
+      diagnostics,
+    );
     if (!isRecord(serverValue.variables)) {
       add(diagnostics, "INVALID_MODEL", `${path}/variables`);
       return;
     }
-    Object.values(serverValue.variables).forEach((variable, variableIndex) => {
-      const variablePath = `${path}/variables/${variableIndex}`;
+    Object.entries(serverValue.variables).forEach(([, variable]) => {
+      const variablePath = `${path}/variables`;
       if (!isRecord(variable)) {
         add(diagnostics, "INVALID_MODEL", variablePath);
         return;
@@ -362,6 +435,11 @@ function validateServers(
         variablePath,
         diagnostics,
       );
+      validateOptionalString(
+        variable.description,
+        `${variablePath}/description`,
+        diagnostics,
+      );
       requireString(
         variable.defaultValue,
         `${variablePath}/defaultValue`,
@@ -370,7 +448,7 @@ function validateServers(
       if (!isArray(variable.allowedValues)) {
         add(diagnostics, "INVALID_MODEL", `${variablePath}/allowedValues`);
       } else {
-        checkNormalizedDuplicates(
+        checkExactDuplicates(
           variable.allowedValues,
           `${variablePath}/allowedValues`,
           diagnostics,
@@ -385,11 +463,17 @@ function validateServers(
       }
     });
     const variableNames = new Set(Object.keys(serverValue.variables));
+    const referencedVariableNames = new Set<string>();
     for (const match of String(serverValue.url).matchAll(/\{([^{}]+)\}/g)) {
-      if (match[1] !== undefined && !variableNames.has(match[1])) {
-        add(diagnostics, "INVALID_MODEL", `${path}/variables`);
+      if (match[1] !== undefined) {
+        referencedVariableNames.add(match[1]);
+        if (!variableNames.has(match[1])) {
+          add(diagnostics, "INVALID_MODEL", `${path}/variables`);
+        }
       }
     }
+    if (!sameSet([...variableNames], [...referencedVariableNames]))
+      add(diagnostics, "INVALID_MODEL", `${path}/variables`);
   });
   return ids;
 }
@@ -401,31 +485,34 @@ function validateSecuritySchemes(
 ): ReadonlyMap<string, string> {
   const ids = new Set(Object.keys(schemes));
   const kinds = new Map<string, string>();
-  [...ids].sort(compareText).forEach((id, index) => {
-    validateId(id, `${servicePath}/securitySchemes/${index}/id`, diagnostics);
+  [...ids].sort(compareText).forEach((id) => {
+    const validId = validateId(
+      id,
+      `${servicePath}/securitySchemes`,
+      diagnostics,
+    );
     const scheme = schemes[id];
+    const schemePath = validId
+      ? `${servicePath}/securitySchemes/${id}`
+      : `${servicePath}/securitySchemes`;
     if (!isRecord(scheme)) {
-      add(
-        diagnostics,
-        "INVALID_MODEL",
-        `${servicePath}/securitySchemes/${index}`,
-      );
+      add(diagnostics, "INVALID_MODEL", schemePath);
       return;
     }
     if (typeof scheme.kind === "string") kinds.set(id, scheme.kind);
+    validateOptionalString(
+      scheme.description,
+      `${schemePath}/description`,
+      diagnostics,
+    );
     const common = ["description", "kind"];
     if (
       !new Set(["apiKey", "http", "mutualTLS", "oauth2", "openIdConnect"]).has(
         String(scheme.kind),
       )
     ) {
-      add(
-        diagnostics,
-        "INVALID_MODEL",
-        `${servicePath}/securitySchemes/${index}/kind`,
-      );
+      add(diagnostics, "INVALID_MODEL", `${schemePath}/kind`);
     }
-    const schemePath = `${servicePath}/securitySchemes/${index}`;
     if (scheme.kind === "apiKey") {
       validateKeys(
         scheme,
@@ -448,6 +535,11 @@ function validateSecuritySchemes(
         !/^[a-z][a-z0-9!#$%&'*+.^_`|~-]*$/.test(scheme.scheme)
       )
         add(diagnostics, "INVALID_MODEL", `${schemePath}/scheme`);
+      validateOptionalString(
+        scheme.bearerFormat,
+        `${schemePath}/bearerFormat`,
+        diagnostics,
+      );
     } else if (scheme.kind === "oauth2") {
       validateKeys(scheme, [...common, "flows"], schemePath, diagnostics);
       validateOAuthFlows(scheme.flows, schemePath, diagnostics);
@@ -541,6 +633,7 @@ function validateOAuthFlows(
 function validateOperations(
   operations: readonly unknown[],
   schemaIds: ReadonlySet<string>,
+  schemaRegistry: Readonly<Record<string, unknown>>,
   securitySchemes: ReadonlyMap<string, string>,
   serverIds: ReadonlySet<string>,
   servicePath: string,
@@ -559,6 +652,7 @@ function validateOperations(
       [
         "deprecated",
         "description",
+        "contractId",
         "extensions",
         "id",
         "method",
@@ -613,6 +707,46 @@ function validateOperations(
     ) {
       add(diagnostics, "INVALID_MODEL", `${path}/method`);
     }
+    validateOptionalString(
+      operationValue.description,
+      `${path}/description`,
+      diagnostics,
+    );
+    if (operationValue.contractId !== undefined) {
+      requireString(
+        operationValue.contractId,
+        `${path}/contractId`,
+        diagnostics,
+      );
+    }
+    if (
+      typeof operationValue.id === "string" &&
+      typeof operationValue.method === "string" &&
+      typeof operationValue.path === "string" &&
+      new Set([
+        "DELETE",
+        "GET",
+        "HEAD",
+        "OPTIONS",
+        "PATCH",
+        "POST",
+        "PUT",
+        "TRACE",
+      ]).has(operationValue.method) &&
+      (operationValue.contractId === undefined ||
+        (typeof operationValue.contractId === "string" &&
+          operationValue.contractId.length > 0))
+    ) {
+      const expectedId = createOperationId({
+        ...(operationValue.contractId === undefined
+          ? {}
+          : { contractId: operationValue.contractId as string }),
+        method: operationValue.method as import("./types.js").HttpMethod,
+        path: operationValue.path,
+      });
+      if (operationValue.id !== expectedId)
+        add(diagnostics, "INVALID_MODEL", `${path}/id`);
+    }
     validateParameters(
       operationValue.parameters,
       operationPath,
@@ -636,12 +770,19 @@ function validateOperations(
         );
         if (typeof operationValue.requestBody.required !== "boolean")
           add(diagnostics, "INVALID_MODEL", `${path}/requestBody/required`);
+        validateOptionalString(
+          operationValue.requestBody.description,
+          `${path}/requestBody/description`,
+          diagnostics,
+        );
         validateMedia(
           operationValue.requestBody.content,
           schemaIds,
           `${path}/requestBody/content`,
           diagnostics,
           diagnosticLinks,
+          true,
+          schemaRegistry,
         );
       }
     }
@@ -661,18 +802,22 @@ function validateOperations(
     if (!isArray(operationValue.serverIds)) {
       add(diagnostics, "INVALID_MODEL", `${path}/serverIds`);
     } else {
+      const seenServerIds = new Set<string>();
       operationValue.serverIds.forEach((id, index) => {
         if (typeof id !== "string" || !serverIds.has(id)) {
           add(diagnostics, "MISSING_SERVER", `${path}/serverIds/${index}`);
+        } else {
+          checkDuplicate(
+            seenServerIds,
+            id,
+            `${path}/serverIds/${index}`,
+            diagnostics,
+          );
         }
       });
     }
     if (isArray(operationValue.tags)) {
-      checkNormalizedDuplicates(
-        operationValue.tags,
-        `${path}/tags`,
-        diagnostics,
-      );
+      checkExactDuplicates(operationValue.tags, `${path}/tags`, diagnostics);
     } else {
       add(diagnostics, "INVALID_MODEL", `${path}/tags`);
     }
@@ -770,7 +915,7 @@ function validateParameters(
         parameterValue.serialization,
         `${path}/serialization`,
         diagnostics,
-        true,
+        parameterValue.location,
       );
     } else if (
       parameterValue.valueKind === "content" &&
@@ -828,76 +973,13 @@ function validateResponses(
     if (status === undefined)
       add(diagnostics, "INVALID_MODEL", `${path}/status`);
     else checkDuplicate(statuses, status, `${path}/status`, diagnostics);
-    const headerNames = new Set<string>();
-    responseValue.headers.forEach((headerValue, headerIndex) => {
-      const headerPath = `${path}/headers/${headerIndex}`;
-      if (!isRecord(headerValue) || typeof headerValue.name !== "string") {
-        add(diagnostics, "INVALID_MODEL", headerPath);
-        return;
-      }
-      validateKeys(
-        headerValue,
-        headerValue.valueKind === "schema"
-          ? [
-              "deprecated",
-              "description",
-              "examples",
-              "name",
-              "schema",
-              "serialization",
-              "valueKind",
-            ]
-          : [
-              "content",
-              "deprecated",
-              "description",
-              "examples",
-              "name",
-              "valueKind",
-            ],
-        headerPath,
-        diagnostics,
-      );
-      if (typeof headerValue.deprecated !== "boolean")
-        add(diagnostics, "INVALID_MODEL", `${headerPath}/deprecated`);
-      checkDuplicate(
-        headerNames,
-        headerValue.name.toLowerCase(),
-        `${headerPath}/name`,
-        diagnostics,
-      );
-      if (headerValue.valueKind === "schema") {
-        validateSchema(
-          headerValue.schema,
-          schemaIds,
-          `${headerPath}/schema`,
-          diagnostics,
-          diagnosticLinks,
-        );
-        validateParameterSerialization(
-          headerValue.serialization,
-          `${headerPath}/serialization`,
-          diagnostics,
-          false,
-        );
-      } else if (
-        headerValue.valueKind === "content" &&
-        isRecord(headerValue.content)
-      ) {
-        validateMedia(
-          [headerValue.content],
-          schemaIds,
-          `${headerPath}/content`,
-          diagnostics,
-          diagnosticLinks,
-        );
-      } else add(diagnostics, "INVALID_MODEL", `${headerPath}/valueKind`);
-      validateExamples(
-        headerValue.examples,
-        `${headerPath}/examples`,
-        diagnostics,
-      );
-    });
+    validateResponseHeaders(
+      responseValue.headers,
+      schemaIds,
+      `${path}/headers`,
+      diagnostics,
+      diagnosticLinks,
+    );
     validateMedia(
       responseValue.bodies,
       schemaIds,
@@ -908,12 +990,98 @@ function validateResponses(
   });
 }
 
+function validateResponseHeaders(
+  headers: readonly unknown[],
+  schemaIds: ReadonlySet<string>,
+  basePath: string,
+  diagnostics: Map<string, CanonicalDiagnostic>,
+  diagnosticLinks: { id: string; path: string }[],
+): void {
+  const headerNames = new Set<string>();
+  headers.forEach((headerValue, headerIndex) => {
+    const headerPath = `${basePath}/${headerIndex}`;
+    if (!isRecord(headerValue) || typeof headerValue.name !== "string") {
+      add(diagnostics, "INVALID_MODEL", headerPath);
+      return;
+    }
+    validateKeys(
+      headerValue,
+      headerValue.valueKind === "schema"
+        ? [
+            "deprecated",
+            "description",
+            "examples",
+            "name",
+            "schema",
+            "serialization",
+            "valueKind",
+          ]
+        : [
+            "content",
+            "deprecated",
+            "description",
+            "examples",
+            "name",
+            "valueKind",
+          ],
+      headerPath,
+      diagnostics,
+    );
+    if (typeof headerValue.deprecated !== "boolean")
+      add(diagnostics, "INVALID_MODEL", `${headerPath}/deprecated`);
+    validateOptionalString(
+      headerValue.description,
+      `${headerPath}/description`,
+      diagnostics,
+    );
+    checkDuplicate(
+      headerNames,
+      headerValue.name.toLowerCase(),
+      `${headerPath}/name`,
+      diagnostics,
+    );
+    if (headerValue.valueKind === "schema") {
+      validateSchema(
+        headerValue.schema,
+        schemaIds,
+        `${headerPath}/schema`,
+        diagnostics,
+        diagnosticLinks,
+      );
+      validateParameterSerialization(
+        headerValue.serialization,
+        `${headerPath}/serialization`,
+        diagnostics,
+        "responseHeader",
+      );
+    } else if (
+      headerValue.valueKind === "content" &&
+      isRecord(headerValue.content)
+    ) {
+      validateMedia(
+        [headerValue.content],
+        schemaIds,
+        `${headerPath}/content`,
+        diagnostics,
+        diagnosticLinks,
+      );
+    } else add(diagnostics, "INVALID_MODEL", `${headerPath}/valueKind`);
+    validateExamples(
+      headerValue.examples,
+      `${headerPath}/examples`,
+      diagnostics,
+    );
+  });
+}
+
 function validateMedia(
   content: readonly unknown[],
   schemaIds: ReadonlySet<string>,
   basePath: string,
   diagnostics: Map<string, CanonicalDiagnostic>,
   diagnosticLinks: { id: string; path: string }[],
+  allowEncodings = false,
+  schemaRegistry?: Readonly<Record<string, unknown>>,
 ): void {
   const mediaTypes = new Set<string>();
   content.forEach((mediaValue, index) => {
@@ -928,16 +1096,21 @@ function validateMedia(
     }
     validateKeys(
       mediaValue,
-      ["examples", "mediaType", "schema"],
+      ["encodings", "examples", "mediaType", "schema"],
       path,
       diagnostics,
     );
-    checkDuplicate(
-      mediaTypes,
-      mediaValue.mediaType.toLowerCase(),
-      `${path}/mediaType`,
-      diagnostics,
-    );
+    const canonicalMediaType = canonicalizeMediaType(mediaValue.mediaType);
+    if (canonicalMediaType === undefined) {
+      add(diagnostics, "INVALID_MODEL", `${path}/mediaType`);
+    } else {
+      checkDuplicate(
+        mediaTypes,
+        canonicalMediaType,
+        `${path}/mediaType`,
+        diagnostics,
+      );
+    }
     if (mediaValue.schema !== undefined) {
       validateSchema(
         mediaValue.schema,
@@ -948,39 +1121,168 @@ function validateMedia(
       );
     }
     validateExamples(mediaValue.examples, `${path}/examples`, diagnostics);
+    if (!isArray(mediaValue.encodings)) {
+      add(diagnostics, "INVALID_MODEL", `${path}/encodings`);
+      return;
+    }
+    const encodingNames = new Set<string>();
+    mediaValue.encodings.forEach((encodingValue, encodingIndex) => {
+      const encodingPath = `${path}/encodings/${encodingIndex}`;
+      if (!isRecord(encodingValue) || !isArray(encodingValue.headers)) {
+        add(diagnostics, "INVALID_MODEL", encodingPath);
+        return;
+      }
+      validateKeys(
+        encodingValue,
+        encodingValue.encodingKind === "content"
+          ? ["contentType", "encodingKind", "headers", "propertyName"]
+          : ["encodingKind", "headers", "propertyName", "serialization"],
+        encodingPath,
+        diagnostics,
+      );
+      requireString(
+        encodingValue.propertyName,
+        `${encodingPath}/propertyName`,
+        diagnostics,
+      );
+      if (typeof encodingValue.propertyName === "string") {
+        checkDuplicate(
+          encodingNames,
+          encodingValue.propertyName.normalize("NFC"),
+          `${encodingPath}/propertyName`,
+          diagnostics,
+        );
+        if (
+          schemaRegistry !== undefined &&
+          !schemaContainsProperty(
+            mediaValue.schema,
+            encodingValue.propertyName,
+            schemaRegistry,
+          )
+        ) {
+          add(diagnostics, "INVALID_MODEL", `${encodingPath}/propertyName`);
+        }
+      }
+      if (encodingValue.encodingKind === "content") {
+        requireString(
+          encodingValue.contentType,
+          `${encodingPath}/contentType`,
+          diagnostics,
+        );
+      } else if (encodingValue.encodingKind === "serialization") {
+        validateParameterSerialization(
+          encodingValue.serialization,
+          `${encodingPath}/serialization`,
+          diagnostics,
+          "encoding",
+        );
+      } else {
+        add(diagnostics, "INVALID_MODEL", `${encodingPath}/encodingKind`);
+      }
+      validateResponseHeaders(
+        encodingValue.headers,
+        schemaIds,
+        `${encodingPath}/headers`,
+        diagnostics,
+        diagnosticLinks,
+      );
+    });
+    const mediaType = canonicalMediaType?.split(";", 1)[0] ?? "";
+    if (
+      mediaValue.encodings.length > 0 &&
+      (!allowEncodings ||
+        (mediaType !== "application/x-www-form-urlencoded" &&
+          !mediaType.startsWith("multipart/")))
+    ) {
+      add(diagnostics, "INVALID_MODEL", `${path}/encodings`);
+    }
+    if (mediaType.startsWith("multipart/")) {
+      if (
+        mediaType !== "multipart/form-data" &&
+        mediaValue.encodings.some(
+          (encoding) =>
+            isRecord(encoding) && encoding.encodingKind === "serialization",
+        )
+      )
+        add(diagnostics, "INVALID_MODEL", `${path}/encodings`);
+    } else if (mediaType === "application/x-www-form-urlencoded") {
+      if (
+        mediaValue.encodings.some(
+          (encoding) =>
+            isRecord(encoding) &&
+            isArray(encoding.headers) &&
+            encoding.headers.length > 0,
+        )
+      )
+        add(diagnostics, "INVALID_MODEL", `${path}/encodings`);
+    }
   });
+}
+
+function schemaContainsProperty(
+  schema: unknown,
+  propertyName: string,
+  registry: Readonly<Record<string, unknown>>,
+  visited = new Set<string>(),
+): boolean {
+  if (!isRecord(schema)) return false;
+  if (schema.kind === "object" && isRecord(schema.properties))
+    return Object.hasOwn(schema.properties, propertyName);
+  if (
+    schema.kind === "type-less" &&
+    isRecord(schema.object) &&
+    isRecord(schema.object.properties)
+  )
+    return Object.hasOwn(schema.object.properties, propertyName);
+  if (schema.kind === "ref" && typeof schema.schemaId === "string") {
+    if (visited.has(schema.schemaId)) return false;
+    visited.add(schema.schemaId);
+    return schemaContainsProperty(
+      registry[schema.schemaId],
+      propertyName,
+      registry,
+      visited,
+    );
+  }
+  if (schema.kind === "composition" && isArray(schema.variants)) {
+    return schema.variants.some((variant) =>
+      schemaContainsProperty(variant, propertyName, registry, new Set(visited)),
+    );
+  }
+  return false;
 }
 
 function validateParameterSerialization(
   value: unknown,
   path: string,
   diagnostics: Map<string, CanonicalDiagnostic>,
-  allowReservedField: boolean,
+  location: unknown,
 ): void {
   if (!isRecord(value)) {
     add(diagnostics, "INVALID_MODEL", path);
     return;
   }
+  const queryLike = location === "query" || location === "encoding";
   validateKeys(
     value,
-    allowReservedField
-      ? ["allowReserved", "explode", "style"]
-      : ["explode", "style"],
+    queryLike ? ["allowReserved", "explode", "style"] : ["explode", "style"],
     path,
     diagnostics,
   );
+  const styles =
+    location === "query" || location === "encoding"
+      ? ["deepObject", "form", "pipeDelimited", "spaceDelimited"]
+      : location === "path"
+        ? ["label", "matrix", "simple"]
+        : location === "header" || location === "responseHeader"
+          ? ["simple"]
+          : location === "cookie"
+            ? ["form"]
+            : [];
   if (
-    !new Set([
-      "deepObject",
-      "form",
-      "label",
-      "matrix",
-      "pipeDelimited",
-      "simple",
-      "spaceDelimited",
-    ]).has(String(value.style)) ||
+    !new Set(styles).has(String(value.style)) ||
     typeof value.explode !== "boolean" ||
-    (allowReservedField && typeof value.allowReserved !== "boolean")
+    (queryLike && typeof value.allowReserved !== "boolean")
   ) {
     add(diagnostics, "INVALID_MODEL", path);
   }
@@ -1050,6 +1352,7 @@ function validateOperationSecurity(
     }
     validateKeys(requirementValue, ["schemes"], path, diagnostics);
     const schemes = new Set<string>();
+    const semanticUses: [string, string[]][] = [];
     requirementValue.schemes.forEach((useValue, useIndex) => {
       if (
         !isRecord(useValue) ||
@@ -1075,7 +1378,7 @@ function validateOperationSecurity(
         `${path}/schemes/${useIndex}`,
         diagnostics,
       );
-      checkNormalizedDuplicates(
+      checkExactDuplicates(
         useValue.scopes,
         `${path}/schemes/${useIndex}/scopes`,
         diagnostics,
@@ -1089,8 +1392,23 @@ function validateOperationSecurity(
       ) {
         add(diagnostics, "INVALID_MODEL", `${path}/schemes/${useIndex}/scopes`);
       }
+      if (
+        isArray(useValue.scopes) &&
+        useValue.scopes.every((scope) => typeof scope === "string")
+      ) {
+        semanticUses.push([
+          useValue.schemeId,
+          useValue.scopes
+            .map((scope) => scope.normalize("NFC"))
+            .sort(compareText),
+        ]);
+      }
     });
-    const key = [...schemes].sort(compareText).join("\u001f");
+    const key = JSON.stringify(
+      semanticUses.sort((left, right) =>
+        compareText(JSON.stringify(left), JSON.stringify(right)),
+      ),
+    );
     checkDuplicate(alternatives, key, path, diagnostics);
   });
 }
@@ -1337,7 +1655,6 @@ function validateScalar(
       [
         "exclusiveMaximum",
         "exclusiveMinimum",
-        "format",
         "maxLength",
         "maximum",
         "minLength",
@@ -1356,7 +1673,7 @@ function validateScalar(
       "exclusiveMaximum",
       "multipleOf",
     ].some((key) => constraints[key] !== undefined);
-    const hasString = ["minLength", "maxLength", "pattern", "format"].some(
+    const hasString = ["minLength", "maxLength", "pattern"].some(
       (key) => constraints[key] !== undefined,
     );
     if (hasNumeric && type !== "integer" && type !== "number")
@@ -1370,12 +1687,13 @@ function validateScalar(
       path,
       diagnostics,
     );
+  } else if (value.constraints !== undefined) {
+    add(diagnostics, "INVALID_SCHEMA", `${path}/constraints`);
   }
   if (value.format !== undefined && typeof value.format !== "string") {
     add(diagnostics, "INVALID_SCHEMA", `${path}/format`);
   }
-  if (isArray(value.enumValues) && value.enumValues.length === 0)
-    add(diagnostics, "INVALID_SCHEMA", `${path}/enumValues`);
+  validateEnumValues(value.enumValues, `${path}/enumValues`, diagnostics);
 }
 
 function pushObjectConstraints(
@@ -1392,7 +1710,8 @@ function pushObjectConstraints(
     add(diagnostics, "INVALID_SCHEMA", path);
     return;
   }
-  const keys = Object.keys(value.properties);
+  const properties = value.properties;
+  const keys = Object.keys(properties);
   const order = value.propertyOrder.filter(
     (item): item is string => typeof item === "string",
   );
@@ -1403,11 +1722,14 @@ function pushObjectConstraints(
   ) {
     add(diagnostics, "INVALID_SCHEMA", `${path}/propertyOrder`);
   }
-  checkNormalizedDuplicates(value.required, `${path}/required`, diagnostics);
-  Object.entries(value.properties)
+  checkExactDuplicates(value.required, `${path}/required`, diagnostics);
+  if (value.required.some((required) => typeof required !== "string")) {
+    add(diagnostics, "INVALID_SCHEMA", `${path}/required`);
+  }
+  Object.entries(properties)
     .sort(([left], [right]) => compareText(left, right))
-    .forEach(([, schema], index) =>
-      stack.push({ value: schema, path: `${path}/properties/${index}` }),
+    .forEach(([, schema]) =>
+      stack.push({ value: schema, path: `${path}/properties` }),
     );
   if (typeof value.additionalProperties !== "boolean")
     stack.push({
@@ -1435,6 +1757,8 @@ function pushArrayConstraints(
     add(diagnostics, "INVALID_SCHEMA", `${path}/contains`);
   validateMinMax(value.minItems, value.maxItems, path, diagnostics);
   validateMinMax(value.minContains, value.maxContains, path, diagnostics);
+  if (value.uniqueItems !== undefined && typeof value.uniqueItems !== "boolean")
+    add(diagnostics, "INVALID_SCHEMA", `${path}/uniqueItems`);
 }
 
 function pushComposition(
@@ -1457,7 +1781,7 @@ function pushComposition(
   );
   if (value.discriminator !== undefined) {
     if (
-      (value.mode !== "anyOf" && value.mode !== "oneOf") ||
+      value.mode === "not" ||
       !isRecord(value.discriminator) ||
       !isRecord(value.discriminator.mapping)
     ) {
@@ -1478,12 +1802,12 @@ function pushComposition(
       );
       Object.entries(value.discriminator.mapping)
         .sort(([left], [right]) => compareText(left, right))
-        .forEach(([, id], index) => {
+        .forEach(([, id]) => {
           if (typeof id !== "string" || !knownIds.has(id))
             add(
               diagnostics,
               "MISSING_REFERENCE",
-              `${path}/discriminator/mapping/${index}`,
+              `${path}/discriminator/mapping`,
             );
         });
     }
@@ -1521,6 +1845,8 @@ function pushTypeLess(
     if (Object.keys(value.numeric).length === 0) {
       add(diagnostics, "INVALID_SCHEMA", `${path}/numeric`);
     }
+  } else if (value.numeric !== undefined) {
+    add(diagnostics, "INVALID_SCHEMA", `${path}/numeric`);
   }
   if (isRecord(value.string)) {
     expected.add("string");
@@ -1545,6 +1871,8 @@ function pushTypeLess(
     ) {
       add(diagnostics, "INVALID_SCHEMA", `${path}/string`);
     }
+  } else if (value.string !== undefined) {
+    add(diagnostics, "INVALID_SCHEMA", `${path}/string`);
   }
   if (isRecord(value.array)) {
     expected.add("array");
@@ -1564,6 +1892,8 @@ function pushTypeLess(
       "INVALID_SCHEMA",
     );
     pushArrayConstraints(value.array, `${path}/array`, stack, diagnostics);
+  } else if (value.array !== undefined) {
+    add(diagnostics, "INVALID_SCHEMA", `${path}/array`);
   }
   if (isRecord(value.object)) {
     expected.add("object");
@@ -1582,7 +1912,10 @@ function pushTypeLess(
       "INVALID_SCHEMA",
     );
     pushObjectConstraints(value.object, `${path}/object`, stack, diagnostics);
+  } else if (value.object !== undefined) {
+    add(diagnostics, "INVALID_SCHEMA", `${path}/object`);
   }
+  validateEnumValues(value.enumValues, `${path}/enumValues`, diagnostics);
   const actual = value.applicableTypes.filter(
     (item): item is SchemaInstanceType =>
       typeof item === "string" &&
@@ -1636,6 +1969,39 @@ function validateNumeric(
   }
 }
 
+function validateEnumValues(
+  values: unknown,
+  path: string,
+  diagnostics: Map<string, CanonicalDiagnostic>,
+): void {
+  if (values === undefined) return;
+  if (!isArray(values) || values.length === 0) {
+    add(diagnostics, "INVALID_SCHEMA", path);
+    return;
+  }
+  const seen = new Set<string>();
+  values.forEach((value, index) => {
+    const key = canonicalJsonValueKey(value);
+    if (seen.has(key)) add(diagnostics, "INVALID_SCHEMA", `${path}/${index}`);
+    seen.add(key);
+  });
+}
+
+function canonicalJsonValueKey(value: unknown): string {
+  if (Array.isArray(value))
+    return `[${value.map(canonicalJsonValueKey).join(",")}]`;
+  if (isRecord(value)) {
+    return `{${Object.entries(value)
+      .sort(([left], [right]) => compareText(left, right))
+      .map(
+        ([key, item]) =>
+          `${JSON.stringify(key)}:${canonicalJsonValueKey(item)}`,
+      )
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "undefined";
+}
+
 function validateMinMax(
   minimum: unknown,
   maximum: unknown,
@@ -1658,7 +2024,7 @@ function validateMinMax(
 function collectSchemaDiagnosticLinks(
   value: Readonly<Record<string, unknown>>,
   path: string,
-  links: { id: string; path: string }[],
+  links: SchemaDiagnosticLink[],
   diagnostics: Map<string, CanonicalDiagnostic>,
 ): void {
   if (value.diagnosticIds === undefined) return;
@@ -1666,9 +2032,15 @@ function collectSchemaDiagnosticLinks(
     add(diagnostics, "INVALID_SCHEMA", `${path}/diagnosticIds`);
     return;
   }
+  const requiredCode =
+    value.kind === "unknown" ? unknownReasonCode(value.reason) : undefined;
   value.diagnosticIds.forEach((id, index) => {
     if (typeof id === "string")
-      links.push({ id, path: `${path}/diagnosticIds/${index}` });
+      links.push({
+        id,
+        path: `${path}/diagnosticIds/${index}`,
+        ...(requiredCode === undefined ? {} : { requiredCode }),
+      });
     else add(diagnostics, "INVALID_SCHEMA", `${path}/diagnosticIds/${index}`);
   });
 }
@@ -1683,6 +2055,7 @@ function validateSerializableStructure(
     { depth: 0, leaving: false, value },
   ];
   let nodes = 0;
+  let serializedLength = 0;
   let valid = true;
   while (stack.length > 0) {
     const current = stack.pop();
@@ -1711,7 +2084,14 @@ function validateSerializableStructure(
       valid = false;
       continue;
     }
-    if (item === null || typeof item !== "object") continue;
+    if (item === null || typeof item !== "object") {
+      serializedLength += JSON.stringify(item)?.length ?? 0;
+      if (serializedLength > limits.maxSerializedLength) {
+        add(diagnostics, "MODEL_LIMIT_EXCEEDED", "/");
+        return false;
+      }
+      continue;
+    }
     if (current.leaving) {
       active.delete(item);
       continue;
@@ -1726,8 +2106,9 @@ function validateSerializableStructure(
       continue;
     }
     if (
-      !Array.isArray(item) &&
-      Object.getPrototypeOf(item) !== Object.prototype
+      (Array.isArray(item) &&
+        Object.getPrototypeOf(item) !== Array.prototype) ||
+      (!Array.isArray(item) && Object.getPrototypeOf(item) !== Object.prototype)
     ) {
       add(diagnostics, "NON_SERIALIZABLE", "/");
       valid = false;
@@ -1743,12 +2124,19 @@ function validateSerializableStructure(
       ([key]) => !Array.isArray(item) || key !== "length",
     );
     if (
+      serializedDescriptors.some(([key]) => key.length > limits.maxStringLength)
+    ) {
+      add(diagnostics, "MODEL_LIMIT_EXCEEDED", "/");
+      valid = false;
+      continue;
+    }
+    if (
       serializedDescriptors.some(
         ([key, descriptor]) =>
           descriptor.get !== undefined ||
           descriptor.set !== undefined ||
           descriptor.enumerable !== true ||
-          (Array.isArray(item) && !/^\d+$/.test(key)),
+          (Array.isArray(item) && !isCanonicalArrayIndex(key, item.length)),
       )
     ) {
       add(diagnostics, "NON_SERIALIZABLE", "/");
@@ -1761,20 +2149,38 @@ function validateSerializableStructure(
         add(diagnostics, "MODEL_LIMIT_EXCEEDED", "/");
         return false;
       }
+      serializedLength += 2 + Math.max(0, item.length - 1);
       for (let index = 0; index < item.length; index += 1) {
         if (!(index in item)) {
           add(diagnostics, "NON_SERIALIZABLE", "/");
           valid = false;
-        } else values.push(item[index]);
+        } else {
+          const descriptor = descriptors[String(index)];
+          if (descriptor === undefined || !("value" in descriptor)) {
+            add(diagnostics, "NON_SERIALIZABLE", "/");
+            valid = false;
+          } else values.push(descriptor.value);
+        }
       }
     } else {
       if (serializedDescriptors.length > limits.maxCollectionEntries) {
         add(diagnostics, "MODEL_LIMIT_EXCEEDED", "/");
         return false;
       }
+      serializedLength +=
+        2 +
+        Math.max(0, serializedDescriptors.length - 1) +
+        serializedDescriptors.reduce(
+          (total, [key]) => total + JSON.stringify(key).length + 1,
+          0,
+        );
       serializedDescriptors.forEach(([, descriptor]) =>
         values.push(descriptor.value),
       );
+    }
+    if (serializedLength > limits.maxSerializedLength) {
+      add(diagnostics, "MODEL_LIMIT_EXCEEDED", "/");
+      return false;
     }
     nodes += 1 + values.length;
     if (nodes > limits.maxNodes) {
@@ -1810,6 +2216,13 @@ function responseStatusKey(value: unknown): string | undefined {
     Number(value.code) <= 599
   )
     return `code:${String(value.code)}`;
+  return undefined;
+}
+
+function unknownReasonCode(reason: unknown): DiagnosticCode | undefined {
+  if (reason === "invalid") return "SCHEMA_INVALID_SEMANTIC";
+  if (reason === "unresolved") return "SCHEMA_UNRESOLVED_REFERENCE";
+  if (reason === "unsupported") return "SCHEMA_UNSUPPORTED_SEMANTIC";
   return undefined;
 }
 
@@ -1854,7 +2267,7 @@ function validDiagnosticLocation(
     (typeof value.path === "string" &&
       value.path.length <= 2_048 &&
       /^\/(?:[^~\/]|~[01]|\/)*$/.test(value.path) &&
-      !/[\u0000-\u001f\u007f]/.test(value.path))
+      !/[\p{Cc}\p{Cf}]/u.test(value.path))
   );
 }
 
@@ -1909,7 +2322,7 @@ function checkDuplicate(
   values.add(value);
 }
 
-function checkNormalizedDuplicates(
+function checkExactDuplicates(
   values: unknown,
   path: string,
   diagnostics: Map<string, CanonicalDiagnostic>,
@@ -1922,7 +2335,7 @@ function checkNormalizedDuplicates(
   values.forEach((value, index) =>
     checkDuplicate(
       seen,
-      String(value).normalize("NFC").toLowerCase(),
+      String(value).normalize("NFC"),
       `${path}/${index}`,
       diagnostics,
     ),
@@ -1930,9 +2343,9 @@ function checkNormalizedDuplicates(
 }
 
 function sameSet(left: readonly string[], right: readonly string[]): boolean {
-  return (
-    left.length === right.length && left.every((item) => right.includes(item))
-  );
+  if (left.length !== right.length) return false;
+  const rightSet = new Set(right);
+  return left.every((item) => rightSet.has(item));
 }
 
 function add(
@@ -1940,8 +2353,36 @@ function add(
   code: DiagnosticCode,
   path: string,
 ): void {
+  const limit = DIAGNOSTIC_LIMITS.get(diagnostics);
+  if (limit !== undefined && diagnostics.size >= limit - 1) {
+    addLimitDiagnostic(diagnostics);
+    return;
+  }
   const diagnostic = createDiagnostic({ code, location: { path } });
-  diagnostics.set(diagnostic.id, diagnostic);
+  addDiagnostic(diagnostics, diagnostic);
+}
+
+function addDiagnostic(
+  diagnostics: Map<string, CanonicalDiagnostic>,
+  diagnostic: CanonicalDiagnostic,
+): void {
+  if (diagnostics.has(diagnostic.id)) return;
+  const limit = DIAGNOSTIC_LIMITS.get(diagnostics);
+  if (limit === undefined || diagnostics.size < limit - 1) {
+    diagnostics.set(diagnostic.id, diagnostic);
+    return;
+  }
+  addLimitDiagnostic(diagnostics);
+}
+
+function addLimitDiagnostic(
+  diagnostics: Map<string, CanonicalDiagnostic>,
+): void {
+  const limitDiagnostic = createDiagnostic({
+    code: "MODEL_LIMIT_EXCEEDED",
+    location: { path: "/" },
+  });
+  diagnostics.set(limitDiagnostic.id, limitDiagnostic);
 }
 
 function sorted(
@@ -1964,6 +2405,12 @@ function isArray(value: unknown): value is readonly unknown[] {
   return Array.isArray(value);
 }
 
+function isCanonicalArrayIndex(key: string, length: number): boolean {
+  if (!/^(?:0|[1-9]\d*)$/.test(key)) return false;
+  const index = Number(key);
+  return Number.isSafeInteger(index) && index >= 0 && index < length;
+}
+
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -1972,8 +2419,49 @@ function isDiagnosticCode(value: unknown): value is DiagnosticCode {
   return typeof value === "string" && Object.hasOwn(DIAGNOSTIC_MESSAGES, value);
 }
 
-function validLimits(limits: ModelLimits): boolean {
-  return Object.values(limits).every(
-    (limit) => Number.isSafeInteger(limit) && limit > 0,
-  );
+export function areModelLimitsValid(limits: ModelLimits): boolean {
+  return snapshotModelLimits(limits) !== undefined;
+}
+
+export function snapshotModelLimits(value: unknown): ModelLimits | undefined {
+  try {
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.getPrototypeOf(value) !== Object.prototype
+    )
+      return undefined;
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    const expected = Object.keys(DEFAULT_MODEL_LIMITS).sort(compareText);
+    if (
+      !sameSet(
+        Reflect.ownKeys(value).map(String).sort(compareText),
+        expected,
+      ) ||
+      expected.some((key) => {
+        const descriptor = descriptors[key];
+        const ceiling = DEFAULT_MODEL_LIMITS[key as keyof ModelLimits];
+        return (
+          descriptor === undefined ||
+          !("value" in descriptor) ||
+          descriptor.enumerable !== true ||
+          !Number.isSafeInteger(descriptor.value) ||
+          Number(descriptor.value) <= 0 ||
+          Number(descriptor.value) > ceiling
+        );
+      })
+    )
+      return undefined;
+    return Object.freeze({
+      maxCollectionEntries: descriptors.maxCollectionEntries?.value as number,
+      maxDepth: descriptors.maxDepth?.value as number,
+      maxDiagnostics: descriptors.maxDiagnostics?.value as number,
+      maxNodes: descriptors.maxNodes?.value as number,
+      maxSerializedLength: descriptors.maxSerializedLength?.value as number,
+      maxStringLength: descriptors.maxStringLength?.value as number,
+    });
+  } catch {
+    return undefined;
+  }
 }

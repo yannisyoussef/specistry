@@ -35,6 +35,7 @@ Invariant diagnostics are errors and prevent canonical serialization.
 | ------------------------------ | ---------------- | -------------------------------------- |
 | `SCHEMA_IGNORED_ANNOTATION`    | Info             | Inert annotation intentionally omitted |
 | `SCHEMA_PARTIALLY_REPRESENTED` | Warning          | Faithful documented subset retained    |
+| `SCHEMA_UNRESOLVED_REFERENCE`  | Warning          | Source reference could not be resolved |
 | `SCHEMA_UNSUPPORTED_SEMANTIC`  | Warning          | Semantic cannot be modeled in v1       |
 | `SCHEMA_INVALID_SEMANTIC`      | Error            | Source semantic is invalid             |
 

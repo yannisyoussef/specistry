@@ -36,32 +36,7 @@ describe("canonical model smoke budget", () => {
         required: [],
       };
     }
-    const artifact: DocumentationArtifact = {
-      diagnostics: [],
-      model: {
-        modelVersion: DOCUMENT_MODEL_VERSION,
-        project: { id: "performance" as ProjectId, name: "Performance" },
-        versions: [
-          {
-            id: "v1" as DocumentationVersionId,
-            label: "v1",
-            pages: [],
-            services: [
-              {
-                extensions: {},
-                id: "large" as ServiceId,
-                name: "Large registry",
-                operations: [],
-                schemas,
-                securitySchemes: {},
-                servers: [],
-              },
-            ],
-            status: "current",
-          },
-        ],
-      },
-    };
+    const artifact = performanceArtifact(schemas);
 
     const started = performance.now();
     expect(validateDocumentationArtifact(artifact)).toEqual([]);
@@ -70,4 +45,57 @@ describe("canonical model smoke budget", () => {
     expect(serialized.length).toBeGreaterThan(500_000);
     expect(serialized.length).toBeLessThan(2_000_000);
   });
+
+  it("validates a broad 20,000-property schema without quadratic slowdown", () => {
+    const properties: Record<string, SchemaNode> = {};
+    const propertyOrder: string[] = [];
+    for (let index = 0; index < 20_000; index += 1) {
+      const name = `property${String(index).padStart(5, "0")}`;
+      properties[name] = { kind: "scalar", type: "string" };
+      propertyOrder.push(name);
+    }
+    const artifact = performanceArtifact({
+      Broad: {
+        additionalProperties: false,
+        kind: "object",
+        properties,
+        propertyOrder,
+        required: [...propertyOrder],
+      },
+    });
+    const started = performance.now();
+    expect(validateDocumentationArtifact(artifact)).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(2_000);
+  });
 });
+
+function performanceArtifact(
+  schemas: Readonly<Record<string, SchemaNode>>,
+): DocumentationArtifact {
+  return {
+    diagnostics: [],
+    model: {
+      modelVersion: DOCUMENT_MODEL_VERSION,
+      project: { id: "performance" as ProjectId, name: "Performance" },
+      versions: [
+        {
+          id: "v1" as DocumentationVersionId,
+          label: "v1",
+          pages: [],
+          services: [
+            {
+              extensions: {},
+              id: "large" as ServiceId,
+              name: "Large registry",
+              operations: [],
+              schemas,
+              securitySchemes: {},
+              servers: [],
+            },
+          ],
+          status: "current",
+        },
+      ],
+    },
+  };
+}

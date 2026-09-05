@@ -46,8 +46,11 @@ Uniqueness scopes are:
 | Example         | Containing example list                  |
 | Diagnostic      | Artifact, from code + canonical location |
 
-An adapter preserves a valid explicit operation ID. If none exists,
-`createOperationId` hashes the normalized HTTP method/path semantic key. Schema IDs
+An adapter retains the exact contract-declared operation identifier in `contractId`.
+When that value is already a valid canonical ID, it is also used as `id`; otherwise
+`createOperationId` derives a URL-safe ID from its NFC-normalized value. When the
+contract declares no identifier, the helper hashes the method plus exact NFC-normalized
+path; repeated and trailing slashes are never collapsed. Schema IDs
 come from the canonical source identity plus escaped resolved pointer through
 `createSchemaId`; they never depend on parser object identity or encounter order.
 The non-cryptographic stable hash is an identity mechanism, not a security primitive.
@@ -62,16 +65,26 @@ moving a schema to a different canonical pointer intentionally changes identity.
 Operations retain method, path, title/description, deprecation, tags, parameters,
 request body, responses, security requirements, and server references.
 
-Parameters keep `path`, `query`, `header`, and `cookie` locations distinct. A path
+Parameters keep `path`, `query`, `header`, and `cookie` locations distinct, and the
+type/runtime contracts permit only their location-specific serialization styles.
+`allowReserved` exists only for query serialization. A path
 parameter must be required and must correspond exactly to a path-template variable.
 A parameter uses either a schema plus serialization rules or one media content entry;
 those alternatives are never collapsed.
 
-Request and response content is a media-type collection. JSON, multipart, form,
+Request and response content is a media-type collection. Media type/subtype tokens
+and parameter names canonicalize case-insensitively while parameter values retain
+their exact case. JSON, multipart, form,
 text, binary, and future media types remain distinguishable without prescribing a
 renderer. Responses use a structured exact status code, status-class range, or
 default status. A body-less response has `bodies: []`; the adapter must not invent a
-schema. Response headers preserve their own schema/content and examples.
+schema. Multipart and form request content carries canonical per-property encodings
+whose keys resolve to represented schema properties. Encoding applicability follows
+wire semantics: content type is retained for both, headers for multipart, and
+serialization for URL-encoded and `multipart/form-data` bodies. Every encoding selects
+exactly one materialized `content` or `serialization` mode so consumers never recreate
+source defaults or choose between ignored fields. Response and encoding headers preserve
+their own schema/content and examples; schema-valued headers are always simple style.
 
 Servers describe contract URL templates, labels, descriptions, and variables. They
 are not configured playground environments and contain no selected environment,
@@ -135,7 +148,8 @@ Composition variants preserve source order because explanations and discriminato
 mapping can depend on author intent. `not` has exactly one variant. `allOf` is never
 eagerly flattened, avoiding lost conflicts, annotations, requirements, and provenance.
 Discriminators are the source-independent concept of a property plus value-to-schema
-mapping and are valid only for polymorphic `oneOf`/`anyOf` projections.
+mapping and are valid for `allOf`, `oneOf`, and `anyOf` projections. This includes the
+common OpenAPI parent/inheritance discriminator form on `allOf`.
 
 ### Recursion and registry
 
@@ -166,12 +180,12 @@ Schema vocabulary into these already-frozen dispositions.
 ## Ordering and serialization
 
 `serializeDocumentationArtifact` validates first, then emits compact JSON with all
-object keys sorted by Unicode code point. It also canonicalizes unordered semantic
+object keys sorted by JavaScript UTF-16 code-unit order. It also canonicalizes unordered semantic
 collections:
 
-- operations by normalized path, fixed method rank, then ID;
-- tags by NFC/case-folded spelling;
-- schemas, security schemes, variables, scopes, discriminator mappings, extensions,
+- operations by exact path, fixed method rank, then ID;
+- tags by NFC/lowercase spelling with original spelling as a deterministic tie-break;
+- schemas, security schemes, variables, scopes, discriminator mappings, encodings, extensions,
   and all other maps by key;
 - media content and response headers by their case-insensitive identifiers;
 - responses by exact code, range, then default;
@@ -194,21 +208,25 @@ IDs, references, path parameters, response statuses, schema shapes, discriminato
 targets, auth/server links, duplicate identities, contradictory constraint metadata,
 and missing capability diagnostics.
 
-Only JSON-compatible data is allowed. Non-finite numbers, negative zero, `undefined`,
+Only JSON-compatible data is allowed. Array subclasses and non-index array properties
+are rejected along with non-finite numbers, negative zero, `undefined`,
 BigInt, functions, symbols, sparse arrays, accessors, non-enumerable data, class
 instances, symbol properties, and inline cycles fail closed rather than being silently
 dropped by `JSON.stringify`.
 
 `DEFAULT_MODEL_LIMITS` centralizes deterministic ceilings:
 
-| Budget                    | Default   |
-| ------------------------- | --------- |
-| Traversal depth           | 128       |
-| Traversed nodes/values    | 500,000   |
-| Entries in one collection | 100,000   |
-| JavaScript string length  | 1,000,000 |
+| Budget                    | Default    |
+| ------------------------- | ---------- |
+| Traversal depth           | 128        |
+| Traversed nodes/values    | 500,000    |
+| Entries in one collection | 100,000    |
+| Emitted diagnostics       | 10,000     |
+| Serialized code units     | 10,000,000 |
+| JavaScript string length  | 1,000,000  |
 
-Callers may supply stricter positive safe-integer limits. These budgets protect model
+Callers may supply all six limits with no extras, using positive safe integers no
+greater than the defaults. These budgets protect model
 validation/serialization only; parser isolation and source acquisition limits remain
 adapter responsibilities.
 

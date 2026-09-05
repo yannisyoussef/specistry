@@ -1,7 +1,10 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
+import goldenModelV1 from "./fixtures/model-v1.golden.json" with { type: "json" };
+
 import {
   CanonicalModelError,
+  DEFAULT_MODEL_LIMITS,
   DOCUMENT_MODEL_VERSION,
   canonicalizeDocumentationArtifact,
   createCanonicalId,
@@ -16,6 +19,7 @@ import {
   type DocumentationArtifact,
   type DocumentationVersionId,
   type ExampleId,
+  type MediaTypeContent,
   type OperationId,
   type Parameter,
   type ParameterId,
@@ -31,10 +35,12 @@ const asId = <T extends string>(value: string): T => value as T;
 function artifactFixture(): DocumentationArtifact {
   const capability = createDiagnostic({
     code: "SCHEMA_UNSUPPORTED_SEMANTIC",
-    location: { path: "/model/versions/0/services/0/schemas/11" },
+    location: { path: "/model/versions/0/services/0/schemas/Unsupported" },
   });
   const nodeId = asId<SchemaId>("Node");
   const branchId = asId<SchemaId>("Branch");
+  const cycleAId = asId<SchemaId>("CycleA");
+  const cycleBId = asId<SchemaId>("CycleB");
   const leafId = asId<SchemaId>("Leaf");
   const apiKeyId = asId<SecuritySchemeId>("api-key");
   const mtlsId = asId<SecuritySchemeId>("mtls");
@@ -64,6 +70,7 @@ function artifactFixture(): DocumentationArtifact {
               name: "Payments",
               operations: [
                 {
+                  contractId: "create-payment",
                   deprecated: true,
                   description: "Create one payment",
                   extensions: {},
@@ -79,7 +86,6 @@ function artifactFixture(): DocumentationArtifact {
                       required: true,
                       schema: { kind: "scalar", type: "string" },
                       serialization: {
-                        allowReserved: false,
                         explode: false,
                         style: "simple",
                       },
@@ -102,6 +108,7 @@ function artifactFixture(): DocumentationArtifact {
                     },
                     {
                       content: {
+                        encodings: [],
                         examples: [],
                         mediaType: "text/plain",
                         schema: { kind: "scalar", type: "string" },
@@ -123,7 +130,6 @@ function artifactFixture(): DocumentationArtifact {
                       required: false,
                       schema: { kind: "scalar", type: "string" },
                       serialization: {
-                        allowReserved: false,
                         explode: true,
                         style: "form",
                       },
@@ -135,18 +141,47 @@ function artifactFixture(): DocumentationArtifact {
                     description: "Payment payload",
                     required: true,
                     content: [
-                      media("multipart/form-data", {
-                        kind: "ref",
-                        schemaId: branchId,
-                      }),
+                      media(
+                        "multipart/form-data",
+                        {
+                          kind: "ref",
+                          schemaId: branchId,
+                        },
+                        [
+                          {
+                            contentType: "application/json",
+                            encodingKind: "content",
+                            headers: [],
+                            propertyName: "child",
+                          },
+                        ],
+                      ),
                       media("application/json", {
                         kind: "ref",
                         schemaId: branchId,
                       }),
-                      media("application/x-www-form-urlencoded", {
-                        kind: "ref",
-                        schemaId: branchId,
-                      }),
+                      media(
+                        "application/x-www-form-urlencoded",
+                        { kind: "ref", schemaId: branchId },
+                        [
+                          {
+                            encodingKind: "serialization",
+                            headers: [],
+                            propertyName: "child",
+                            serialization: {
+                              allowReserved: false,
+                              explode: true,
+                              style: "form",
+                            },
+                          },
+                          {
+                            contentType: "image/png",
+                            encodingKind: "content",
+                            headers: [],
+                            propertyName: "nodes",
+                          },
+                        ],
+                      ),
                       media("text/plain", { kind: "scalar", type: "string" }),
                       media("application/octet-stream", {
                         kind: "scalar",
@@ -240,8 +275,31 @@ function artifactFixture(): DocumentationArtifact {
                     { kind: "ref", schemaId: leafId },
                   ],
                 },
+                ComposedCycle: {
+                  kind: "composition",
+                  mode: "allOf",
+                  variants: [{ kind: "ref", schemaId: cycleAId }],
+                },
+                CycleA: {
+                  additionalProperties: false,
+                  kind: "object",
+                  properties: { next: { kind: "ref", schemaId: cycleBId } },
+                  propertyOrder: ["next"],
+                  required: [],
+                },
+                CycleB: {
+                  additionalProperties: false,
+                  kind: "object",
+                  properties: { next: { kind: "ref", schemaId: cycleAId } },
+                  propertyOrder: ["next"],
+                  required: [],
+                },
                 Every: { accepts: true, kind: "boolean-schema" },
                 Intersection: {
+                  discriminator: {
+                    mapping: { branch: branchId },
+                    propertyName: "kind",
+                  },
                   kind: "composition",
                   mode: "allOf",
                   variants: [
@@ -287,6 +345,19 @@ function artifactFixture(): DocumentationArtifact {
                   kind: "type-less",
                   numeric: { minimum: 0 },
                   string: { minLength: 1 },
+                },
+                TypeLessCollections: {
+                  applicableTypes: ["array", "object"],
+                  array: { items: { kind: "any" }, uniqueItems: true },
+                  constValue: { mode: "strict" },
+                  enumValues: [{ mode: "strict" }, ["fallback"]],
+                  kind: "type-less",
+                  object: {
+                    additionalProperties: true,
+                    properties: {},
+                    propertyOrder: [],
+                    required: [],
+                  },
                 },
                 Union: {
                   kind: "composition",
@@ -362,8 +433,9 @@ function example(id: string, value: string) {
 function media(
   mediaType: string,
   schema: DocumentationArtifact["model"]["versions"][number]["services"][number]["schemas"][string],
+  encodings: MediaTypeContent["encodings"] = [],
 ) {
-  return { examples: [], mediaType, schema };
+  return { encodings, examples: [], mediaType, schema };
 }
 
 describe("canonical model contract", () => {
@@ -395,6 +467,11 @@ describe("canonical model contract", () => {
       mode: "not",
       variants: [{ kind: "ref" }],
     });
+    expect(schemas?.TypeLessCollections).toMatchObject({
+      applicableTypes: ["array", "object"],
+      constValue: { mode: "strict" },
+      enumValues: [{ mode: "strict" }, ["fallback"]],
+    });
   });
 
   it("represents direct, indirect, array, and composed recursion through registry IDs", () => {
@@ -408,6 +485,19 @@ describe("canonical model contract", () => {
     });
     expect(schemas?.Composed).toMatchObject({
       discriminator: { mapping: { branch: "Branch", leaf: "Leaf" } },
+    });
+    expect(schemas?.Intersection).toMatchObject({
+      discriminator: { mapping: { branch: "Branch" } },
+      mode: "allOf",
+    });
+    expect(schemas?.CycleA).toMatchObject({
+      properties: { next: { schemaId: "CycleB" } },
+    });
+    expect(schemas?.CycleB).toMatchObject({
+      properties: { next: { schemaId: "CycleA" } },
+    });
+    expect(schemas?.ComposedCycle).toMatchObject({
+      variants: [{ schemaId: "CycleA" }],
     });
     expect(validateDocumentationModel(artifact.model)).toEqual([]);
   });
@@ -434,6 +524,11 @@ describe("canonical model contract", () => {
       bodies: [],
       status: { code: 204 },
     });
+    expect(operation?.requestBody?.content[0]?.encodings[0]).toMatchObject({
+      contentType: "application/json",
+      encodingKind: "content",
+      propertyName: "child",
+    });
     expect(operation?.security).toHaveLength(2);
     expect(operation?.security[0]?.schemes).toHaveLength(2);
     expect(operation?.serverIds).toEqual(["production"]);
@@ -442,10 +537,11 @@ describe("canonical model contract", () => {
 });
 
 describe("identity", () => {
-  it("derives deterministic IDs independent of incidental path spelling", () => {
-    expect(createOperationId({ method: "GET", path: "/things/" })).toBe(
-      createOperationId({ method: "GET", path: "//things" }),
+  it("derives deterministic IDs without conflating distinct paths", () => {
+    const ids = ["/things", "/things/", "//things"].map((path) =>
+      createOperationId({ method: "GET", path }),
     );
+    expect(new Set(ids)).toHaveLength(3);
     expect(createSchemaId("memory:fixture", "/schemas/Node")).toBe(
       createSchemaId("memory:fixture", "/schemas/Node"),
     );
@@ -454,20 +550,29 @@ describe("identity", () => {
     );
   });
 
-  it("normalizes explicit IDs and rejects unsafe identities", () => {
+  it("separates contract operation IDs from canonical identities", () => {
     expect(
       createOperationId({
-        explicitId: "get-item",
+        contractId: "get-item",
         method: "GET",
         path: "/items",
       }),
     ).toBe("get-item");
-    expect(() =>
+    const derived = createOperationId({
+      contractId: "get item/v1",
+      method: "GET",
+      path: "/items",
+    });
+    expect(derived).toMatch(/^op_[a-f0-9]{16}$/);
+    expect(derived).toBe(
       createOperationId({
-        explicitId: "unsafe/id",
-        method: "GET",
-        path: "/items",
+        contractId: "get item/v1",
+        method: "POST",
+        path: "/elsewhere",
       }),
+    );
+    expect(() =>
+      createOperationId({ contractId: "", method: "GET", path: "/items" }),
     ).toThrow(TypeError);
   });
 
@@ -478,6 +583,16 @@ describe("identity", () => {
     expectTypeOf(service).toEqualTypeOf<ServiceId>();
     expect(project).toBe("project-one");
     expect(service).toBe("service-one");
+  });
+
+  it("validates schema pointer syntax before deriving an identity", () => {
+    expect(createSchemaId("source", "/schemas/~0escaped/~1slash")).toMatch(
+      /^schema_/,
+    );
+    expect(() => createSchemaId("source", "/schemas/~2invalid")).toThrow(
+      TypeError,
+    );
+    expect(() => createSchemaId("", "/schemas/Value")).toThrow(TypeError);
   });
 
   it("rejects collisions within identity scopes", () => {
@@ -496,6 +611,12 @@ describe("identity", () => {
 });
 
 describe("deterministic serialization", () => {
+  it("matches and parses the committed canonical v1 golden fixture", () => {
+    const bytes = JSON.stringify(goldenModelV1);
+    const parsed = parseDocumentationArtifact(bytes);
+    expect(serializeDocumentationArtifact(parsed)).toBe(bytes);
+    expect(parsed.model.modelVersion).toBe(1);
+  });
   it("canonicalizes unordered maps and semantic sets to byte-identical output", () => {
     const left = artifactFixture();
     const right = structuredClone(left) as DocumentationArtifact;
@@ -546,6 +667,70 @@ describe("deterministic serialization", () => {
     expect(serializeDocumentationArtifact(right)).not.toBe(
       serializeDocumentationArtifact(left),
     );
+  });
+
+  it("canonicalizes seeded permutations of semantic collections", () => {
+    const expected = serializeDocumentationArtifact(artifactFixture());
+    let state = 0x5eed1234;
+    const random = () => {
+      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0;
+      return state / 0x1_0000_0000;
+    };
+    for (let run = 0; run < 32; run += 1) {
+      const artifact = structuredClone(
+        artifactFixture(),
+      ) as DocumentationArtifact;
+      const service = artifact.model.versions[0]?.services[0];
+      const operation = service?.operations[0];
+      if (service === undefined || operation === undefined)
+        throw new Error("fixture");
+      (service as unknown as Record<string, unknown>).schemas =
+        Object.fromEntries(
+          Object.entries(service.schemas).sort(() => random() - 0.5),
+        );
+      (service as unknown as Record<string, unknown>).securitySchemes =
+        Object.fromEntries(
+          Object.entries(service.securitySchemes).sort(() => random() - 0.5),
+        );
+      (operation.tags as unknown as string[]).sort(() => random() - 0.5);
+      (operation.responses as unknown as object[]).sort(() => random() - 0.5);
+      (operation.security as unknown as object[]).sort(() => random() - 0.5);
+      expect(serializeDocumentationArtifact(artifact)).toBe(expected);
+    }
+  });
+
+  it("distinguishes scoped security alternatives and orders them collision-free", () => {
+    const left = artifactFixture();
+    const operation = left.model.versions[0]?.services[0]?.operations[0];
+    if (operation === undefined) throw new Error("fixture");
+    (operation.security as unknown as object[]).push({
+      schemes: [{ schemeId: "oauth", scopes: ["payments:read"] }],
+    });
+    const right = structuredClone(left) as DocumentationArtifact;
+    (
+      right.model.versions[0]?.services[0]?.operations[0]
+        ?.security as unknown as object[]
+    ).reverse();
+    expect(validateDocumentationArtifact(left)).toEqual([]);
+    expect(serializeDocumentationArtifact(right)).toBe(
+      serializeDocumentationArtifact(left),
+    );
+  });
+
+  it("canonicalizes media tokens without folding case-sensitive parameter values", () => {
+    const artifact = artifactFixture();
+    const content =
+      artifact.model.versions[0]?.services[0]?.operations[0]?.requestBody
+        ?.content;
+    const text = content?.find(({ mediaType }) => mediaType === "text/plain");
+    if (text === undefined) throw new Error("fixture");
+    (text as unknown as Record<string, unknown>).mediaType =
+      'Text/Plain; Profile="CaseSensitive"; CHARSET=utf-8';
+    const serialized = serializeDocumentationArtifact(artifact);
+    expect(serialized).toContain(
+      'text/plain;charset=utf-8;profile=\\"CaseSensitive\\"',
+    );
+    expect(serialized).not.toContain('profile=\\"casesensitive\\"');
   });
 
   it("round-trips to a deeply frozen canonical artifact", () => {
@@ -654,18 +839,55 @@ describe("validation and diagnostics", () => {
     });
   });
 
-  it("enforces explicit depth, node, collection, and string budgets", () => {
+  it("enforces explicit depth, node, diagnostic, aggregate, collection, and string budgets", () => {
     const artifact = artifactFixture();
     const limits = {
       maxCollectionEntries: 2,
       maxDepth: 2,
+      maxDiagnostics: 2,
       maxNodes: 20,
+      maxSerializedLength: 100,
       maxStringLength: 8,
     };
     expect(validateDocumentationArtifact(artifact, limits)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "MODEL_LIMIT_EXCEEDED" }),
       ]),
+    );
+  });
+
+  it("caps amplified diagnostics and rejects oversized serialized input before parsing", () => {
+    const artifact = artifactFixture();
+    const version = artifact.model.versions[0];
+    if (version === undefined) throw new Error("fixture");
+    (version.pages as unknown as object[]).push({}, {}, {}, {});
+    const diagnostics = validateDocumentationArtifact(artifact, {
+      ...DEFAULT_MODEL_LIMITS,
+      maxDiagnostics: 3,
+    });
+    expect(diagnostics.length).toBeLessThanOrEqual(3);
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MODEL_LIMIT_EXCEEDED" }),
+      ]),
+    );
+    expect(() =>
+      parseDocumentationArtifact(" ".repeat(101), {
+        ...DEFAULT_MODEL_LIMITS,
+        maxSerializedLength: 100,
+      }),
+    ).toThrow(CanonicalModelError);
+    expect(() =>
+      parseDocumentationArtifact(" ".repeat(10_000_001), {
+        ...DEFAULT_MODEL_LIMITS,
+        maxSerializedLength: DEFAULT_MODEL_LIMITS.maxSerializedLength + 1,
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        diagnostics: expect.arrayContaining([
+          expect.objectContaining({ code: "MODEL_LIMIT_EXCEEDED" }),
+        ]),
+      }),
     );
   });
 
@@ -734,6 +956,236 @@ describe("validation and diagnostics", () => {
       expect.arrayContaining([
         expect.objectContaining({ code: "INVALID_MODEL" }),
         expect.objectContaining({ code: "INVALID_SCHEMA" }),
+      ]),
+    );
+  });
+
+  it.each([
+    ["scalar constraints", "Leaf", "constraints", "oops"],
+    ["scalar enum", "Leaf", "enumValues", "oops"],
+    ["array uniqueness", "Node", "uniqueItems", "oops"],
+    ["type-less numeric group", "TypeLess", "numeric", "oops"],
+  ])("rejects malformed optional %s", (_label, schemaName, key, invalid) => {
+    const artifact = artifactFixture();
+    const schemas = artifact.model.versions[0]?.services[0]?.schemas;
+    if (schemas === undefined) throw new Error("fixture");
+    (schemas[schemaName] as unknown as Record<string, unknown>)[key] = invalid;
+    expect(validateDocumentationArtifact(artifact)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "INVALID_SCHEMA" }),
+      ]),
+    );
+    expect(() => serializeDocumentationArtifact(artifact)).toThrow(
+      CanonicalModelError,
+    );
+  });
+
+  it("preserves distinct case-sensitive schema names, scopes, tags, and server values", () => {
+    const artifact = artifactFixture();
+    const service = artifact.model.versions[0]?.services[0];
+    const operation = service?.operations[0];
+    const branch = service?.schemas.Branch;
+    const server = service?.servers[0];
+    if (
+      operation === undefined ||
+      branch?.kind !== "object" ||
+      server === undefined
+    )
+      throw new Error("fixture");
+    (branch as unknown as Record<string, unknown>).required = ["ID", "id"];
+    (server.variables.region?.allowedValues as unknown as string[]).push("CA");
+    (operation.tags as unknown as string[]).push("payments");
+    (operation.security as unknown as object[]).push({
+      schemes: [{ schemeId: "oauth", scopes: ["Payments:Write"] }],
+    });
+    expect(validateDocumentationArtifact(artifact)).toEqual([]);
+  });
+
+  it("rejects malformed headings and location-incompatible serialization", () => {
+    const artifact = artifactFixture();
+    const version = artifact.model.versions[0];
+    const operation = version?.services[0]?.operations[0];
+    if (version === undefined || operation === undefined)
+      throw new Error("fixture");
+    (version.pages as unknown as object[]).push({
+      headings: [null],
+      id: "page",
+      slug: "page",
+      sourcePath: "page.md",
+      title: "Page",
+    });
+    const parameter = operation.parameters[0];
+    if (parameter?.valueKind !== "schema") throw new Error("fixture");
+    (parameter.serialization as unknown as Record<string, unknown>).style =
+      "form";
+    expect(validateDocumentationArtifact(artifact)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "INVALID_MODEL" }),
+      ]),
+    );
+  });
+
+  it("rejects per-property encodings outside multipart and form bodies", () => {
+    const artifact = artifactFixture();
+    const json =
+      artifact.model.versions[0]?.services[0]?.operations[0]?.requestBody?.content.find(
+        ({ mediaType }) => mediaType === "application/json",
+      );
+    if (json === undefined) throw new Error("fixture");
+    (json.encodings as unknown as object[]).push({
+      contentType: "application/json",
+      encodingKind: "content",
+      headers: [],
+      propertyName: "child",
+    });
+    expect(validateDocumentationArtifact(artifact)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "INVALID_MODEL" }),
+      ]),
+    );
+  });
+
+  it("requires one unambiguous materialized encoding mode", () => {
+    const missing = artifactFixture();
+    const missingEncoding = missing.model.versions[0]?.services[0]?.operations[0]
+      ?.requestBody?.content[0]?.encodings[0];
+    if (missingEncoding === undefined) throw new Error("fixture");
+    delete (missingEncoding as unknown as Record<string, unknown>).encodingKind;
+    expect(validateDocumentationArtifact(missing)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "INVALID_MODEL" })]),
+    );
+
+    const conflicting = artifactFixture();
+    const conflictingEncoding = conflicting.model.versions[0]?.services[0]
+      ?.operations[0]?.requestBody?.content[0]?.encodings[0];
+    if (conflictingEncoding === undefined) throw new Error("fixture");
+    (conflictingEncoding as unknown as Record<string, unknown>).serialization = {
+      allowReserved: false,
+      explode: true,
+      style: "form",
+    };
+    expect(validateDocumentationArtifact(conflicting)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "INVALID_MODEL" })]),
+    );
+  });
+
+  it("rejects missing, extra, or relaxed resource-limit fields", () => {
+    const artifact = artifactFixture();
+    expect(validateDocumentationArtifact(artifact, {} as never)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MODEL_LIMIT_EXCEEDED" }),
+      ]),
+    );
+    expect(
+      validateDocumentationArtifact(artifact, {
+        ...DEFAULT_MODEL_LIMITS,
+        maxDepth: DEFAULT_MODEL_LIMITS.maxDepth + 1,
+      }),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MODEL_LIMIT_EXCEEDED" }),
+      ]),
+    );
+  });
+
+  it("rejects accessor-based limits without invoking them", () => {
+    const artifact = artifactFixture();
+    let invoked = false;
+    const hostile = Object.fromEntries(
+      Object.entries(DEFAULT_MODEL_LIMITS).map(([key, value]) => [key, value]),
+    ) as unknown as Record<string, unknown>;
+    Object.defineProperty(hostile, "maxDepth", {
+      enumerable: true,
+      get: () => {
+        invoked = true;
+        return Number.MAX_SAFE_INTEGER;
+      },
+    });
+    expect(validateDocumentationArtifact(artifact, hostile as never)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "MODEL_LIMIT_EXCEEDED" }),
+      ]),
+    );
+    expect(invoked).toBe(false);
+  });
+
+  it("rejects array subclasses and non-index enumerable properties without access", () => {
+    const inherited = artifactFixture();
+    const version = inherited.model.versions[0];
+    if (version === undefined) throw new Error("fixture");
+    let invoked = false;
+    class HostileArray extends Array<unknown> {}
+    Object.defineProperty(HostileArray.prototype, "0", {
+      get: () => {
+        invoked = true;
+        return version;
+      },
+    });
+    const hostile = new HostileArray();
+    hostile.length = 1;
+    (inherited.model as unknown as Record<string, unknown>).versions = hostile;
+    expect(validateDocumentationArtifact(inherited)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "NON_SERIALIZABLE" }),
+      ]),
+    );
+    expect(invoked).toBe(false);
+
+    const decorated = artifactFixture();
+    Object.defineProperty(decorated.model.versions, "01", {
+      enumerable: true,
+      value: "must not disappear",
+    });
+    expect(validateDocumentationArtifact(decorated)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "NON_SERIALIZABLE" }),
+      ]),
+    );
+  });
+
+  it("requires unknown schemas to link the matching capability taxonomy", () => {
+    const artifact = artifactFixture();
+    const schema = artifact.model.versions[0]?.services[0]?.schemas.Unsupported;
+    if (schema?.kind !== "unknown") throw new Error("fixture");
+    const mismatch = createDiagnostic({
+      code: "SCHEMA_INVALID_SEMANTIC",
+      location: { path: "/model/versions/0/services/0/schemas/Unsupported" },
+    });
+    (artifact as unknown as Record<string, unknown>).diagnostics = [mismatch];
+    (schema as unknown as Record<string, unknown>).diagnosticIds = [
+      mismatch.id,
+    ];
+    expect(validateDocumentationArtifact(artifact)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "INVALID_SCHEMA" }),
+      ]),
+    );
+  });
+
+  it("fixes invariant severity and rejects control-bearing diagnostic paths", () => {
+    expect(() =>
+      createDiagnostic({ code: "INVALID_MODEL", severity: "warning" }),
+    ).toThrow(TypeError);
+    expect(() =>
+      createDiagnostic({
+        code: "SCHEMA_UNSUPPORTED_SEMANTIC",
+        location: { path: "/safe/\u202edanger" },
+      }),
+    ).toThrow(TypeError);
+  });
+
+  it("reports artifact-relative RFC 6901 locations", () => {
+    const artifact = artifactFixture();
+    const schema = artifact.model.versions[0]?.services[0]?.schemas.Leaf;
+    if (schema === undefined) throw new Error("fixture");
+    (schema as unknown as Record<string, unknown>).constraints = "bad";
+    expect(validateDocumentationArtifact(artifact)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          location: {
+            path: "/model/versions/0/services/0/schemas/Leaf/constraints",
+          },
+        }),
       ]),
     );
   });

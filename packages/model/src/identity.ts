@@ -56,16 +56,22 @@ export function assertCanonicalId(value: string): void {
 }
 
 export function createOperationId(input: {
-  readonly explicitId?: string;
+  readonly contractId?: string;
   readonly method: HttpMethod;
   readonly path: string;
 }): OperationId {
-  if (input.explicitId !== undefined) {
-    return normalizeCanonicalId(input.explicitId) as OperationId;
+  if (input.contractId !== undefined) {
+    const contractId = input.contractId.normalize("NFC");
+    if (contractId.length === 0) {
+      throw new TypeError("Contract operation IDs must be non-empty.");
+    }
+    if (CANONICAL_ID.test(contractId)) return contractId as OperationId;
+    return stableId("op", ["contract", contractId]) as OperationId;
   }
   return stableId("op", [
+    "transport",
     input.method,
-    normalizePath(input.path),
+    input.path.normalize("NFC"),
   ]) as OperationId;
 }
 
@@ -73,8 +79,11 @@ export function createSchemaId(
   canonicalSourceId: string,
   escapedJsonPointer: string,
 ): SchemaId {
-  if (!escapedJsonPointer.startsWith("/") && escapedJsonPointer !== "") {
-    throw new TypeError("Schema pointers must be empty or start with '/'.");
+  if (canonicalSourceId.length === 0) {
+    throw new TypeError("Canonical source identities must be non-empty.");
+  }
+  if (!/^(?:\/(?:[^~/]|~[01])*)*$/.test(escapedJsonPointer)) {
+    throw new TypeError("Schema pointers must use valid RFC 6901 escaping.");
   }
   return stableId("schema", [
     canonicalSourceId.normalize("NFC"),
@@ -113,11 +122,4 @@ function stableId(prefix: string, parts: readonly string[]): string {
     hash = (hash * FNV_PRIME) & UINT64_MASK;
   }
   return `${prefix}_${hash.toString(16).padStart(16, "0")}`;
-}
-
-function normalizePath(path: string): string {
-  const normalized = path.normalize("NFC").replace(/\/{2,}/g, "/");
-  return normalized.length > 1 && normalized.endsWith("/")
-    ? normalized.slice(0, -1)
-    : normalized;
 }

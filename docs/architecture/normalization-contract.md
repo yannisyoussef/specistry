@@ -20,7 +20,7 @@ JSON Schema validation-engine equivalence.
 - Project, documentation version, service, operation, parameter, schema, server,
   security-scheme, page, example, and diagnostic IDs are branded concepts. Serialized
   IDs are non-empty URL-safe values of at most 128 characters.
-- Prefer a unique `operationId`. Missing IDs receive the deterministic candidate `METHOD <normalized-path>` and a quality diagnostic; collisions are build errors, never suffix-by-encounter-order.
+- Retain a declared contract operation ID exactly in `contractId`; derive its canonical ID directly when URL-safe or by deterministic hash otherwise. When absent, hash the method plus exact NFC-normalized path. Never collapse repeated or trailing slashes. Collisions are build errors, never suffix-by-encounter-order.
 - The globally addressable operation key is `(versionId, serviceId, operationId)`. `operationId` uniqueness is required only within a versioned service so retained API versions can reuse it.
 - Schema IDs derive from canonical source identity plus escaped resolved JSON Pointer,
   not parser object identity. Renames/moves are breaking links and surfaced by diffing.
@@ -30,13 +30,13 @@ JSON Schema validation-engine equivalence.
 
 - Versions and navigation preserve explicit configuration order.
 - Services preserve explicit configuration order.
-- Operations sort by normalized path, fixed HTTP method rank, then operation ID unless navigation overrides their presentation.
-- Tags used as sets sort by NFC/case-folded key with original spelling retained; configured tag order is a separate presentation input.
+- Operations sort by exact path, fixed HTTP method rank, then operation ID unless navigation overrides their presentation.
+- Tags used as sets sort by NFC/lowercase key with original spelling retained as a tie-break; configured tag order is a separate presentation input.
 - Version, service, page, parameter, server, example, schema composition variant,
   tuple item, enum value, required-property, and explicit property-display arrays
   preserve order where it conveys author intent or output behavior.
 - Map-like registry, variable, scope, mapping, property, and extension keys serialize
-  in Unicode code-point order. Schema property display order is captured explicitly
+  in JavaScript UTF-16 code-unit order. Schema property display order is captured explicitly
   before canonical object-key sorting.
 - Diagnostics sort by severity rank, code, canonical source pointer, canonical model pointer, then diagnostic ID.
 
@@ -47,7 +47,7 @@ JSON Schema validation-engine equivalence.
 - Reject `NaN`, infinities, negative zero, `bigint`, functions, symbols, `undefined`,
   sparse arrays, accessors, non-enumerable/symbol properties, non-plain objects, and
   inline object cycles.
-- Normalize equivalent URL/method/media/status forms once. Defaults that influence rendering or request behavior are materialized; presentation-only omissions stay omitted.
+- Normalize equivalent method/media/status forms once without altering path slash semantics or case-sensitive media parameter values. Defaults that influence rendering or request behavior are materialized; presentation-only omissions stay omitted.
 - Source extensions remain JSON data under their exact names but never alter core behavior without a registered adapter capability.
 
 ## Canonical serialization
@@ -86,6 +86,8 @@ reject unknown future model versions with a stable diagnostic.
 ## Budgets
 
 `DEFAULT_MODEL_LIMITS` centralizes positive safe-integer ceilings for traversal depth
-(128), total nodes/values (500,000), entries in one collection (100,000), and string
-length (1,000,000 JavaScript code units). These limits protect canonical validation
-and serialization; adapter parse/process/acquisition limits remain separate.
+(128), total nodes/values (500,000), entries in one collection (100,000), diagnostics
+(10,000), aggregate serialized length (10,000,000 JavaScript code units), and one
+string (1,000,000 code units). The public artifact parser rejects an oversized input
+before `JSON.parse`. These limits protect canonical validation and serialization;
+adapter parse/process/acquisition limits remain separate.

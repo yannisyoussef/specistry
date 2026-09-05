@@ -1,4 +1,4 @@
-import { createDiagnosticId } from "./identity.js";
+import { assertCanonicalId, createDiagnosticId } from "./identity.js";
 import type {
   CanonicalDiagnostic,
   DiagnosticCode,
@@ -36,6 +36,8 @@ export const DIAGNOSTIC_MESSAGES: Readonly<Record<DiagnosticCode, string>> =
       "Source schema semantics are invalid and cannot be represented.",
     SCHEMA_PARTIALLY_REPRESENTED:
       "Source schema semantics are represented only partially.",
+    SCHEMA_UNRESOLVED_REFERENCE:
+      "A source schema reference could not be resolved for projection.",
     SCHEMA_UNSUPPORTED_SEMANTIC:
       "Source schema semantics are unsupported by model v1.",
   });
@@ -59,6 +61,7 @@ const DEFAULT_SEVERITY: Readonly<
   SCHEMA_IGNORED_ANNOTATION: "info",
   SCHEMA_INVALID_SEMANTIC: "error",
   SCHEMA_PARTIALLY_REPRESENTED: "warning",
+  SCHEMA_UNRESOLVED_REFERENCE: "warning",
   SCHEMA_UNSUPPORTED_SEMANTIC: "warning",
 });
 
@@ -69,6 +72,14 @@ export interface DiagnosticInput {
 }
 
 export function createDiagnostic(input: DiagnosticInput): CanonicalDiagnostic {
+  if (
+    !input.code.startsWith("SCHEMA_") &&
+    input.severity !== undefined &&
+    input.severity !== "error"
+  ) {
+    throw new TypeError("Invariant diagnostic severity is fixed at error.");
+  }
+  if (input.location !== undefined) assertDiagnosticLocation(input.location);
   const location =
     input.location === undefined ? undefined : { ...input.location };
   return {
@@ -78,4 +89,25 @@ export function createDiagnostic(input: DiagnosticInput): CanonicalDiagnostic {
     message: DIAGNOSTIC_MESSAGES[input.code],
     severity: input.severity ?? DEFAULT_SEVERITY[input.code],
   };
+}
+
+function assertDiagnosticLocation(location: DiagnosticLocation): void {
+  for (const id of [
+    location.versionId,
+    location.serviceId,
+    location.operationId,
+    location.schemaId,
+  ]) {
+    if (id !== undefined) assertCanonicalId(id);
+  }
+  if (
+    location.path !== undefined &&
+    (location.path.length > 2_048 ||
+      !/^\/(?:[^~\/]|~[01]|\/)*$/.test(location.path) ||
+      /[\p{Cc}\p{Cf}]/u.test(location.path))
+  ) {
+    throw new TypeError(
+      "Diagnostic paths must be bounded, control-free RFC 6901 pointers.",
+    );
+  }
 }
