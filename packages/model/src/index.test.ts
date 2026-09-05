@@ -1047,25 +1047,32 @@ describe("validation and diagnostics", () => {
 
   it("requires one unambiguous materialized encoding mode", () => {
     const missing = artifactFixture();
-    const missingEncoding = missing.model.versions[0]?.services[0]?.operations[0]
-      ?.requestBody?.content[0]?.encodings[0];
+    const missingEncoding =
+      missing.model.versions[0]?.services[0]?.operations[0]?.requestBody
+        ?.content[0]?.encodings[0];
     if (missingEncoding === undefined) throw new Error("fixture");
     delete (missingEncoding as unknown as Record<string, unknown>).encodingKind;
     expect(validateDocumentationArtifact(missing)).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: "INVALID_MODEL" })]),
+      expect.arrayContaining([
+        expect.objectContaining({ code: "INVALID_MODEL" }),
+      ]),
     );
 
     const conflicting = artifactFixture();
-    const conflictingEncoding = conflicting.model.versions[0]?.services[0]
-      ?.operations[0]?.requestBody?.content[0]?.encodings[0];
+    const conflictingEncoding =
+      conflicting.model.versions[0]?.services[0]?.operations[0]?.requestBody
+        ?.content[0]?.encodings[0];
     if (conflictingEncoding === undefined) throw new Error("fixture");
-    (conflictingEncoding as unknown as Record<string, unknown>).serialization = {
-      allowReserved: false,
-      explode: true,
-      style: "form",
-    };
+    (conflictingEncoding as unknown as Record<string, unknown>).serialization =
+      {
+        allowReserved: false,
+        explode: true,
+        style: "form",
+      };
     expect(validateDocumentationArtifact(conflicting)).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: "INVALID_MODEL" })]),
+      expect.arrayContaining([
+        expect.objectContaining({ code: "INVALID_MODEL" }),
+      ]),
     );
   });
 

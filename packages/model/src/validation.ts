@@ -9,6 +9,7 @@ import {
   DOCUMENT_MODEL_VERSION,
   type CanonicalDiagnostic,
   type DiagnosticCode,
+  type HttpMethod,
   type ModelLimits,
   type SchemaInstanceType,
 } from "./types.js";
@@ -741,7 +742,7 @@ function validateOperations(
         ...(operationValue.contractId === undefined
           ? {}
           : { contractId: operationValue.contractId as string }),
-        method: operationValue.method as import("./types.js").HttpMethod,
+        method: operationValue.method as HttpMethod,
         path: operationValue.path,
       });
       if (operationValue.id !== expectedId)
