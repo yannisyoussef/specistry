@@ -45,7 +45,7 @@ describe("reader fixtures", () => {
         encoding: "utf8",
         timeout: 60_000,
       });
-      expect(built.status, built.stderr).toBe(0);
+      expect(built.status, `${built.stdout}\n${built.stderr}`).toBe(0);
       expect(JSON.parse(built.stdout)).toMatchObject({ ok: true });
       for (const file of ["documentation.json", "manifest.json"]) {
         const fresh = await readFile(
