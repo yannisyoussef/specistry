@@ -1,0 +1,17 @@
+openapi: 3.1.0
+info:
+  title: Recursive fixture
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Node:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/Node"

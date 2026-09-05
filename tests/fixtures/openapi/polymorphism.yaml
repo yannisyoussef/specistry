@@ -1,0 +1,39 @@
+openapi: 3.1.0
+info:
+  title: Polymorphism fixture
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Pet:
+      oneOf:
+        - $ref: "#/components/schemas/Cat"
+        - $ref: "#/components/schemas/Dog"
+      discriminator:
+        propertyName: kind
+        mapping:
+          cat: "#/components/schemas/Cat"
+          dog: "#/components/schemas/Dog"
+    Cat:
+      allOf:
+        - type: object
+          properties:
+            kind:
+              const: cat
+        - type: object
+          properties:
+            lives:
+              type: integer
+              minimum: 0
+              maximum: 9
+    Dog:
+      type: object
+      properties:
+        kind:
+          const: dog
+        tricks:
+          anyOf:
+            - type: array
+              items:
+                type: string
+            - type: "null"

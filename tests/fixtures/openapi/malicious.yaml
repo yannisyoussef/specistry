@@ -1,0 +1,19 @@
+openapi: 3.1.0
+info:
+  title: Malicious text fixture
+  version: 1.0.0
+  description: '<img src=x onerror="alert(document.domain)"><script>alert(1)</script>'
+paths:
+  /payload:
+    post:
+      operationId: submitPayload
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+            example:
+              authorization: Bearer do-not-log-this-fixture-value
+      responses:
+        "204":
+          description: No content

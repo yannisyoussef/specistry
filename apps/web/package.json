@@ -1,0 +1,23 @@
+{
+  "name": "@specra/web",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "node ../../scripts/run-next.mjs build",
+    "dev": "node ../../scripts/run-next.mjs dev",
+    "start": "node ../../scripts/run-next.mjs start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.7",
+    "typescript": "6.0.3"
+  }
+}

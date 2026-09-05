@@ -1,0 +1,15 @@
+node_modules/
+.pnpm-store/
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.DS_Store
+.idea/
+.env
+.env.*
+!.env.example
+*.pem
+*.key

@@ -1,0 +1,13 @@
+packages:
+  - apps/*
+  - packages/*
+autoInstallPeers: false
+engineStrict: true
+saveExact: true
+strictPeerDependencies: true
+allowBuilds:
+  unrs-resolver: false
+minimumReleaseAgeExclude:
+  - "@playwright/test@1.63.0"
+  - playwright-core@1.63.0
+  - playwright@1.63.0
