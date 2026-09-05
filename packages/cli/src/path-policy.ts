@@ -39,7 +39,9 @@ export async function resolveProjectRoot(
 ): Promise<string | undefined> {
   if (
     root.length === 0 ||
-    (path.sep !== "\\" && /^(?:[a-z]:[\\/]|\\\\)/i.test(root))
+    (path.sep !== "\\" &&
+      path.win32.isAbsolute(root) &&
+      !path.posix.isAbsolute(root))
   ) {
     return undefined;
   }
