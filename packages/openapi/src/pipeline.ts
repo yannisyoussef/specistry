@@ -1,12 +1,13 @@
 import {
+  CanonicalModelError,
   canonicalizeDocumentationArtifact,
-  hasModelErrors,
-  validateDocumentationArtifact,
+  DEFAULT_MODEL_LIMITS,
   DOCUMENT_MODEL_VERSION,
   type ApiService,
   type CanonicalDiagnostic,
   type DocumentationArtifact,
   type DocumentationVersionId,
+  type ModelLimits,
   type ProjectId,
   type ServiceId,
 } from "@specra/model";
@@ -37,6 +38,8 @@ export interface IngestOptions {
   readonly sources: readonly SourceAcquisition[];
   readonly project: IngestionProject;
   readonly limits?: IngestionLimits;
+  /** Canonical model budgets; may only tighten the model defaults. */
+  readonly modelLimits?: ModelLimits;
   readonly signal?: AbortSignal;
 }
 
@@ -80,12 +83,13 @@ export async function ingestOpenApi(
   const limits = snapshotIngestionLimits(
     options.limits ?? DEFAULT_INGESTION_LIMITS,
   );
-  const rootDocument = options.sources[0]?.entry ?? "";
-  if (limits === undefined || options.sources.length === 0) {
-    const sink = new DiagnosticSink(16, rootDocument);
-    sink.add("SOURCE_LIMIT_EXCEEDED", { document: rootDocument, pointer: "" });
-    return failure(sink.toSorted(), [], [], emptyStatistics(), false);
+  if (limits === undefined) {
+    throw new TypeError("Ingestion limits must be positive safe integers.");
   }
+  if (options.sources.length === 0) {
+    throw new TypeError("At least one source acquisition is required.");
+  }
+  const rootDocument = options.sources[0]?.entry ?? "";
   const sink = new DiagnosticSink(limits.maxDiagnostics, rootDocument);
   const sources: IngestionSourceRecord[] = [];
   const services: ApiService[] = [];
@@ -142,6 +146,7 @@ export async function ingestOpenApi(
         document: acquisition.entry,
         pointer: "",
       });
+      sink.add("SOURCE_IDENTITY_COLLISION", claim.existing.location);
       continue;
     }
     const normalized = normalizeService(graph, limits, sink, serviceId);
@@ -179,12 +184,28 @@ export async function ingestOpenApi(
       ],
     },
   };
-  const modelIssues = validateDocumentationArtifact(artifact);
+  const modelLimits = options.modelLimits ?? DEFAULT_MODEL_LIMITS;
+  // Canonicalization validates once and throws on model errors, so the model
+  // walk runs a single time per build.
+  let canonical: DocumentationArtifact | undefined;
+  let modelIssues: readonly CanonicalDiagnostic[] = [];
+  try {
+    canonical = canonicalizeDocumentationArtifact(artifact, modelLimits);
+  } catch (error) {
+    if (!(error instanceof CanonicalModelError)) throw error;
+    modelIssues = error.diagnostics;
+  }
+  // A canonical artifact that outgrows the frozen model budget is an input-size
+  // outcome, not an adapter defect: report it as a source limit at the root.
+  if (modelIssues.some((issue) => issue.code === "MODEL_LIMIT_EXCEEDED")) {
+    sink.add("SOURCE_LIMIT_EXCEEDED", { document: rootDocument, pointer: "" });
+  }
   const artifactDiagnostics = modelIssues.filter(
-    (issue) => issue.severity === "error",
+    (issue) =>
+      issue.severity === "error" && issue.code !== "MODEL_LIMIT_EXCEEDED",
   );
   const diagnostics = sink.toSorted();
-  if (sink.hasErrors || hasModelErrors(modelIssues)) {
+  if (sink.hasErrors || canonical === undefined) {
     return failure(
       diagnostics,
       artifactDiagnostics,
@@ -194,7 +215,7 @@ export async function ingestOpenApi(
     );
   }
   return {
-    artifact: canonicalizeDocumentationArtifact(artifact),
+    artifact: canonical,
     artifactDiagnostics: [],
     cancelled: false,
     diagnostics,
@@ -219,10 +240,6 @@ function failure(
     sources,
     statistics,
   };
-}
-
-function emptyStatistics(): IngestionStatistics {
-  return { documents: 0, operations: 0, references: 0, schemas: 0 };
 }
 
 function isAborted(signal: AbortSignal | undefined): boolean {

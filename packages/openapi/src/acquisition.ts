@@ -9,6 +9,13 @@
 export interface AcquiredSource {
   /** Project-relative POSIX id exactly as requested. */
   readonly id: string;
+  /**
+   * Project-relative POSIX id of the file actually opened (after real-path
+   * resolution). When it differs from `id`, for example on a case-insensitive
+   * filesystem, the adapter treats the reference as unresolved so results do
+   * not depend on the host filesystem.
+   */
+  readonly canonicalId?: string;
   readonly bytes: Uint8Array;
 }
 

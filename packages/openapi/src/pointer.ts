@@ -23,6 +23,22 @@ export function joinPointer(
 }
 
 /** Returns the unescaped segments, or `undefined` when the pointer is malformed. */
+/**
+ * Longest bound on a diagnostic pointer accepted by the model and the CLI
+ * frame contract. Deeper locations are reported at the nearest ancestor that
+ * fits, so an over-long author key can never turn a diagnostic into a crash.
+ */
+export const MAX_POINTER_LENGTH = 2_048;
+
+export function boundPointer(
+  pointer: string,
+  maxLength = MAX_POINTER_LENGTH,
+): string {
+  if (pointer.length <= maxLength) return pointer;
+  const cut = pointer.lastIndexOf("/", maxLength);
+  return cut <= 0 ? "" : pointer.slice(0, cut);
+}
+
 export function parsePointer(pointer: string): readonly string[] | undefined {
   if (pointer === "") return [];
   if (!pointer.startsWith("/")) return undefined;

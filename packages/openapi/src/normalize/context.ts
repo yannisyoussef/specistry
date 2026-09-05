@@ -20,6 +20,7 @@ import { resolveReference, type DocumentGraph } from "../documents.js";
 import { IdentityLedger, canonicalSlug } from "../identity.js";
 import type { IngestionLimits } from "../limits.js";
 import { isRecord, type OpenApiDialect } from "../parse.js";
+import { boundPointer } from "../pointer.js";
 
 /**
  * Where a capability diagnostic is anchored inside the canonical artifact.
@@ -71,7 +72,9 @@ export class NormalizeContext {
   public operationCount = 0;
   #exampleBudgetReported = false;
   readonly #schemaIds = new Map<string, SchemaId>();
-  readonly #pending: PendingSchema[] = [];
+  readonly #schemaKeys = new Map<SchemaId, string>();
+  #pending: PendingSchema[] = [];
+  #pendingHead = 0;
 
   public constructor(
     graph: DocumentGraph,
@@ -98,7 +101,7 @@ export class NormalizeContext {
         ? {}
         : { operationId: anchor.operationId }),
       ...(anchor.schemaId === undefined ? {} : { schemaId: anchor.schemaId }),
-      ...(anchor.path === "" ? {} : { path: anchor.path }),
+      ...(anchor.path === "" ? {} : { path: boundPointer(anchor.path) }),
     };
     const diagnostic = createDiagnostic({ code, location });
     this.canonicalDiagnostics.set(diagnostic.id, diagnostic);
@@ -138,12 +141,30 @@ export class NormalizeContext {
     if (existing !== undefined) return existing;
     const schemaId = createSchemaId(location.document, location.pointer);
     this.#schemaIds.set(key, schemaId);
+    this.#schemaKeys.set(schemaId, key);
     this.#pending.push({ location, schemaId });
     return schemaId;
   }
 
+  /** Registered `document#pointer` key of a schema identity. */
+  public schemaKey(schemaId: SchemaId): string | undefined {
+    return this.#schemaKeys.get(schemaId);
+  }
+
   public nextPendingSchema(): PendingSchema | undefined {
-    return this.#pending.shift();
+    if (this.#pendingHead >= this.#pending.length) return undefined;
+    const next = this.#pending[this.#pendingHead];
+    this.#pendingHead += 1;
+    // A head index keeps dequeuing O(1); compact once the consumed prefix
+    // dominates so memory does not grow with the total registered count.
+    if (
+      this.#pendingHead >= 4_096 &&
+      this.#pendingHead * 2 >= this.#pending.length
+    ) {
+      this.#pending = this.#pending.slice(this.#pendingHead);
+      this.#pendingHead = 0;
+    }
+    return next;
   }
 
   /** Registered `document#pointer` keys with their schema identities. */
@@ -167,19 +188,49 @@ export class NormalizeContext {
 
   /**
    * Dereferences a Reference Object (`{ $ref }`) chain. Non-reference values
-   * are returned unchanged. Cycles and over-long chains are invalid.
+   * are returned unchanged. Cycles and over-long chains are invalid. In 3.1 a
+   * Reference Object may override `summary` and `description`; the first hop's
+   * values are returned so callers can apply them. In 3.0 siblings are
+   * diagnosed as partially represented.
    */
   public dereference(
     value: unknown,
     source: SourceLocation,
-  ):
-    { readonly location: SourceLocation; readonly value: unknown } | undefined {
+    siblingSeverity: (key: string) => "invalid" | "partial" = () => "partial",
+  ): Dereferenced | undefined {
     let current = value;
     let location = source;
     const visited = new Set<string>();
+    let summary: string | undefined;
+    let description: string | undefined;
     for (let hop = 0; hop < 32; hop += 1) {
       if (!isRecord(current) || typeof current.$ref !== "string") {
-        return { location, value: current };
+        return {
+          ...(description === undefined ? {} : { description }),
+          location,
+          ...(summary === undefined ? {} : { summary }),
+          value: current,
+        };
+      }
+      if (hop === 0) {
+        for (const key of Object.keys(current)) {
+          if (key === "$ref" || key.startsWith("x-")) continue;
+          const sibling = current[key];
+          if (
+            this.dialect === "oas31" &&
+            (key === "summary" || key === "description") &&
+            typeof sibling === "string"
+          ) {
+            if (key === "summary") summary = sibling;
+            else description = sibling;
+            continue;
+          }
+          if (siblingSeverity(key) === "invalid") {
+            this.invalid(child(location, key));
+          } else {
+            this.partial(child(location, key));
+          }
+        }
       }
       const key = `${location.document}#${location.pointer}`;
       if (visited.has(key)) {
@@ -210,18 +261,17 @@ export class NormalizeContext {
     source: SourceLocation,
     budgeted = false,
   ): JsonValue | undefined {
+    if (budgeted && this.#exampleBudgetReported) return undefined;
     const converted = convertJson(value);
     if (converted === undefined) {
       this.invalid(source);
       return undefined;
     }
     if (budgeted) {
-      this.exampleBytes += JSON.stringify(converted).length;
+      this.exampleBytes += Buffer.byteLength(JSON.stringify(converted), "utf8");
       if (this.exampleBytes > this.limits.maxExampleBytes) {
-        if (!this.#exampleBudgetReported) {
-          this.#exampleBudgetReported = true;
-          this.sink.add("SOURCE_LIMIT_EXCEEDED", source);
-        }
+        this.#exampleBudgetReported = true;
+        this.sink.add("SOURCE_LIMIT_EXCEEDED", source);
         return undefined;
       }
     }
@@ -239,7 +289,7 @@ export class NormalizeContext {
         document: source.document,
         pointer: `${source.pointer}/${escapeKey(key)}`,
       });
-      if (converted !== undefined) extensions[key] = converted;
+      if (converted !== undefined) defineOwn(extensions, key, converted);
     }
     return extensions;
   }
@@ -277,11 +327,52 @@ export function convertJson(value: unknown): JsonValue | undefined {
     for (const [key, item] of Object.entries(value)) {
       const converted = convertJson(item);
       if (converted === undefined) return undefined;
-      record[key] = converted;
+      defineOwn(record, key, converted);
     }
     return record;
   }
   return undefined;
+}
+
+/**
+ * Assigns an own enumerable data property without invoking setters, so author
+ * keys such as `__proto__` become ordinary keys instead of prototype writes.
+ */
+export function defineOwn<T>(
+  record: Record<string, T>,
+  key: string,
+  value: T,
+): void {
+  Object.defineProperty(record, key, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
+}
+
+/**
+ * Applies 3.1 Reference Object `summary`/`description` overrides to the
+ * dereferenced record so callers read the effective values.
+ */
+export function withOverrides(dereferenced: Dereferenced): unknown {
+  const { description, summary, value } = dereferenced;
+  if (!isRecord(value) || (description === undefined && summary === undefined))
+    return value;
+  return {
+    ...value,
+    ...(summary === undefined ? {} : { summary }),
+    ...(description === undefined ? {} : { description }),
+  };
+}
+
+export interface Dereferenced {
+  readonly location: SourceLocation;
+  readonly value: unknown;
+  /** 3.1 Reference Object override, when declared. */
+  readonly summary?: string;
+  /** 3.1 Reference Object override, when declared. */
+  readonly description?: string;
 }
 
 export function escapeKey(key: string): string {

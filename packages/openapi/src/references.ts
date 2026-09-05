@@ -1,11 +1,4 @@
-import { OpenApiIngestionError } from "./parse.js";
-
 export type ReferenceKind = "document" | "fragment" | "remote" | "unsupported";
-
-export interface RemoteReferencePolicy {
-  /** Exact HTTPS origins, including a non-default port when applicable. */
-  readonly allowedOrigins: readonly string[];
-}
 
 export function classifyReference(reference: string): ReferenceKind {
   if (reference.startsWith("#")) return "fragment";
@@ -18,41 +11,6 @@ export function classifyReference(reference: string): ReferenceKind {
     // A relative path is a document reference, not a remotely fetchable URL.
   }
   return "document";
-}
-
-/**
- * Policy helper retained from SPEC-000. SPEC-003 keeps remote retrieval
- * disabled: the ingestion pipeline never calls this with a policy, so every
- * remote reference is diagnosed instead of fetched.
- */
-export function assertReferenceAllowed(
-  reference: string,
-  policy?: RemoteReferencePolicy,
-): void {
-  const kind = classifyReference(reference);
-  if (kind === "unsupported") {
-    throw new OpenApiIngestionError(
-      "UNSUPPORTED_REFERENCE_SCHEME",
-      "OpenAPI reference uses an unsupported URL scheme.",
-    );
-  }
-  if (kind === "remote") {
-    const url = new URL(reference);
-    const allowed =
-      policy !== undefined &&
-      url.protocol === "https:" &&
-      url.username === "" &&
-      url.password === "" &&
-      policy.allowedOrigins.some((candidate) =>
-        isExactHttpsOrigin(candidate, url.origin),
-      );
-    if (!allowed) {
-      throw new OpenApiIngestionError(
-        "REMOTE_REFERENCE_DENIED",
-        "Remote OpenAPI reference is not permitted by the exact HTTPS origin policy.",
-      );
-    }
-  }
 }
 
 export interface SplitReference {
@@ -119,19 +77,4 @@ export function resolveDocumentId(
   }
   if (segments.length === 0) return { ok: false, reason: "invalid" };
   return { id: segments.join("/"), ok: true };
-}
-
-function isExactHttpsOrigin(candidate: string, expected: string): boolean {
-  try {
-    const parsed = new URL(candidate);
-    return (
-      parsed.protocol === "https:" &&
-      parsed.username === "" &&
-      parsed.password === "" &&
-      parsed.origin === expected &&
-      parsed.href === `${parsed.origin}/`
-    );
-  } catch {
-    return false;
-  }
 }

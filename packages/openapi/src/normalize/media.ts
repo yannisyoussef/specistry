@@ -15,6 +15,7 @@ import {
   child,
   optionalBoolean,
   optionalString,
+  withOverrides,
   type CanonicalAnchor,
   type NormalizeContext,
 } from "./context.js";
@@ -152,7 +153,12 @@ export function normalizeExamples(
   source: SourceLocation,
 ): readonly Example[] {
   const examples: Example[] = [];
-  const claimed = new Set<string>();
+  const claimed = new Map<string, SourceLocation>();
+  if (record.example !== undefined && record.examples !== undefined) {
+    // The specification makes the two fields mutually exclusive.
+    ctx.invalid(child(source, "examples"));
+    return examples;
+  }
   if (record.example !== undefined) {
     const value = ctx.toJsonValue(
       record.example,
@@ -161,7 +167,7 @@ export function normalizeExamples(
     );
     if (value !== undefined) {
       examples.push({ id: "example" as ExampleId, name: "example", value });
-      claimed.add("example");
+      claimed.set("example", child(source, "example"));
     }
   }
   if (record.examples === undefined) return examples;
@@ -173,7 +179,7 @@ export function normalizeExamples(
     const exampleSource = child(source, "examples", name);
     const dereferenced = ctx.dereference(record.examples[name], exampleSource);
     if (dereferenced === undefined) continue;
-    const example = dereferenced.value;
+    const example = withOverrides(dereferenced);
     if (!isRecord(example)) {
       ctx.invalid(exampleSource);
       continue;
@@ -183,11 +189,13 @@ export function normalizeExamples(
       continue;
     }
     const id = ctx.slug("example", name);
-    if (claimed.has(id)) {
+    const existing = claimed.get(id);
+    if (existing !== undefined) {
       ctx.sink.add("SOURCE_IDENTITY_COLLISION", exampleSource);
+      ctx.sink.add("SOURCE_IDENTITY_COLLISION", existing);
       continue;
     }
-    claimed.add(id);
+    claimed.set(id, exampleSource);
     const summary = optionalString(
       example,
       "summary",
@@ -235,6 +243,7 @@ function normalizeEncodings(
   const essence = mediaType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
   const multipart = essence.startsWith("multipart/");
   const encodings: MediaTypeEncoding[] = [];
+  const declared = sourceSchemaProperties(ctx, rawSchema, schemaSource);
   for (const propertyName of Object.keys(raw).sort(compareText)) {
     const entrySource = child(source, propertyName);
     const entry = raw[propertyName];
@@ -242,7 +251,7 @@ function normalizeEncodings(
       ctx.invalid(entrySource);
       continue;
     }
-    if (!sourceSchemaHasProperty(ctx, rawSchema, schemaSource, propertyName)) {
+    if (!declared.has(propertyName)) {
       ctx.invalid(entrySource);
       continue;
     }
@@ -302,59 +311,56 @@ function normalizeEncodings(
 }
 
 /**
- * Checks, on the raw source, whether the media schema declares a property,
- * following references and composition variants without I/O.
+ * Collects, on the raw source, every property name the media schema declares,
+ * following references and composition variants without I/O. Computed once
+ * per media schema so each encoding entry is an O(1) lookup.
  */
-export function sourceSchemaHasProperty(
+export function sourceSchemaProperties(
   ctx: NormalizeContext,
   rawSchema: unknown,
   source: SourceLocation,
-  propertyName: string,
-  depth = 0,
-  visited = new Set<string>(),
-): boolean {
-  if (depth > 32) return false;
-  if (!isRecord(rawSchema)) return false;
-  if (typeof rawSchema.$ref === "string") {
-    const key = `${source.document}#${source.pointer}`;
-    if (visited.has(key)) return false;
-    visited.add(key);
-    const resolved = ctx.resolve(child(source, "$ref"), rawSchema.$ref);
-    if (resolved === undefined) return false;
-    return sourceSchemaHasProperty(
-      ctx,
-      resolved.value,
-      resolved.location,
-      propertyName,
-      depth + 1,
-      visited,
-    );
-  }
-  if (
-    isRecord(rawSchema.properties) &&
-    Object.hasOwn(rawSchema.properties, propertyName)
-  ) {
-    return true;
-  }
-  for (const mode of ["allOf", "anyOf", "oneOf"] as const) {
-    const variants = rawSchema[mode];
-    if (!Array.isArray(variants)) continue;
-    if (
-      variants.some((variant, index) =>
-        sourceSchemaHasProperty(
-          ctx,
-          variant,
-          child(source, mode, String(index)),
-          propertyName,
-          depth + 1,
-          new Set(visited),
-        ),
-      )
-    ) {
-      return true;
+): ReadonlySet<string> {
+  const declared = new Set<string>();
+  const visited = new Set<string>();
+  const stack: {
+    readonly depth: number;
+    readonly source: SourceLocation;
+    readonly value: unknown;
+  }[] = [{ depth: 0, source, value: rawSchema }];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === undefined) break;
+    const { depth, value } = current;
+    if (depth > 32 || !isRecord(value)) continue;
+    if (typeof value.$ref === "string") {
+      const key = `${current.source.document}#${current.source.pointer}`;
+      if (visited.has(key)) continue;
+      visited.add(key);
+      const resolved = ctx.resolve(child(current.source, "$ref"), value.$ref);
+      if (resolved === undefined) continue;
+      stack.push({
+        depth: depth + 1,
+        source: resolved.location,
+        value: resolved.value,
+      });
+      continue;
+    }
+    if (isRecord(value.properties)) {
+      for (const name of Object.keys(value.properties)) declared.add(name);
+    }
+    for (const mode of ["allOf", "anyOf", "oneOf"] as const) {
+      const variants = value[mode];
+      if (!Array.isArray(variants)) continue;
+      variants.forEach((variant, index) => {
+        stack.push({
+          depth: depth + 1,
+          source: child(current.source, mode, String(index)),
+          value: variant,
+        });
+      });
     }
   }
-  return false;
+  return declared;
 }
 
 /** Normalizes a Headers map into canonical response/encoding headers. */
@@ -387,7 +393,7 @@ export function normalizeHeaders(
     const header = normalizeHeader(
       ctx,
       name,
-      dereferenced.value,
+      withOverrides(dereferenced),
       dereferenced.location,
       anchorChild(anchor, name),
     );
@@ -416,7 +422,15 @@ function normalizeHeader(
     examples,
     name,
   };
-  for (const key of ["in", "name"] as const) {
+  // The canonical header carries no requiredness or reserved-character
+  // flags; declared values are diagnosed rather than narrowed silently.
+  for (const key of [
+    "allowEmptyValue",
+    "allowReserved",
+    "in",
+    "name",
+    "required",
+  ] as const) {
     if (raw[key] !== undefined) ctx.partial(child(source, key));
   }
   if (raw.schema !== undefined && raw.content !== undefined) {

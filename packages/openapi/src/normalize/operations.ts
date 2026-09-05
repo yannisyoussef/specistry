@@ -19,6 +19,7 @@ import {
   child,
   optionalBoolean,
   optionalString,
+  withOverrides,
   type CanonicalAnchor,
   type NormalizeContext,
 } from "./context.js";
@@ -44,6 +45,9 @@ const METHODS: readonly (readonly [string, HttpMethod])[] = [
   ["patch", "PATCH"],
   ["trace", "TRACE"],
 ];
+const METHOD_KEYS = new Set(METHODS.map(([key]) => key));
+/** Header parameters the specification ignores in favour of other fields. */
+const RESERVED_HEADERS = new Set(["accept", "authorization", "content-type"]);
 const PATH_ITEM_KEYS = new Set([
   "$ref",
   "description",
@@ -79,7 +83,11 @@ export function normalizePaths(
       ctx.invalid(pathSource);
       continue;
     }
-    const dereferenced = ctx.dereference(raw[path], pathSource);
+    // Operations declared beside a Path Item `$ref` are undefined by the
+    // specification and would otherwise be dropped silently.
+    const dereferenced = ctx.dereference(raw[path], pathSource, (key) =>
+      METHOD_KEYS.has(key) ? "invalid" : "partial",
+    );
     if (dereferenced === undefined) continue;
     const item = dereferenced.value;
     if (!isRecord(item)) {
@@ -298,37 +306,37 @@ function normalizeParameters(
       ctx.invalid(source);
       continue;
     }
+    // A list MUST NOT repeat a name/location pair; an operation may override
+    // a path-level parameter, which is the only permitted repetition.
+    const seenInList = new Set<string>();
     raw.forEach((entry, index) => {
       const entrySource = child(source, String(index));
       const dereferenced = ctx.dereference(entry, entrySource);
       if (dereferenced === undefined) return;
+      const value = withOverrides(dereferenced);
       if (
-        !isRecord(dereferenced.value) ||
-        typeof dereferenced.value.name !== "string" ||
-        typeof dereferenced.value.in !== "string"
+        !isRecord(value) ||
+        typeof value.name !== "string" ||
+        typeof value.in !== "string"
       ) {
         ctx.invalid(entrySource);
         return;
       }
-      const location = dereferenced.value.in;
+      const location = value.in;
       const name =
-        location === "header"
-          ? dereferenced.value.name.toLowerCase()
-          : dereferenced.value.name;
-      const key = `${location}${name}`;
-      if (merged.has(key) && source === pathSource) {
+        location === "header" ? value.name.toLowerCase() : value.name;
+      const key = `${location}\u001f${name}`;
+      if (seenInList.has(key)) {
         ctx.invalid(entrySource);
         return;
       }
+      seenInList.add(key);
       if (!merged.has(key)) order.push(key);
-      merged.set(key, {
-        location: dereferenced.location,
-        value: dereferenced.value,
-      });
+      merged.set(key, { location: dereferenced.location, value });
     });
   }
   const parameters: Parameter[] = [];
-  const claimed = new Set<string>();
+  const claimed = new Map<string, SourceLocation>();
   for (const key of order) {
     const raw = merged.get(key);
     if (raw === undefined) continue;
@@ -366,7 +374,7 @@ function normalizeParameter(
   raw: Readonly<Record<string, unknown>>,
   source: SourceLocation,
   anchor: CanonicalAnchor,
-  claimed: Set<string>,
+  claimed: Map<string, SourceLocation>,
 ): Parameter | undefined {
   const name = raw.name as string;
   const location = raw.in;
@@ -383,6 +391,16 @@ function normalizeParameter(
     ctx.invalid(child(source, "name"));
     return undefined;
   }
+  if (location === "header" && RESERVED_HEADERS.has(name.toLowerCase())) {
+    // The specification ignores these as parameters; they are described by
+    // `content`, `requestBody`, and `security` instead.
+    ctx.partial(source);
+    return undefined;
+  }
+  if (raw.schema === undefined && raw.content === undefined) {
+    ctx.invalid(source);
+    return undefined;
+  }
   const description = optionalString(raw, "description", source, ctx);
   const deprecated = optionalBoolean(raw, "deprecated", source, ctx) ?? false;
   let required = optionalBoolean(raw, "required", source, ctx) ?? false;
@@ -394,11 +412,13 @@ function normalizeParameter(
     "parameter",
     `${location}.${location === "header" ? name.toLowerCase() : name}`,
   ) as ParameterId;
-  if (claimed.has(id)) {
+  const existing = claimed.get(id);
+  if (existing !== undefined) {
     ctx.sink.add("SOURCE_IDENTITY_COLLISION", source);
+    ctx.sink.add("SOURCE_IDENTITY_COLLISION", existing);
     return undefined;
   }
-  claimed.add(id);
+  claimed.set(id, source);
   const examples = normalizeExamples(ctx, raw, source);
   const parameterAnchor = anchorChild(
     anchor,
@@ -527,9 +547,13 @@ function normalizeRequestBody(
 ): RequestBody | undefined {
   const dereferenced = ctx.dereference(raw, source);
   if (dereferenced === undefined) return undefined;
-  const body = dereferenced.value;
+  const body = withOverrides(dereferenced);
   if (!isRecord(body)) {
     ctx.invalid(source);
+    return undefined;
+  }
+  if (body.content === undefined) {
+    ctx.invalid(child(dereferenced.location, "content"));
     return undefined;
   }
   const description = optionalString(
@@ -582,7 +606,7 @@ function normalizeResponses(
     seen.add(statusKey);
     const dereferenced = ctx.dereference(raw[key], responseSource);
     if (dereferenced === undefined) continue;
-    const response = dereferenced.value;
+    const response = withOverrides(dereferenced);
     if (
       !isRecord(response) ||
       typeof response.description !== "string" ||

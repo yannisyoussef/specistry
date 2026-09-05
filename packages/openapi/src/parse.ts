@@ -1,41 +1,15 @@
-import { parse } from "yaml";
+import {
+  isScalar,
+  parseDocument as parseYamlDocument,
+  visit,
+  type Document,
+} from "yaml";
 
 import {
   DEFAULT_PARSE_LIMITS,
   areLimitsValid,
   type ParseLimits,
 } from "./limits.js";
-
-export interface SourceOrigin {
-  readonly id: string;
-  readonly kind: "file" | "memory";
-}
-
-/**
- * Parser-layer value. It is deliberately opaque to downstream rendering code;
- * only the OpenAPI adapter may inspect `document` before normalization.
- */
-export interface OpenApiSourceDocument {
-  readonly format: "openapi";
-  readonly openapiVersion: string;
-  readonly origin: SourceOrigin;
-  readonly document: Readonly<Record<string, unknown>>;
-}
-
-export class OpenApiIngestionError extends Error {
-  public constructor(
-    public readonly code:
-      | "INVALID_DOCUMENT"
-      | "LIMIT_EXCEEDED"
-      | "REMOTE_REFERENCE_DENIED"
-      | "UNSUPPORTED_REFERENCE_SCHEME"
-      | "UNSUPPORTED_VERSION",
-    message: string,
-  ) {
-    super(message);
-    this.name = "OpenApiIngestionError";
-  }
-}
 
 export type ParseFailure =
   | { readonly kind: "invalid-limits" }
@@ -45,8 +19,7 @@ export type ParseFailure =
     }
   | { readonly kind: "not-object" }
   | { readonly kind: "syntax" }
-  | { readonly kind: "non-finite" }
-  | { readonly kind: "encoding" };
+  | { readonly kind: "non-finite" };
 
 export type ParseOutcome =
   | {
@@ -82,14 +55,31 @@ export function parseDocument(
   if (Buffer.byteLength(source, "utf8") > limits.maxBytes) {
     return { failure: { budget: "bytes", kind: "limit" }, ok: false };
   }
+  // Nesting is bounded before the recursive composer runs so pathological
+  // depth is a diagnostic rather than a stack or heap exhaustion.
+  if (exceedsNestingPrecheck(source, limits.maxDepth)) {
+    return { failure: { budget: "depth", kind: "limit" }, ok: false };
+  }
   let parsed: unknown;
   try {
-    parsed = parse(source, {
-      maxAliasCount: 0,
+    const document = parseYamlDocument(source, {
+      logLevel: "silent",
       prettyErrors: false,
       strict: true,
-      uniqueKeys: true,
+      // The parser's own duplicate check scans every existing key per
+      // insertion (quadratic in mapping width); `hasUniquePlainKeys` below is
+      // the linear equivalent.
+      uniqueKeys: false,
     });
+    // Unknown or non-JSON tags (!!binary, !!timestamp, !!set, custom tags)
+    // surface as warnings; the adapter accepts only plain JSON-compatible data.
+    if (document.errors.length > 0 || document.warnings.length > 0) {
+      return { failure: { kind: "syntax" }, ok: false };
+    }
+    if (!hasUniquePlainKeys(document)) {
+      return { failure: { kind: "syntax" }, ok: false };
+    }
+    parsed = document.toJS({ maxAliasCount: 0 });
   } catch {
     return { failure: { kind: "syntax" }, ok: false };
   }
@@ -101,55 +91,67 @@ export function parseDocument(
   return { nodes: walk.nodes, ok: true, value: parsed };
 }
 
-export function parseOpenApiSource(
-  source: string,
-  origin: SourceOrigin,
-  limits: ParseLimits = DEFAULT_PARSE_LIMITS,
-): OpenApiSourceDocument {
-  const outcome = parseDocument(source, limits);
-  if (!outcome.ok) {
-    switch (outcome.failure.kind) {
-      case "invalid-limits":
-        throw new OpenApiIngestionError(
-          "LIMIT_EXCEEDED",
-          "Ingestion limits must be positive safe integers.",
-        );
-      case "limit":
-        throw new OpenApiIngestionError(
-          "LIMIT_EXCEEDED",
-          `Source exceeds the configured ${outcome.failure.budget} ingestion limit.`,
-        );
-      case "not-object":
-        throw new OpenApiIngestionError(
-          "INVALID_DOCUMENT",
-          "OpenAPI source must be an object.",
-        );
-      case "non-finite":
-        throw new OpenApiIngestionError(
-          "INVALID_DOCUMENT",
-          "Document contains a non-finite numeric value.",
-        );
-      case "syntax":
-      case "encoding":
-        throw new OpenApiIngestionError(
-          "INVALID_DOCUMENT",
-          "Source is not valid JSON or YAML.",
-        );
+/**
+ * Rejects duplicate or non-scalar mapping keys in one linear pass. Keys are
+ * compared by their JavaScript property name, so `1` and `"1"` collide just as
+ * they would in the parsed object.
+ */
+function hasUniquePlainKeys(document: Document): boolean {
+  let unique = true;
+  visit(document, {
+    Map(_key, map) {
+      const seen = new Set<string>();
+      for (const pair of map.items) {
+        if (!isScalar(pair.key)) {
+          unique = false;
+          return visit.BREAK;
+        }
+        const name = String(pair.key.value);
+        if (seen.has(name)) {
+          unique = false;
+          return visit.BREAK;
+        }
+        seen.add(name);
+      }
+      return undefined;
+    },
+  });
+  return unique;
+}
+
+/**
+ * Cheap O(n) guard against pathological nesting: a run of flow-collection
+ * openers longer than the depth budget, or a line indented more than eight
+ * times the budget, cannot describe a document within the budget.
+ */
+function exceedsNestingPrecheck(source: string, maxDepth: number): boolean {
+  let run = 0;
+  let indent = 0;
+  let atLineStart = true;
+  const maxIndent = maxDepth * 8;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source.charCodeAt(index);
+    if (character === 0x0a) {
+      atLineStart = true;
+      indent = 0;
+      continue;
+    }
+    if (atLineStart) {
+      if (character === 0x20 || character === 0x09) {
+        indent += 1;
+        if (indent > maxIndent) return true;
+        continue;
+      }
+      atLineStart = false;
+    }
+    if (character === 0x5b || character === 0x7b) {
+      run += 1;
+      if (run > maxDepth) return true;
+    } else if (character !== 0x20 && character !== 0x09 && character !== 0x0d) {
+      run = 0;
     }
   }
-  const openapiVersion = detectOpenApiVersion(outcome.value);
-  if (openapiVersion === undefined) {
-    throw new OpenApiIngestionError(
-      "UNSUPPORTED_VERSION",
-      "Only explicit OpenAPI 3.0.x and 3.1.x documents are accepted.",
-    );
-  }
-  return Object.freeze({
-    document: outcome.value,
-    format: "openapi",
-    openapiVersion,
-    origin: Object.freeze({ ...origin }),
-  });
+  return false;
 }
 
 export type OpenApiDialect = "oas30" | "oas31";
@@ -199,6 +201,17 @@ function enforceStructuralLimits(
       continue;
     }
     if (value === null || typeof value !== "object") continue;
+    // Only plain objects and arrays are JSON data; typed arrays, dates, sets,
+    // and other instances cannot be represented and are rejected outright.
+    const prototype = Object.getPrototypeOf(value) as unknown;
+    if (
+      (Array.isArray(value) && prototype !== Array.prototype) ||
+      (!Array.isArray(value) &&
+        prototype !== Object.prototype &&
+        prototype !== null)
+    ) {
+      return { failure: { kind: "syntax" }, ok: false };
+    }
     if (visited.has(value)) continue;
     visited.add(value);
     Object.freeze(value);

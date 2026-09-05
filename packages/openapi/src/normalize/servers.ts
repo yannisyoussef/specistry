@@ -1,8 +1,14 @@
 import type { ServerDefinition, ServerId, ServerVariable } from "@specra/model";
 
 import type { SourceLocation } from "../diagnostics.js";
+import { stableHash } from "../identity.js";
 import { isRecord } from "../parse.js";
-import { child, optionalString, type NormalizeContext } from "./context.js";
+import {
+  child,
+  defineOwn,
+  optionalString,
+  type NormalizeContext,
+} from "./context.js";
 
 /**
  * Normalizes a Server Object list. Servers are de-duplicated by their full
@@ -55,8 +61,9 @@ export function normalizeServers(
       if (!ids.includes(existing.id)) ids.push(existing.id);
       return;
     }
-    const id = `server-${ctx.slug("server", entry.url).replace(/^server_/, "")}`;
-    const candidate = disambiguate(ctx, id, content) as ServerId;
+    // Identity derives from the complete server content, never from encounter
+    // order, so reordering or duplicating server lists cannot rename servers.
+    const candidate = `server_${stableHash(content)}` as ServerId;
     const definition: ServerDefinition = {
       ...(description === undefined ? {} : { description }),
       id: candidate,
@@ -71,23 +78,6 @@ export function normalizeServers(
     ids.push(candidate);
   });
   return ids;
-}
-
-function disambiguate(
-  ctx: NormalizeContext,
-  base: string,
-  content: string,
-): string {
-  const taken = new Set(
-    [...ctx.servers.values()].map((record) => record.id as string),
-  );
-  if (!taken.has(base)) return base;
-  // Same URL with different description/variables: derive a stable suffix from
-  // the full content rather than from encounter order.
-  return `${base}-${ctx.slug("server", content).replace(/^server_/, "")}`.slice(
-    0,
-    128,
-  );
 }
 
 function normalizeVariables(
@@ -124,11 +114,11 @@ function normalizeVariables(
         return undefined;
       }
     }
-    variables[name] = {
+    defineOwn(variables, name, {
       allowedValues,
       defaultValue: entry.default,
       ...(description === undefined ? {} : { description }),
-    };
+    });
   }
   return variables;
 }

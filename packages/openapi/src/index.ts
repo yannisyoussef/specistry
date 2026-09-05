@@ -7,6 +7,7 @@ export {
 } from "./acquisition.js";
 export {
   SOURCE_DIAGNOSTIC_MESSAGES,
+  SOURCE_DIAGNOSTIC_SEVERITY,
   compareSourceDiagnostics,
   createSourceDiagnostic,
   type SourceDiagnostic,
@@ -16,19 +17,9 @@ export {
 } from "./diagnostics.js";
 export {
   DEFAULT_INGESTION_LIMITS,
-  DEFAULT_PARSE_LIMITS,
   snapshotIngestionLimits,
   type IngestionLimits,
-  type ParseLimits,
 } from "./limits.js";
-export {
-  OpenApiIngestionError,
-  detectOpenApiVersion,
-  parseOpenApiSource,
-  type OpenApiDialect,
-  type OpenApiSourceDocument,
-  type SourceOrigin,
-} from "./parse.js";
 export {
   ingestOpenApi,
   type IngestOptions,
@@ -37,11 +28,4 @@ export {
   type IngestionSourceRecord,
   type IngestionStatistics,
 } from "./pipeline.js";
-export { comparePointers, escapeSegment, joinPointer } from "./pointer.js";
-export {
-  assertReferenceAllowed,
-  classifyReference,
-  resolveDocumentId,
-  type ReferenceKind,
-  type RemoteReferencePolicy,
-} from "./references.js";
+export { comparePointers, escapeSegment } from "./pointer.js";

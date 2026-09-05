@@ -168,6 +168,16 @@ export async function loadDocumentGraph(
       failures.set(id, code);
       return undefined;
     }
+    if (
+      acquired.source.canonicalId !== undefined &&
+      acquired.source.canonicalId !== id
+    ) {
+      // The filesystem resolved a differently spelled file (case folding,
+      // normalization); behave as a case-sensitive host would.
+      diagnostics.add("SOURCE_REFERENCE_UNRESOLVED", referencedFrom);
+      failures.set(id, "SOURCE_REFERENCE_UNRESOLVED");
+      return undefined;
+    }
     const bytes = acquired.source.bytes;
     totalBytes += bytes.byteLength;
     if (
@@ -206,21 +216,57 @@ export async function loadDocumentGraph(
   }
 }
 
-/** Every `$ref` string in the document with its pointer, in traversal order. */
+/** Keys whose values are user-named maps of OpenAPI objects. */
+const MAP_KEYS = new Set([
+  "$defs",
+  "callbacks",
+  "content",
+  "definitions",
+  "encoding",
+  "headers",
+  "links",
+  "mapping",
+  "parameters",
+  "pathItems",
+  "paths",
+  "patternProperties",
+  "properties",
+  "requestBodies",
+  "responses",
+  "schemas",
+  "securitySchemes",
+  "variables",
+]);
+/** Keys whose values are opaque JSON data, never Reference Objects. */
+const DATA_KEYS = new Set(["const", "default", "enum", "example"]);
+
+type WalkMode = "example" | "map" | "structural";
+
+/**
+ * Every `$ref` string in Reference Object or Schema Object position, with its
+ * pointer, in traversal order. Data-bearing values (examples, defaults, enum
+ * and const values, extensions) are opaque and never treated as references.
+ */
 export function collectReferences(
   document: Readonly<Record<string, unknown>>,
 ): readonly (readonly [string, string])[] {
   const found: (readonly [string, string])[] = [];
-  const stack: { readonly pointer: string; readonly value: unknown }[] = [
-    { pointer: "", value: document },
-  ];
+  const stack: {
+    readonly mode: WalkMode;
+    readonly pointer: string;
+    readonly value: unknown;
+  }[] = [{ mode: "structural", pointer: "", value: document }];
   while (stack.length > 0) {
     const current = stack.pop();
     if (current === undefined) break;
-    const { pointer, value } = current;
+    const { mode, pointer, value } = current;
     if (Array.isArray(value)) {
       for (let index = value.length - 1; index >= 0; index -= 1) {
-        stack.push({ pointer: `${pointer}/${index}`, value: value[index] });
+        stack.push({
+          mode: "structural",
+          pointer: `${pointer}/${index}`,
+          value: value[index],
+        });
       }
       continue;
     }
@@ -228,11 +274,37 @@ export function collectReferences(
     if (typeof value.$ref === "string") {
       found.push([joinPointer(pointer, "$ref"), value.$ref]);
     }
+    if (mode === "example") continue;
     const keys = Object.keys(value);
     for (let index = keys.length - 1; index >= 0; index -= 1) {
       const key = keys[index];
       if (key === undefined) continue;
-      stack.push({ pointer: joinPointer(pointer, key), value: value[key] });
+      const child = value[key];
+      const childPointer = joinPointer(pointer, key);
+      if (mode === "map") {
+        stack.push({ mode: "structural", pointer: childPointer, value: child });
+        continue;
+      }
+      if (key.startsWith("x-") || DATA_KEYS.has(key)) continue;
+      if (key === "examples") {
+        // A schema `examples` list is data; a media/parameter `examples` map
+        // holds Example Objects that may themselves be references.
+        if (isRecord(child)) {
+          for (const name of Object.keys(child)) {
+            stack.push({
+              mode: "example",
+              pointer: joinPointer(childPointer, name),
+              value: child[name],
+            });
+          }
+        }
+        continue;
+      }
+      stack.push({
+        mode: MAP_KEYS.has(key) && isRecord(child) ? "map" : "structural",
+        pointer: childPointer,
+        value: child,
+      });
     }
   }
   return found;

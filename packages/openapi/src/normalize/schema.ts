@@ -16,6 +16,7 @@ import { isRecord } from "../parse.js";
 import {
   anchorChild,
   child,
+  defineOwn,
   type CanonicalAnchor,
   type NormalizeContext,
 } from "./context.js";
@@ -177,12 +178,16 @@ function referenceNode(
   const siblings = Object.keys(value).filter((key) => key !== "$ref");
   if (siblings.length === 0) return { kind: "ref", schemaId };
   if (ctx.dialect === "oas30") {
-    const diagnosticId = ctx.capability(
-      "SCHEMA_IGNORED_ANNOTATION",
-      source,
-      anchor,
+    const ignored = siblings.filter((key) => !key.startsWith("x-"));
+    if (ignored.length === 0) return { kind: "ref", schemaId };
+    const diagnosticIds = ignored.map((key) =>
+      ctx.capability(
+        "SCHEMA_IGNORED_ANNOTATION",
+        child(source, key),
+        anchorChild(anchor, key),
+      ),
     );
-    return { diagnosticIds: [diagnosticId], kind: "ref", schemaId };
+    return { diagnosticIds, kind: "ref", schemaId };
   }
   const semantic = siblings.filter(
     (key) => !ANNOTATION_KEYS.has(key) && !key.startsWith("x-"),
@@ -192,7 +197,7 @@ function referenceNode(
     return { ...metadata, kind: "ref", schemaId };
   }
   const siblingSchema: Record<string, unknown> = {};
-  for (const key of semantic) siblingSchema[key] = value[key];
+  for (const key of semantic) defineOwn(siblingSchema, key, value[key]);
   return {
     ...metadata,
     kind: "composition",
@@ -309,6 +314,7 @@ function projectSchemaObject(
     node = applyDiscriminator(
       ctx,
       node,
+      compositions,
       value.discriminator,
       source,
       anchor,
@@ -345,7 +351,10 @@ function declaredTypes(
     return undefined;
   }
   const candidates = Array.isArray(raw) ? raw : [raw];
-  if (Array.isArray(raw) && ctx.dialect === "oas30") {
+  if (
+    Array.isArray(raw) &&
+    (ctx.dialect === "oas30" || candidates.length === 0)
+  ) {
     diagnosticIds.push(
       ctx.capability(
         "SCHEMA_INVALID_SEMANTIC",
@@ -404,13 +413,38 @@ function projectOwnSchema(
   depth: number,
   diagnosticIds: string[],
 ): SchemaNode {
-  const enumValues = readEnum(ctx, value, source, anchor, diagnosticIds);
-  const constValue = readConst(ctx, value, source, anchor, diagnosticIds);
+  let enumValues = readEnum(ctx, value, source, anchor, diagnosticIds);
+  let constValue = readConst(ctx, value, source, anchor, diagnosticIds);
+  reportInapplicableKeywords(ctx, value, types, source, anchor, diagnosticIds);
   if (types.length === 1 && types[0] !== undefined) {
+    const type = types[0];
+    if (
+      enumValues !== undefined &&
+      enumValues.some((item) => !matchesType(item, type))
+    ) {
+      diagnosticIds.push(
+        ctx.capability(
+          "SCHEMA_INVALID_SEMANTIC",
+          child(source, "enum"),
+          anchorChild(anchor, "enum"),
+        ),
+      );
+      enumValues = filterByType(enumValues, type);
+    }
+    if (constValue !== undefined && !matchesType(constValue, type)) {
+      diagnosticIds.push(
+        ctx.capability(
+          "SCHEMA_INVALID_SEMANTIC",
+          child(source, "const"),
+          anchorChild(anchor, "const"),
+        ),
+      );
+      constValue = undefined;
+    }
     return projectTypedSchema(
       ctx,
       value,
-      types[0],
+      type,
       enumValues,
       constValue,
       source,
@@ -448,7 +482,6 @@ function projectTypedSchema(
   depth: number,
   diagnosticIds: string[],
 ): SchemaNode {
-  reportInapplicableKeywords(ctx, value, type, source, anchor, diagnosticIds);
   switch (type) {
     case "null":
       return { kind: "scalar", type: "null" };
@@ -519,8 +552,39 @@ function projectTypedSchema(
       };
     }
     case "array": {
-      if (ctx.dialect === "oas31" && Array.isArray(value.prefixItems)) {
-        return tupleSchema(ctx, value, source, anchor, depth, diagnosticIds);
+      if (value.prefixItems !== undefined) {
+        if (ctx.dialect === "oas30") {
+          diagnosticIds.push(
+            ctx.capability(
+              "SCHEMA_UNSUPPORTED_SEMANTIC",
+              child(source, "prefixItems"),
+              anchorChild(anchor, "prefixItems"),
+            ),
+          );
+        } else if (
+          !Array.isArray(value.prefixItems) ||
+          value.prefixItems.length === 0
+        ) {
+          diagnosticIds.push(
+            ctx.capability(
+              "SCHEMA_INVALID_SEMANTIC",
+              child(source, "prefixItems"),
+              anchorChild(anchor, "prefixItems"),
+            ),
+          );
+        } else {
+          for (const key of ["enum", "const"] as const) {
+            if (value[key] === undefined) continue;
+            diagnosticIds.push(
+              ctx.capability(
+                "SCHEMA_PARTIALLY_REPRESENTED",
+                child(source, key),
+                anchorChild(anchor, key),
+              ),
+            );
+          }
+          return tupleSchema(ctx, value, source, anchor, depth, diagnosticIds);
+        }
       }
       const array = arrayConstraints(
         ctx,
@@ -560,16 +624,23 @@ function typeLessSchema(
     : undefined;
   if (numeric !== undefined) applicableTypes.push("integer", "number");
   let string: StringConstraints | undefined;
-  if (
-    STRING_KEYS.some((key) => value[key] !== undefined) ||
-    typeof value.format === "string"
-  ) {
+  if (STRING_KEYS.some((key) => value[key] !== undefined)) {
     const constraints =
       stringConstraints(ctx, value, source, anchor, diagnosticIds) ?? {};
     const format = typeof value.format === "string" ? value.format : undefined;
     string = { ...constraints, ...(format === undefined ? {} : { format }) };
     if (Object.keys(string).length > 0) applicableTypes.push("string");
     else string = undefined;
+  } else if (value.format !== undefined) {
+    // `format` is type-agnostic; without a type or string keyword it cannot
+    // be attached to one applicable type.
+    diagnosticIds.push(
+      ctx.capability(
+        "SCHEMA_PARTIALLY_REPRESENTED",
+        child(source, "format"),
+        anchorChild(anchor, "format"),
+      ),
+    );
   }
   let array: ArrayConstraints | undefined;
   if (ARRAY_KEYS.some((key) => value[key] !== undefined)) {
@@ -666,12 +737,45 @@ function collectCompositions(
 function applyDiscriminator(
   ctx: NormalizeContext,
   node: SchemaNode,
+  compositions: readonly SchemaNode[],
   raw: unknown,
   source: SourceLocation,
   anchor: CanonicalAnchor,
   diagnosticIds: string[],
 ): SchemaNode {
   const discriminatorSource = child(source, "discriminator");
+  // When own keywords were wrapped together with exactly one oneOf/anyOf in a
+  // synthesized allOf, the discriminator belongs to that polymorphic list.
+  const polymorphic = compositions.filter(
+    (item) =>
+      item.kind === "composition" &&
+      (item.mode === "oneOf" || item.mode === "anyOf"),
+  );
+  if (
+    node.kind === "composition" &&
+    node.mode === "allOf" &&
+    polymorphic.length === 1 &&
+    polymorphic[0] !== undefined &&
+    node !== polymorphic[0] &&
+    node.variants.includes(polymorphic[0])
+  ) {
+    const target = polymorphic[0];
+    const applied = applyDiscriminator(
+      ctx,
+      target,
+      [],
+      raw,
+      source,
+      anchor,
+      diagnosticIds,
+    );
+    return {
+      ...node,
+      variants: node.variants.map((variant) =>
+        variant === target ? applied : variant,
+      ),
+    };
+  }
   if (
     !isRecord(raw) ||
     typeof raw.propertyName !== "string" ||
@@ -734,7 +838,7 @@ function applyDiscriminator(
           );
           continue;
         }
-        mapping[key] = ctx.registerSchema(resolved.location);
+        defineOwn(mapping, key, ctx.registerSchema(resolved.location));
       }
     }
   } else {
@@ -746,7 +850,7 @@ function applyDiscriminator(
       }
       const name = componentName(ctx, variant.schemaId);
       if (name === undefined) complete = false;
-      else mapping[name] = variant.schemaId;
+      else defineOwn(mapping, name, variant.schemaId);
     }
     if (!complete) {
       diagnosticIds.push(
@@ -768,15 +872,13 @@ function componentName(
   ctx: NormalizeContext,
   schemaId: SchemaId,
 ): string | undefined {
-  for (const [location, id] of ctx.schemaLocations()) {
-    if (id !== schemaId) continue;
-    const match = /^#\/components\/schemas\/([^/]+)$/.exec(
-      location.slice(location.indexOf("#")),
-    );
-    if (match?.[1] !== undefined)
-      return match[1].replaceAll("~1", "/").replaceAll("~0", "~");
-  }
-  return undefined;
+  const location = ctx.schemaKey(schemaId);
+  if (location === undefined) return undefined;
+  const match = /^#\/components\/schemas\/([^/]+)$/.exec(
+    location.slice(location.indexOf("#")),
+  );
+  if (match?.[1] === undefined) return undefined;
+  return match[1].replaceAll("~1", "/").replaceAll("~0", "~");
 }
 
 function collectMetadata(
@@ -1147,12 +1249,16 @@ function objectConstraints(
       );
     } else {
       for (const [name, schema] of Object.entries(value.properties)) {
-        properties[name] = normalizeSchema(
-          ctx,
-          schema,
-          child(source, "properties", name),
-          anchorChild(anchor, "properties", name),
-          depth + 1,
+        defineOwn(
+          properties,
+          name,
+          normalizeSchema(
+            ctx,
+            schema,
+            child(source, "properties", name),
+            anchorChild(anchor, "properties", name),
+            depth + 1,
+          ),
         );
         propertyOrder.push(name);
       }
@@ -1379,24 +1485,28 @@ function tupleSchema(
   };
 }
 
+/**
+ * Reports keywords that apply to none of the declared types, once per schema.
+ * Multi-type projections legitimately carry keywords for sibling types, so a
+ * keyword is ignored only when every declared type ignores it.
+ */
 function reportInapplicableKeywords(
   ctx: NormalizeContext,
   value: Readonly<Record<string, unknown>>,
-  type: SchemaInstanceType,
+  types: readonly SchemaInstanceType[],
   source: SourceLocation,
   anchor: CanonicalAnchor,
   diagnosticIds: string[],
 ): void {
+  const numeric = types.includes("number") || types.includes("integer");
   const inapplicable: string[] = [];
-  if (type !== "number" && type !== "integer")
-    inapplicable.push(...NUMERIC_KEYS);
-  if (type !== "string") inapplicable.push(...STRING_KEYS);
-  if (type !== "array") inapplicable.push(...ARRAY_KEYS);
-  if (type !== "object") inapplicable.push(...OBJECT_KEYS);
+  if (!numeric) inapplicable.push(...NUMERIC_KEYS);
+  if (!types.includes("string")) inapplicable.push(...STRING_KEYS);
+  if (!types.includes("array")) inapplicable.push(...ARRAY_KEYS);
+  if (!types.includes("object")) inapplicable.push(...OBJECT_KEYS);
+  if (!numeric && !types.includes("string")) inapplicable.push("format");
   for (const key of inapplicable) {
     if (value[key] === undefined) continue;
-    // Multi-type projections legitimately carry keywords for sibling types.
-    if (Array.isArray(value.type) && value.type.length > 1) continue;
     diagnosticIds.push(
       ctx.capability(
         "SCHEMA_IGNORED_ANNOTATION",

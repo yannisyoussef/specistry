@@ -8,7 +8,12 @@ import type {
 import type { SourceLocation } from "../diagnostics.js";
 import { compareText } from "../identity.js";
 import { isRecord } from "../parse.js";
-import { child, optionalString, type NormalizeContext } from "./context.js";
+import {
+  child,
+  defineOwn,
+  optionalString,
+  type NormalizeContext,
+} from "./context.js";
 
 export interface SecurityCatalog {
   readonly schemes: Readonly<Record<string, SecurityScheme>>;
@@ -214,7 +219,7 @@ function readScopes(
       ctx.invalid(child(source, name));
       return undefined;
     }
-    scopes[name] = description;
+    defineOwn(scopes, name, description);
   }
   return scopes;
 }
@@ -261,8 +266,14 @@ export function normalizeSecurityRequirements(
       const scopes = scopesRaw as string[];
       const kind = catalog.kinds.get(name);
       if (scopes.length > 0 && kind !== "oauth2" && kind !== "openIdConnect") {
-        ctx.invalid(useSource);
-        valid = false;
+        if (ctx.dialect === "oas30") {
+          ctx.invalid(useSource);
+          valid = false;
+          continue;
+        }
+        // 3.1 allows role names here; the model has no field for them.
+        ctx.partial(useSource);
+        schemes.push({ schemeId, scopes: [] });
         continue;
       }
       if (
