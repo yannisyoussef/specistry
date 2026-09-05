@@ -29,7 +29,10 @@ describe("CLI clean-room package", () => {
       const project = path.join(cleanRoom, "project");
       await mkdir(packages);
       await mkdir(path.join(project, "docs"), { recursive: true });
-      await writeFile(path.join(project, "openapi.yaml"), "openapi: 3.1.0\n");
+      await writeFile(
+        path.join(project, "openapi.yaml"),
+        "openapi: 3.1.0\ninfo:\n  title: Clean room\n  version: 1.0.0\npaths:\n  /ping:\n    get:\n      operationId: ping\n      responses:\n        '200':\n          description: ok\n",
+      );
       await writeFile(
         path.join(project, "specra.config.ts"),
         `import { defineConfig } from "@specra/config";
@@ -131,11 +134,45 @@ describe("CLI clean-room package", () => {
       );
       const validated = command(executable, ["validate", "--json"], project);
       expect(validated.status, validated.stderr).toBe(0);
-      expect(JSON.parse(validated.stdout)).toEqual({
-        artifacts: { directory: ".specra/artifacts" },
-        diagnostics: [],
-        ok: true,
-      });
+      expect(JSON.parse(validated.stdout)).toEqual(
+        expect.objectContaining({
+          artifacts: { directory: ".specra/artifacts" },
+          diagnostics: [],
+          ok: true,
+          statistics: {
+            documents: 1,
+            operations: 1,
+            references: 0,
+            schemas: 0,
+          },
+        }),
+      );
+
+      const built = command(executable, ["build", "--json"], project);
+      expect(built.status, built.stderr).toBe(0);
+      expect(JSON.parse(built.stdout)).toEqual(
+        expect.objectContaining({
+          artifacts: expect.objectContaining({
+            directory: ".specra/artifacts",
+            files: ["documentation.json", "manifest.json"],
+          }),
+          ok: true,
+        }),
+      );
+      const manifest = JSON.parse(
+        await readFile(
+          path.join(project, ".specra", "artifacts", "manifest.json"),
+          "utf8",
+        ),
+      );
+      expect(manifest).toEqual(
+        expect.objectContaining({ artifactFormat: 1, modelVersion: 1 }),
+      );
+      const documentation = await readFile(
+        path.join(project, ".specra", "artifacts", "documentation.json"),
+        "utf8",
+      );
+      expect(JSON.parse(documentation).model.modelVersion).toBe(1);
 
       const programmatic = command(
         process.execPath,

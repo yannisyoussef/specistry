@@ -1,18 +1,34 @@
 export {
   ARTIFACT_DIRECTORY,
+  ARTIFACT_DOCUMENTATION_FILENAME,
+  ARTIFACT_FORMAT_VERSION,
+  ARTIFACT_MANIFEST_FILENAME,
   DEFAULT_CONFIG_TIMEOUT_MS,
+  DEFAULT_SOURCE_TIMEOUT_MS,
   EXIT_CODES,
   MAX_CONFIG_TIMEOUT_MS,
+  MAX_SOURCE_TIMEOUT_MS,
   MIN_CONFIG_TIMEOUT_MS,
+  MIN_SOURCE_TIMEOUT_MS,
 } from "./contracts.js";
 export type {
+  ArtifactSummary,
   BuildContext,
   BuildPaths,
+  BuildResult,
   DeepReadonly,
   Diagnostic,
   DiagnosticCode,
+  DiagnosticSeverity,
+  IngestionSummary,
+  SourceSummary,
   ValidatedConfig,
   ValidationOptions,
+  ValidationOutcome,
   ValidationResult,
 } from "./contracts.js";
-export { createBuildContext, validateProject } from "./orchestrator.js";
+export {
+  buildProject,
+  createBuildContext,
+  validateProject,
+} from "./orchestrator.js";

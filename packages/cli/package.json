@@ -12,6 +12,9 @@
   },
   "bundleDependencies": [
     "@specra/config",
+    "@specra/model",
+    "@specra/openapi",
+    "yaml",
     "zod"
   ],
   "exports": {
@@ -31,6 +34,9 @@
   },
   "dependencies": {
     "@specra/config": "workspace:*",
+    "@specra/model": "workspace:*",
+    "@specra/openapi": "workspace:*",
+    "yaml": "2.9.0",
     "zod": "4.5.4"
   },
   "devDependencies": {

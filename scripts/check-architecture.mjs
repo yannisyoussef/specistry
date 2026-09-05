@@ -22,7 +22,13 @@ const boundaries = new Map([
     { allowed: new Set(["@specra/model"]), constrained: true },
   ],
   ["@specra/config", { allowed: new Set(), constrained: true }],
-  ["@specra/cli", { allowed: new Set(["@specra/config"]), constrained: true }],
+  [
+    "@specra/cli",
+    {
+      allowed: new Set(["@specra/config", "@specra/model", "@specra/openapi"]),
+      constrained: true,
+    },
+  ],
   [
     "@specra/web",
     {
@@ -38,9 +44,7 @@ const boundaries = new Map([
 const opaqueLoadExceptions = new Map([
   ["packages/cli/src/config-worker.ts", 1],
 ]);
-const processBoundaryExceptions = new Set([
-  "packages/cli/src/config-loader.ts",
-]);
+const processBoundaryExceptions = new Set(["packages/cli/src/bounded-host.ts"]);
 const processBoundaryModules = new Set(
   ["child_process", "cluster", "vm", "worker_threads"].flatMap((name) => [
     name,
@@ -219,7 +223,7 @@ if (cliComponent !== undefined && modelComponent !== undefined) {
     ...manifestViolations(
       {
         dependencies: { "@specra/config": "workspace:*" },
-        devDependencies: { "@specra/openapi": "workspace:*" },
+        devDependencies: { "@specra/web": "workspace:*" },
       },
       cliComponent,
     ),
@@ -310,7 +314,7 @@ if (
   allowedOpaqueLoads(path.join(root, "packages/cli/src/orchestrator.ts")) !==
     0 ||
   !isProcessBoundaryAllowed(
-    path.join(root, "packages/cli/src/config-loader.ts"),
+    path.join(root, "packages/cli/src/bounded-host.ts"),
   ) ||
   isProcessBoundaryAllowed(path.join(root, "packages/config/src/index.ts"))
 ) {

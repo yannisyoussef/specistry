@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_CONFIG_TIMEOUT_MS } from "./contracts.js";
+import {
+  DEFAULT_CONFIG_TIMEOUT_MS,
+  DEFAULT_SOURCE_TIMEOUT_MS,
+} from "./contracts.js";
 import { parseArguments } from "./arguments.js";
 
 describe("parseArguments", () => {
@@ -10,7 +13,12 @@ describe("parseArguments", () => {
 
   it.each(["--help", "-h"])("parses validate help via %s", (flag) => {
     expect(parseArguments(["validate", flag])).toEqual({
-      kind: "validate-help",
+      command: "validate",
+      kind: "command-help",
+    });
+    expect(parseArguments(["build", flag])).toEqual({
+      command: "build",
+      kind: "command-help",
     });
   });
 
@@ -23,18 +31,24 @@ describe("parseArguments", () => {
         "./project",
         "--config-timeout",
         "7500",
+        "--source-timeout",
+        "1000",
       ]),
     ).toEqual({
+      command: "validate",
       configTimeoutMs: 7_500,
       json: true,
-      kind: "validate",
+      kind: "command",
       root: "./project",
+      sourceTimeoutMs: 1_000,
     });
-    expect(parseArguments(["validate"])).toEqual({
+    expect(parseArguments(["build"])).toEqual({
+      command: "build",
       configTimeoutMs: DEFAULT_CONFIG_TIMEOUT_MS,
       json: false,
-      kind: "validate",
+      kind: "command",
       root: ".",
+      sourceTimeoutMs: DEFAULT_SOURCE_TIMEOUT_MS,
     });
   });
 
@@ -54,6 +68,10 @@ describe("parseArguments", () => {
       ["validate", "--config-timeout", "60001"],
       ["validate", "--config-timeout", "100", "--config-timeout", "200"],
       ["validate", "--help", "--json"],
+      ["build", "--source-timeout", "99"],
+      ["build", "--source-timeout", "600001"],
+      ["build", "--source-timeout", "100", "--source-timeout", "200"],
+      ["dev"],
     ];
     for (const args of invalidInvocations) {
       expect(parseArguments(args)).toEqual(

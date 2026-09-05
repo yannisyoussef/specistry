@@ -7,6 +7,7 @@ export default defineConfig({
       exclude: [
         "packages/cli/src/bin.ts",
         "packages/cli/src/config-worker.ts",
+        "packages/cli/src/ingestion-host.ts",
         "**/*.test-helper.ts",
       ],
       include: ["packages/*/src/**/*.ts"],

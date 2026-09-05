@@ -8,10 +8,7 @@
     "/a": {
       "post": {
         "operationId": "postA",
-        "tags": [
-          "alpha",
-          "zeta"
-        ],
+        "tags": ["alpha", "zeta"],
         "responses": {
           "200": {
             "description": "ok"

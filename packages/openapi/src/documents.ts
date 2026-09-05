@@ -31,8 +31,17 @@ export interface DocumentGraph {
   readonly openapiVersion: string;
   readonly dialect: OpenApiDialect;
   readonly documents: ReadonlyMap<string, ParsedDocument>;
+  /** Documents that could not be acquired or parsed, with the diagnostic already recorded. */
+  readonly failures: ReadonlyMap<string, ReferenceFailureCode>;
   readonly referenceCount: number;
 }
+
+export type ReferenceFailureCode =
+  | "SOURCE_LIMIT_EXCEEDED"
+  | "SOURCE_PARSE_FAILED"
+  | "SOURCE_REFERENCE_INVALID"
+  | "SOURCE_REFERENCE_OUTSIDE_ROOT"
+  | "SOURCE_REFERENCE_UNRESOLVED";
 
 export interface LoadOptions {
   readonly signal?: AbortSignal;
@@ -51,6 +60,7 @@ export async function loadDocumentGraph(
   options: LoadOptions = {},
 ): Promise<DocumentGraph | undefined> {
   const documents = new Map<string, ParsedDocument>();
+  const failures = new Map<string, ReferenceFailureCode>();
   let totalBytes = 0;
   let referenceCount = 0;
 
@@ -109,7 +119,13 @@ export async function loadDocumentGraph(
         );
         continue;
       }
-      if (documents.has(resolved.id) || resolved.id === current.id) continue;
+      if (
+        documents.has(resolved.id) ||
+        failures.has(resolved.id) ||
+        resolved.id === current.id
+      ) {
+        continue;
+      }
       if (!targets.has(resolved.id)) targets.set(resolved.id, location);
     }
     for (const [id, location] of [...targets.entries()].sort(
@@ -128,6 +144,7 @@ export async function loadDocumentGraph(
   return {
     dialect: dialectOf(openapiVersion),
     documents,
+    failures,
     openapiVersion,
     referenceCount,
     root,
@@ -139,16 +156,16 @@ export async function loadDocumentGraph(
   ): Promise<ParsedDocument | undefined> {
     const acquired = await acquisition.acquire(id, limits.maxBytes);
     if (!acquired.ok) {
-      diagnostics.add(
+      const code: ReferenceFailureCode =
         acquired.reason === "missing"
           ? "SOURCE_REFERENCE_UNRESOLVED"
           : acquired.reason === "outside"
             ? "SOURCE_REFERENCE_OUTSIDE_ROOT"
             : acquired.reason === "too-large"
               ? "SOURCE_LIMIT_EXCEEDED"
-              : "SOURCE_REFERENCE_INVALID",
-        referencedFrom,
-      );
+              : "SOURCE_REFERENCE_INVALID";
+      diagnostics.add(code, referencedFrom);
+      failures.set(id, code);
       return undefined;
     }
     const bytes = acquired.source.bytes;
@@ -158,21 +175,23 @@ export async function loadDocumentGraph(
       totalBytes > limits.maxTotalBytes
     ) {
       diagnostics.add("SOURCE_LIMIT_EXCEEDED", referencedFrom);
+      failures.set(id, "SOURCE_LIMIT_EXCEEDED");
       return undefined;
     }
     const text = decodeSource(bytes);
     if (text === undefined) {
       diagnostics.add("SOURCE_PARSE_FAILED", { document: id, pointer: "" });
+      failures.set(id, "SOURCE_PARSE_FAILED");
       return undefined;
     }
     const outcome = parseDocument(text, limits);
     if (!outcome.ok) {
-      diagnostics.add(
+      const code: ReferenceFailureCode =
         outcome.failure.kind === "limit"
           ? "SOURCE_LIMIT_EXCEEDED"
-          : "SOURCE_PARSE_FAILED",
-        { document: id, pointer: "" },
-      );
+          : "SOURCE_PARSE_FAILED";
+      diagnostics.add(code, { document: id, pointer: "" });
+      failures.set(id, code);
       return undefined;
     }
     const parsed: ParsedDocument = {
@@ -228,10 +247,8 @@ export type ReferenceResolution =
   | {
       readonly ok: false;
       readonly code:
-        | "SOURCE_REFERENCE_INVALID"
-        | "SOURCE_REFERENCE_OUTSIDE_ROOT"
+        | ReferenceFailureCode
         | "SOURCE_REFERENCE_REMOTE_DISABLED"
-        | "SOURCE_REFERENCE_UNRESOLVED"
         | "SOURCE_REFERENCE_UNSUPPORTED";
     };
 
@@ -268,7 +285,10 @@ export function resolveReference(
   }
   const target = graph.documents.get(documentId);
   if (target === undefined) {
-    return { code: "SOURCE_REFERENCE_UNRESOLVED", ok: false };
+    return {
+      code: graph.failures.get(documentId) ?? "SOURCE_REFERENCE_UNRESOLVED",
+      ok: false,
+    };
   }
   const fragment = split.fragment ?? "";
   const segments = parsePointer(fragment);

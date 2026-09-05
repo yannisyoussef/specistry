@@ -99,6 +99,15 @@ importers:
       '@specra/config':
         specifier: workspace:*
         version: link:../config
+      '@specra/model':
+        specifier: workspace:*
+        version: link:../model
+      '@specra/openapi':
+        specifier: workspace:*
+        version: link:../openapi
+      yaml:
+        specifier: 2.9.0
+        version: 2.9.0
       zod:
         specifier: 4.5.4
         version: 4.5.4

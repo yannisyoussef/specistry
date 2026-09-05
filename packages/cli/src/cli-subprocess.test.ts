@@ -76,15 +76,19 @@ describe("packaged specra executable", () => {
   it("provides accurate root and command help", () => {
     const root = run(["--help"]);
     expect(root.status).toBe(EXIT_CODES.success);
-    expect(root.stdout).toContain("specra validate");
-    expect(root.stdout).not.toMatch(/^\s+(build|dev)\s/m);
+    expect(root.stdout).toMatch(/^\s+validate\s/m);
+    expect(root.stdout).toMatch(/^\s+build\s/m);
+    expect(root.stdout).not.toMatch(/^\s+dev\s/m);
     expect(root.stderr).toBe("");
 
     const command = run(["validate", "--help"]);
     expect(command.status).toBe(EXIT_CODES.success);
     expect(command.stdout).toContain("--root <path>");
     expect(command.stdout).toContain("--json");
-    expect(command.stdout).toContain("semantic validation begins in SPEC-003");
+    expect(command.stdout).toContain("--source-timeout");
+    const build = run(["build", "--help"]);
+    expect(build.status).toBe(EXIT_CODES.success);
+    expect(build.stdout).toContain("specra build [options]");
     expect(command.stderr).toBe("");
   });
 
@@ -93,7 +97,7 @@ describe("packaged specra executable", () => {
     const started = performance.now();
     const fromCwd = run(["validate"], project);
     expect(fromCwd.status).toBe(EXIT_CODES.success);
-    expect(fromCwd.stdout).toContain("Specra project configuration is valid.");
+    expect(fromCwd.stdout).toContain("Specra project is valid.");
     expect(fromCwd.stdout).toContain("Artifacts: .specra/artifacts");
     expect(fromCwd.stderr).toBe("");
     expect(performance.now() - started).toBeLessThan(3_000);
@@ -120,6 +124,13 @@ describe("packaged specra executable", () => {
       artifacts: { directory: ".specra/artifacts" },
       diagnostics: [],
       ok: true,
+      sources: [
+        expect.objectContaining({
+          bytes: expect.any(Number),
+          path: "openapi.yaml",
+        }),
+      ],
+      statistics: { documents: 1, operations: 0, references: 0, schemas: 0 },
     });
 
     const invalid = await createProject(
@@ -277,7 +288,10 @@ function run(
 async function createProject(configSource?: string): Promise<string> {
   const project = await makeTemporaryDirectory();
   await mkdir(path.join(project, "docs"));
-  await writeFile(path.join(project, "openapi.yaml"), "openapi: 3.1.0\n");
+  await writeFile(
+    path.join(project, "openapi.yaml"),
+    "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n",
+  );
   await writeFile(
     path.join(project, "specra.config.ts"),
     configSource ??

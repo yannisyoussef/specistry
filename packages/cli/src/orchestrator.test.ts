@@ -140,10 +140,16 @@ describe("validateProject", () => {
       expect(multiple.diagnostics).toEqual([
         expect.objectContaining({
           code: "CONFIG_INVALID",
-          path: "environments.*.baseUrl",
+          path: "config#/environments/*/baseUrl",
         }),
-        expect.objectContaining({ code: "CONFIG_INVALID", path: "name" }),
-        expect.objectContaining({ code: "CONFIG_INVALID", path: "openapi.[]" }),
+        expect.objectContaining({
+          code: "CONFIG_INVALID",
+          path: "config#/name",
+        }),
+        expect.objectContaining({
+          code: "CONFIG_INVALID",
+          path: "config#/openapi/1",
+        }),
       ]);
       expect(JSON.stringify(multiple)).not.toContain("secret-key");
     }
@@ -255,7 +261,10 @@ describe("validateProject", () => {
     const project = await makeTemporaryDirectory();
     const marker = path.join(project, "orphan-marker");
     await mkdir(path.join(project, "docs"));
-    await writeFile(path.join(project, "openapi.yaml"), "openapi: 3.1.0\n");
+    await writeFile(
+      path.join(project, "openapi.yaml"),
+      "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n",
+    );
     await writeFile(
       path.join(project, "specra.config.ts"),
       `import { spawn } from "node:child_process";
@@ -348,9 +357,9 @@ describe("validateProject", () => {
     expect(first.ok).toBe(false);
     if (!first.ok) {
       expect(first.diagnostics.map((diagnostic) => diagnostic.path)).toEqual([
-        "docs",
-        "openapi[0]",
-        "openapi[1]",
+        "config#/docs",
+        "config#/openapi/0",
+        "config#/openapi/1",
       ]);
     }
   });
@@ -361,7 +370,7 @@ describe("validateProject", () => {
     await mkdir(path.join(project, "guides", "docs"), { recursive: true });
     await writeFile(
       path.join(project, "contracts", "openapi.yaml"),
-      "openapi: 3.1.0\n",
+      "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n",
     );
     await writeFile(
       path.join(project, "specra.config.ts"),
@@ -427,7 +436,7 @@ describe("validateProject", () => {
       expect(result.diagnostics).toContainEqual(
         expect.objectContaining({
           code: "CONFIG_PATH_OUTSIDE_ROOT",
-          path: "artifacts",
+          path: "artifact",
         }),
       );
     }
@@ -442,7 +451,7 @@ describe("validateProject", () => {
       expect(result.diagnostics).toContainEqual(
         expect.objectContaining({
           code: "CONFIG_PATH_INVALID",
-          path: "artifacts",
+          path: "artifact",
         }),
       );
     }
@@ -476,7 +485,10 @@ async function createProject(
   const project = await makeTemporaryDirectory();
   await mkdir(path.join(project, "docs"));
   if (options.createOpenapi !== false) {
-    await writeFile(path.join(project, "openapi.yaml"), "openapi: 3.1.0\n");
+    await writeFile(
+      path.join(project, "openapi.yaml"),
+      "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n",
+    );
   }
   await writeFile(path.join(project, "specra.config.ts"), configSource);
   return project;
