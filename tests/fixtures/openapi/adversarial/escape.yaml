@@ -1,0 +1,23 @@
+openapi: 3.1.0
+info: { title: Escape, version: 1.0.0 }
+paths: {}
+components:
+  schemas:
+    Passwd:
+      $ref: "../../../../etc/passwd"
+    Encoded:
+      $ref: "..%2F..%2Fsecret.yaml#/x"
+    Absolute:
+      $ref: "/etc/hosts"
+    Remote:
+      $ref: "https://example.com/schema.yaml#/x"
+    File:
+      $ref: "file:///etc/passwd"
+    Protocol:
+      $ref: "//169.254.169.254/latest/meta-data"
+    Missing:
+      $ref: "missing.yaml#/Nope"
+    Anchor:
+      $ref: "#anchorName"
+    BadPointer:
+      $ref: "#/components/schemas/Nope"

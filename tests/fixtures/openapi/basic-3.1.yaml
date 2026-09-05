@@ -1,0 +1,211 @@
+openapi: 3.1.0
+info:
+  title: Pet Store
+  version: 2.0.0
+  description: Basic OpenAPI 3.1 contract
+x-owner: platform
+servers:
+  - url: https://{region}.api.example.test/v2
+    description: Production
+    variables:
+      region:
+        default: eu
+        enum: [eu, us]
+        description: Deployment region
+tags:
+  - name: pets
+security:
+  - apiKey: []
+paths:
+  /pets:
+    get:
+      operationId: listPets
+      summary: List pets
+      tags: [pets]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: X-Trace
+          in: header
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A page of pets
+          headers:
+            X-Next:
+              description: Next page token
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pet"
+              examples:
+                short:
+                  summary: One pet
+                  value: [{ id: 1, name: Rex, kind: dog }]
+        "4XX":
+          description: Client error
+        default:
+          description: Unexpected error
+    post:
+      operationId: createPet
+      tags: [pets]
+      security:
+        - apiKey: []
+          mtls: []
+        - oauth: [pets:write]
+        - {}
+      requestBody:
+        required: true
+        description: Pet to create
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Pet"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                meta:
+                  $ref: "#/components/schemas/Pet"
+            encoding:
+              photo:
+                contentType: image/png
+                headers:
+                  X-Rate:
+                    schema:
+                      type: integer
+              meta:
+                style: form
+                explode: true
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+            encoding:
+              name:
+                style: form
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+        "204":
+          description: Accepted without body
+  /pets/{petId}:
+    parameters:
+      - name: petId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getPet
+      deprecated: true
+      responses:
+        "200":
+          description: One pet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+            text/plain:
+              schema:
+                type: string
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+    delete:
+      responses:
+        "204":
+          description: Deleted
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      name: X-API-Key
+      in: header
+    mtls:
+      type: mutualTLS
+    oauth:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.test/authorize
+          tokenUrl: https://auth.example.test/token
+          scopes:
+            pets:write: Write pets
+            pets:read: Read pets
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://auth.example.test/.well-known/openid-configuration
+    basic:
+      type: http
+      scheme: Basic
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Pet:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          minLength: 1
+        kind:
+          type: string
+          enum: [dog, cat]
+        tags:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        owner:
+          $ref: "#/components/schemas/Owner"
+        nickname:
+          type: [string, "null"]
+        weight:
+          type: number
+          exclusiveMinimum: 0
+        matrix:
+          type: array
+          prefixItems:
+            - type: number
+            - type: number
+          items: false
+        anything: true
+        nothing: false
+        mode:
+          const: strict
+      additionalProperties: false
+    Owner:
+      type: object
+      properties:
+        name:
+          type: string
+        pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"

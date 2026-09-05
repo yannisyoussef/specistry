@@ -1,0 +1,13 @@
+openapi: 3.1.0
+info:
+  title: "Controls \u001b]8;;https://evil.example\u0007click\u001b]8;;\u0007"
+  version: 1.0.0
+  description: "<script>alert(1)</script> and \u202e reversed and \u2028 separator"
+paths:
+  /x:
+    get:
+      operationId: getX
+      summary: "Summary\r\ninjected: line"
+      responses:
+        "200":
+          description: "Bearer do-not-log-this-fixture-value"

@@ -1,0 +1,287 @@
+import { createHash } from "node:crypto";
+
+import type { SourceAcquisition } from "./acquisition.js";
+import type { DiagnosticSink, SourceLocation } from "./diagnostics.js";
+import type { IngestionLimits } from "./limits.js";
+import {
+  decodeSource,
+  detectOpenApiVersion,
+  dialectOf,
+  isRecord,
+  parseDocument,
+  type OpenApiDialect,
+} from "./parse.js";
+import { joinPointer, parsePointer, resolvePointer } from "./pointer.js";
+import {
+  classifyReference,
+  resolveDocumentId,
+  splitReference,
+} from "./references.js";
+
+export interface ParsedDocument {
+  readonly id: string;
+  readonly document: Readonly<Record<string, unknown>>;
+  readonly bytes: number;
+  readonly sha256: string;
+  readonly nodes: number;
+}
+
+export interface DocumentGraph {
+  readonly root: ParsedDocument;
+  readonly openapiVersion: string;
+  readonly dialect: OpenApiDialect;
+  readonly documents: ReadonlyMap<string, ParsedDocument>;
+  readonly referenceCount: number;
+}
+
+export interface LoadOptions {
+  readonly signal?: AbortSignal;
+}
+
+/**
+ * Acquires and parses the root document plus every document reachable through
+ * document references, breadth-first and in deterministic (sorted) order.
+ * Remote references are diagnosed, never fetched; escaping references are
+ * diagnosed and skipped. Every acquisition goes through the single port.
+ */
+export async function loadDocumentGraph(
+  acquisition: SourceAcquisition,
+  limits: IngestionLimits,
+  diagnostics: DiagnosticSink,
+  options: LoadOptions = {},
+): Promise<DocumentGraph | undefined> {
+  const documents = new Map<string, ParsedDocument>();
+  let totalBytes = 0;
+  let referenceCount = 0;
+
+  const root = await acquireAndParse(acquisition.entry, {
+    document: acquisition.entry,
+    pointer: "",
+  });
+  if (root === undefined) return undefined;
+  const openapiVersion = detectOpenApiVersion(root.document);
+  if (openapiVersion === undefined) {
+    diagnostics.add("SOURCE_UNSUPPORTED_VERSION", {
+      document: root.id,
+      pointer: joinPointer("", "openapi"),
+    });
+    return undefined;
+  }
+
+  const queue: ParsedDocument[] = [root];
+  while (queue.length > 0) {
+    if (options.signal?.aborted === true) return undefined;
+    const current = queue.shift();
+    if (current === undefined) break;
+    const targets = new Map<string, SourceLocation>();
+    for (const [pointer, reference] of collectReferences(current.document)) {
+      referenceCount += 1;
+      if (referenceCount > limits.maxReferences) {
+        diagnostics.add("SOURCE_LIMIT_EXCEEDED", {
+          document: current.id,
+          pointer,
+        });
+        return undefined;
+      }
+      const location = { document: current.id, pointer };
+      const kind = classifyReference(reference);
+      if (kind === "fragment") continue;
+      if (kind === "remote") {
+        diagnostics.add("SOURCE_REFERENCE_REMOTE_DISABLED", location);
+        continue;
+      }
+      if (kind === "unsupported") {
+        diagnostics.add("SOURCE_REFERENCE_UNSUPPORTED", location);
+        continue;
+      }
+      const split = splitReference(reference);
+      if (split === undefined) {
+        diagnostics.add("SOURCE_REFERENCE_UNSUPPORTED", location);
+        continue;
+      }
+      const resolved = resolveDocumentId(current.id, split.location);
+      if (!resolved.ok) {
+        diagnostics.add(
+          resolved.reason === "outside"
+            ? "SOURCE_REFERENCE_OUTSIDE_ROOT"
+            : "SOURCE_REFERENCE_UNSUPPORTED",
+          location,
+        );
+        continue;
+      }
+      if (documents.has(resolved.id) || resolved.id === current.id) continue;
+      if (!targets.has(resolved.id)) targets.set(resolved.id, location);
+    }
+    for (const [id, location] of [...targets.entries()].sort(
+      ([left], [right]) => (left < right ? -1 : left > right ? 1 : 0),
+    )) {
+      if (documents.has(id)) continue;
+      if (documents.size >= limits.maxDocuments) {
+        diagnostics.add("SOURCE_LIMIT_EXCEEDED", location);
+        return undefined;
+      }
+      const parsed = await acquireAndParse(id, location);
+      if (parsed !== undefined) queue.push(parsed);
+    }
+  }
+
+  return {
+    dialect: dialectOf(openapiVersion),
+    documents,
+    openapiVersion,
+    referenceCount,
+    root,
+  };
+
+  async function acquireAndParse(
+    id: string,
+    referencedFrom: SourceLocation,
+  ): Promise<ParsedDocument | undefined> {
+    const acquired = await acquisition.acquire(id, limits.maxBytes);
+    if (!acquired.ok) {
+      diagnostics.add(
+        acquired.reason === "missing"
+          ? "SOURCE_REFERENCE_UNRESOLVED"
+          : acquired.reason === "outside"
+            ? "SOURCE_REFERENCE_OUTSIDE_ROOT"
+            : acquired.reason === "too-large"
+              ? "SOURCE_LIMIT_EXCEEDED"
+              : "SOURCE_REFERENCE_INVALID",
+        referencedFrom,
+      );
+      return undefined;
+    }
+    const bytes = acquired.source.bytes;
+    totalBytes += bytes.byteLength;
+    if (
+      bytes.byteLength > limits.maxBytes ||
+      totalBytes > limits.maxTotalBytes
+    ) {
+      diagnostics.add("SOURCE_LIMIT_EXCEEDED", referencedFrom);
+      return undefined;
+    }
+    const text = decodeSource(bytes);
+    if (text === undefined) {
+      diagnostics.add("SOURCE_PARSE_FAILED", { document: id, pointer: "" });
+      return undefined;
+    }
+    const outcome = parseDocument(text, limits);
+    if (!outcome.ok) {
+      diagnostics.add(
+        outcome.failure.kind === "limit"
+          ? "SOURCE_LIMIT_EXCEEDED"
+          : "SOURCE_PARSE_FAILED",
+        { document: id, pointer: "" },
+      );
+      return undefined;
+    }
+    const parsed: ParsedDocument = {
+      bytes: bytes.byteLength,
+      document: outcome.value,
+      id,
+      nodes: outcome.nodes,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    };
+    documents.set(id, parsed);
+    return parsed;
+  }
+}
+
+/** Every `$ref` string in the document with its pointer, in traversal order. */
+export function collectReferences(
+  document: Readonly<Record<string, unknown>>,
+): readonly (readonly [string, string])[] {
+  const found: (readonly [string, string])[] = [];
+  const stack: { readonly pointer: string; readonly value: unknown }[] = [
+    { pointer: "", value: document },
+  ];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === undefined) break;
+    const { pointer, value } = current;
+    if (Array.isArray(value)) {
+      for (let index = value.length - 1; index >= 0; index -= 1) {
+        stack.push({ pointer: `${pointer}/${index}`, value: value[index] });
+      }
+      continue;
+    }
+    if (!isRecord(value)) continue;
+    if (typeof value.$ref === "string") {
+      found.push([joinPointer(pointer, "$ref"), value.$ref]);
+    }
+    const keys = Object.keys(value);
+    for (let index = keys.length - 1; index >= 0; index -= 1) {
+      const key = keys[index];
+      if (key === undefined) continue;
+      stack.push({ pointer: joinPointer(pointer, key), value: value[key] });
+    }
+  }
+  return found;
+}
+
+export type ReferenceResolution =
+  | {
+      readonly ok: true;
+      readonly location: SourceLocation;
+      readonly value: unknown;
+    }
+  | {
+      readonly ok: false;
+      readonly code:
+        | "SOURCE_REFERENCE_INVALID"
+        | "SOURCE_REFERENCE_OUTSIDE_ROOT"
+        | "SOURCE_REFERENCE_REMOTE_DISABLED"
+        | "SOURCE_REFERENCE_UNRESOLVED"
+        | "SOURCE_REFERENCE_UNSUPPORTED";
+    };
+
+/** Resolves one reference string against the loaded graph without I/O. */
+export function resolveReference(
+  graph: DocumentGraph,
+  from: SourceLocation,
+  reference: string,
+): ReferenceResolution {
+  const kind = classifyReference(reference);
+  if (kind === "remote") {
+    return { code: "SOURCE_REFERENCE_REMOTE_DISABLED", ok: false };
+  }
+  if (kind === "unsupported") {
+    return { code: "SOURCE_REFERENCE_UNSUPPORTED", ok: false };
+  }
+  const split = splitReference(reference);
+  if (split === undefined) {
+    return { code: "SOURCE_REFERENCE_UNSUPPORTED", ok: false };
+  }
+  let documentId = from.document;
+  if (split.location.length > 0) {
+    const resolved = resolveDocumentId(from.document, split.location);
+    if (!resolved.ok) {
+      return {
+        code:
+          resolved.reason === "outside"
+            ? "SOURCE_REFERENCE_OUTSIDE_ROOT"
+            : "SOURCE_REFERENCE_UNSUPPORTED",
+        ok: false,
+      };
+    }
+    documentId = resolved.id;
+  }
+  const target = graph.documents.get(documentId);
+  if (target === undefined) {
+    return { code: "SOURCE_REFERENCE_UNRESOLVED", ok: false };
+  }
+  const fragment = split.fragment ?? "";
+  const segments = parsePointer(fragment);
+  if (segments === undefined) {
+    return { code: "SOURCE_REFERENCE_UNSUPPORTED", ok: false };
+  }
+  const lookup = resolvePointer(target.document, segments);
+  if (!lookup.found) {
+    return { code: "SOURCE_REFERENCE_UNRESOLVED", ok: false };
+  }
+  return {
+    location: { document: documentId, pointer: fragment },
+    ok: true,
+    value: lookup.value,
+  };
+}

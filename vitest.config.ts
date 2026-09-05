@@ -4,7 +4,11 @@ export default defineConfig({
   test: {
     coverage: {
       autoAttachSubprocess: true,
-      exclude: ["packages/cli/src/bin.ts", "packages/cli/src/config-worker.ts"],
+      exclude: [
+        "packages/cli/src/bin.ts",
+        "packages/cli/src/config-worker.ts",
+        "**/*.test-helper.ts",
+      ],
       include: ["packages/*/src/**/*.ts"],
       provider: "v8",
       reporter: ["text", "json-summary"],

@@ -612,7 +612,7 @@ function isModelImportAllowed(importer, specifier) {
 }
 
 function isProductionSource(file) {
-  return !/\.test\.[cm]?[jt]sx?$/.test(file);
+  return !/\.test(?:-helper)?\.[cm]?[jt]sx?$/.test(file);
 }
 
 async function sourceFiles(directory, packageRoot = true) {

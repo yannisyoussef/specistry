@@ -1,0 +1,51 @@
+openapi: 3.1.0
+info: { title: Refs, version: 1.0.0 }
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      parameters:
+        - $ref: "#/components/parameters/Page"
+      responses:
+        "200":
+          $ref: "#/components/responses/Users"
+components:
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+  responses:
+    Users:
+      description: Users
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "./schemas/user.yaml"
+  schemas:
+    Address:
+      $ref: "nested/address.yaml#/components/schemas/Address"
+    Tree:
+      $ref: "#/components/schemas/Node"
+    Node:
+      type: object
+      properties:
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/Node"
+        left:
+          $ref: "#/components/schemas/Left"
+    Left:
+      type: object
+      properties:
+        right:
+          $ref: "#/components/schemas/Right"
+    Right:
+      type: object
+      properties:
+        left:
+          $ref: "#/components/schemas/Left"
