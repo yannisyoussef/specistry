@@ -12,8 +12,9 @@
   },
   "scripts": {
     "build": "pnpm --recursive --if-present run build",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm check:architecture && pnpm check:licenses && pnpm check:secrets",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm check:architecture && pnpm check:dependencies && pnpm check:licenses && pnpm check:secrets",
     "check:architecture": "node scripts/check-architecture.mjs",
+    "check:dependencies": "node scripts/check-dependencies.mjs",
     "check:licenses": "node scripts/check-licenses.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "dev": "pnpm --filter @specra/web dev",

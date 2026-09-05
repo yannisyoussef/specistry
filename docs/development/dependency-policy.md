@@ -27,6 +27,6 @@ No OpenAPI resolver/validator is selected until SPEC-003 evaluates current candi
 
 ## Enforcement and response
 
-`pnpm audit --audit-level high` blocks CI for high/critical advisories. The production license script denies AGPL and GPL-family licenses by default; exceptions require legal review, an ADR, scope, owner, and review date. Pull requests receive dependency review. Secrets scanning is redacted.
+`pnpm audit --audit-level high` blocks CI for high/critical advisories. The production license script denies AGPL and GPL-family licenses by default; exceptions require legal review, an ADR, scope, owner, and review date. Pull requests receive a dedicated dependency-policy job that performs a frozen install, exact-manifest checks, full production-license traversal, and a whole-lockfile audit. This repository-local gate is portable to private GitHub plans where GitHub Advanced Security's Dependency Review action is unavailable. Secrets scanning is redacted.
 
 Advisories are triaged by reachability, runtime/dev scope, exploitability, and fixes. High/critical reachable production findings block release. Document any deferral with owner and review date. Never suppress install scripts or verification merely to make the pipeline green; use pnpm's dependency build allowlist deliberately when a package requires scripts.
