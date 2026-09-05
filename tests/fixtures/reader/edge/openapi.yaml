@@ -1,0 +1,294 @@
+openapi: 3.1.0
+info:
+  title: Edge cases <script>alert("title")</script>
+  version: 0.0.1
+  description: >-
+    Reader edge cases. Every string here is untrusted: <img src=x onerror=alert(1)>
+    javascript:alert(1) and a right-to-left override ‮marker.
+servers:
+  - url: javascript:alert(1)
+    description: Hostile server URL that must render as text
+  - url: https://edge.example.test/{region}
+    variables:
+      region:
+        default: eu
+        enum: [eu, us]
+paths:
+  /plain:
+    get:
+      operationId: plainOperation
+      responses:
+        "200":
+          description: A response with no body and no description on the operation.
+    head:
+      operationId: probePlain
+      summary: Probe (HEAD)
+      responses:
+        "200":
+          description: Headers only.
+    options:
+      summary: Preflight without operationId
+      responses:
+        "204":
+          description: No content.
+  /deprecated:
+    get:
+      operationId: legacyLookup
+      summary: Legacy lookup <b>bold?</b>
+      deprecated: true
+      description: "Deprecated endpoint whose description contains <script>alert(1)</script> and a javascript:void(0) link."
+      responses:
+        "200":
+          description: Still works.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /many-responses:
+    get:
+      operationId: manyResponses
+      summary: Many responses
+      responses:
+        default:
+          description: Fallback.
+        "500":
+          description: Server error.
+        "200":
+          description: OK.
+        "5XX":
+          description: Any server error.
+        "301":
+          description: Moved.
+        "404":
+          description: Missing.
+        "2XX":
+          description: Any success.
+        "102":
+          description: Processing.
+        "1XX":
+          description: Informational.
+        "204":
+          description: No content, honestly empty.
+  /a/very/long/path/that/keeps/going/and/going/{firstIdentifier}/segments/{secondIdentifier}/even/more/segments/{thirdIdentifier}/until/it/must/wrap/somewhere/on/small/screens:
+    get:
+      operationId: extremelyLongPathOperationNameThatShouldWrapGracefullyOnNarrowViewports
+      summary: An operation with a very long path and a very long operation identifier that stresses wrapping
+      parameters:
+        - name: firstIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: secondIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: thirdIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: aVeryLongQueryParameterNameThatIsUnreasonableButPossible
+          in: query
+          schema:
+            type: string
+        - name: p2
+          in: query
+          schema: { type: integer }
+        - name: p3
+          in: query
+          schema: { type: integer }
+        - name: p4
+          in: query
+          schema: { type: number }
+        - name: p5
+          in: query
+          schema: { type: boolean }
+        - name: p6
+          in: query
+          schema: { type: array, items: { type: string } }
+        - name: p7
+          in: query
+          deprecated: true
+          schema: { type: string }
+        - name: p8
+          in: query
+          required: true
+          schema: { type: string, enum: [alpha, beta, gamma] }
+        - name: X-One
+          in: header
+          schema: { type: string }
+        - name: X-Two
+          in: header
+          required: true
+          schema: { type: string }
+        - name: crumb
+          in: cookie
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK.
+  /auth-alternatives:
+    post:
+      operationId: authAlternatives
+      summary: Multiple auth alternatives
+      security:
+        - apiKey: []
+          mtls: []
+        - bearer: []
+        - {}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Node"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+          text/plain:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: OK.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Node"
+  /schemas:
+    get:
+      operationId: schemaShapes
+      summary: Schema shapes
+      responses:
+        "200":
+          description: Every schema shape the summary must survive.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  anyValue: {}
+                  never: false
+                  tuple:
+                    type: array
+                    prefixItems:
+                      - type: string
+                      - type: integer
+                    items: false
+                  union:
+                    type: [string, integer, "null"]
+                  choice:
+                    oneOf:
+                      - $ref: "#/components/schemas/Node"
+                      - type: string
+                  merged:
+                    allOf:
+                      - $ref: "#/components/schemas/Node"
+                      - type: object
+                        properties:
+                          extra: { type: boolean }
+                  negated:
+                    not: { type: string }
+                  typeless:
+                    minLength: 3
+                  constant:
+                    const: fixed
+                  choices:
+                    type: string
+                    enum: [a, b, c]
+                  unsupported:
+                    type: object
+                    patternProperties:
+                      "^x-": { type: string }
+                  map:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                  deep:
+                    type: object
+                    properties:
+                      level2:
+                        type: object
+                        properties:
+                          level3:
+                            type: object
+                            properties:
+                              leaf: { type: string }
+  /callbacks:
+    post:
+      operationId: withCallback
+      summary: Warning-bearing operation
+      callbacks:
+        onEvent:
+          "{$request.body#/url}":
+            post:
+              responses:
+                "200":
+                  description: OK.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url: { type: string, format: uri }
+      responses:
+        "202":
+          description: Accepted.
+  /Inbox rules:
+    get:
+      operationId: rulesA
+      tags: [Inbox rules]
+      responses:
+        "200":
+          description: OK.
+  /inbox-rules:
+    get:
+      operationId: rulesB
+      tags: [inbox-rules]
+      responses:
+        "200":
+          description: OK.
+  /collide-1:
+    get:
+      operationId: getItem
+      tags: [Collisions]
+      responses:
+        "200":
+          description: OK.
+  /collide-2:
+    get:
+      operationId: get-item
+      tags: [Collisions]
+      responses:
+        "200":
+          description: OK.
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: query
+      name: key
+    bearer:
+      type: http
+      scheme: bearer
+    mtls:
+      type: mutualTLS
+  schemas:
+    Node:
+      type: object
+      description: Recursive node.
+      properties:
+        value:
+          type: string
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/Node"
+        parent:
+          $ref: "#/components/schemas/Node"

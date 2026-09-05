@@ -14,6 +14,7 @@
     "build": "pnpm --recursive --if-present run build",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm check:architecture && pnpm check:dependencies && pnpm check:licenses && pnpm check:secrets",
     "check:architecture": "node scripts/check-architecture.mjs",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:dependencies": "node scripts/check-dependencies.mjs",
     "check:licenses": "node scripts/check-licenses.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
@@ -33,11 +34,12 @@
     "typecheck": "pnpm --recursive --if-present run typecheck"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "7.0.1",
-    "@testing-library/react": "16.3.3",
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
+    "@specra/model": "workspace:*",
     "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
     "@types/node": "24.13.3",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",

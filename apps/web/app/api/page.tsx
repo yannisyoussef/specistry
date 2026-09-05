@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 
-import { HomePage } from "../components/reader/list-pages";
-import { loadReaderArtifact } from "../lib/reader/artifact";
-import { homeMetadata } from "../lib/reader/metadata";
+import { ReferencePage } from "../../components/reader/list-pages";
+import { loadReaderArtifact } from "../../lib/reader/artifact";
+import { referenceMetadata } from "../../lib/reader/metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { index } = await loadReaderArtifact();
-  const metadata = homeMetadata(index);
+  const metadata = referenceMetadata(index);
   return {
     alternates: { canonical: metadata.path },
     description: metadata.description,
@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function Home() {
+export default async function Reference() {
   const { index } = await loadReaderArtifact();
-  return <HomePage index={index} />;
+  return <ReferencePage index={index} />;
 }
