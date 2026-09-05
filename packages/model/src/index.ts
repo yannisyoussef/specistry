@@ -88,6 +88,17 @@ export {
 } from "./serialization.js";
 
 export {
+  ARTIFACT_DOCUMENTATION_FILENAME,
+  ARTIFACT_MANIFEST_FILENAME,
+  ARTIFACT_MANIFEST_FORMAT,
+  parseArtifactManifest,
+  serializeArtifactManifest,
+  type ArtifactManifest,
+  type ArtifactSourceRecord,
+  type ArtifactStatistics,
+} from "./artifact-manifest.js";
+
+export {
   DEFAULT_MODEL_LIMITS,
   hasModelErrors,
   validateDocumentationArtifact,
