@@ -96,8 +96,23 @@ describe("CLI clean-room package", () => {
       const stagedManifest = JSON.parse(
         await readFile(path.join(staged, "package.json"), "utf8"),
       ) as { readonly dependencies: Readonly<Record<string, string>> };
+      // npm bundles the declared dependencies plus their own dependencies that
+      // live in the staged tree (yaml under @specra/openapi).
+      const expectedBundled = new Set(Object.keys(stagedManifest.dependencies));
+      for (const name of Object.keys(stagedManifest.dependencies)) {
+        if (!name.startsWith("@specra/")) continue;
+        const nested = JSON.parse(
+          await readFile(
+            path.join(staged, "node_modules", name, "package.json"),
+            "utf8",
+          ),
+        ) as { readonly dependencies?: Readonly<Record<string, string>> };
+        for (const dependency of Object.keys(nested.dependencies ?? {})) {
+          expectedBundled.add(dependency);
+        }
+      }
       expect([...packResult[0].bundled].sort()).toEqual(
-        Object.keys(stagedManifest.dependencies).sort(),
+        [...expectedBundled].sort(),
       );
       const tarball = path.join(packages, packResult[0].filename);
 

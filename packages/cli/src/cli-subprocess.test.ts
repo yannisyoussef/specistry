@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -11,6 +11,9 @@ import { EXIT_CODES } from "./contracts.js";
 const cliPath = fileURLToPath(new URL("../dist/bin.js", import.meta.url));
 const configHostPath = fileURLToPath(
   new URL("../dist/config-worker.js", import.meta.url),
+);
+const fixtureRoot = fileURLToPath(
+  new URL("../../../tests/fixtures/openapi/", import.meta.url),
 );
 const temporaryDirectories: string[] = [];
 
@@ -226,6 +229,99 @@ describe("packaged specra executable", () => {
     expect(result.stdout).toContain("\\u000d");
   });
 
+  it("builds through the executable with isolated stdout and stderr", async () => {
+    const project = await createProject();
+    const human = run(["build"], project);
+    expect(human.status).toBe(EXIT_CODES.success);
+    expect(human.stdout).toContain("Specra build succeeded.");
+    expect(human.stderr).toBe("");
+
+    const json = run(["build", "--json"], project);
+    expect(json.status).toBe(EXIT_CODES.success);
+    expect(json.stderr).toBe("");
+    expect(JSON.parse(json.stdout)).toEqual(
+      expect.objectContaining({
+        artifacts: expect.objectContaining({
+          files: ["documentation.json", "manifest.json"],
+        }),
+        ok: true,
+      }),
+    );
+
+    await writeFile(
+      path.join(project, "openapi.yaml"),
+      await readFile(
+        path.join(fixtureRoot, "adversarial", "invalid-shapes.yaml"),
+        "utf8",
+      ),
+    );
+    const failed = run(["build", "--json"], project);
+    expect(failed.status).toBe(EXIT_CODES.validationFailure);
+    expect(failed.stderr).toBe("");
+    expect(JSON.parse(failed.stdout).diagnostics[0].code).toBe(
+      "SOURCE_INVALID",
+    );
+    const humanFailure = run(["build"], project);
+    expect(humanFailure.status).toBe(EXIT_CODES.validationFailure);
+    expect(humanFailure.stdout).toBe("");
+    expect(humanFailure.stderr).toContain("Specra build failed");
+
+    await writeFile(path.join(project, "openapi.yaml"), VALID_DOCUMENT);
+    const child = spawn(process.execPath, [cliPath, "build", "--json"], {
+      cwd: project,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    child.stdout.destroy();
+    let stderr = "";
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString("utf8");
+    });
+    const status = await new Promise<number | null>((resolve) => {
+      child.once("exit", (code) => resolve(code));
+    });
+    expect(status).toBe(EXIT_CODES.success);
+    expect(stderr).not.toMatch(/EPIPE|at .*\.js:\d+/);
+  }, 30_000);
+
+  it("times out slow ingestion and cancels it on SIGINT", async () => {
+    const project = await createProject();
+    await writeFile(path.join(project, "openapi.yaml"), slowDocument());
+    const timedOut = run(
+      ["build", "--json", "--source-timeout", "100"],
+      project,
+    );
+    expect(timedOut.status).toBe(EXIT_CODES.validationFailure);
+    expect(timedOut.stderr).toBe("");
+    expect(JSON.parse(timedOut.stdout).diagnostics).toEqual([
+      expect.objectContaining({
+        code: "INGESTION_TIMEOUT",
+        path: "source/openapi.yaml",
+      }),
+    ]);
+
+    const child = spawn(process.execPath, [cliPath, "build", "--json"], {
+      cwd: project,
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8").on("data", (value: string) => {
+      stdout += value;
+    });
+    child.stderr.setEncoding("utf8").on("data", (value: string) => {
+      stderr += value;
+    });
+    setTimeout(() => child.kill("SIGINT"), 1_000);
+    const status = await new Promise<number | null>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("exit", resolve);
+    });
+    expect(status).toBe(EXIT_CODES.cancelled);
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout).diagnostics[0].code).toBe("CANCELLED");
+  }, 30_000);
+
   it("times out a hanging config without leaving the process alive", async () => {
     const project = await createProject("while (true) {};");
     const started = performance.now();
@@ -285,13 +381,31 @@ function run(
   return result;
 }
 
+const VALID_DOCUMENT =
+  "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n";
+
+/** About 9 MiB of valid, node-dense JSON: ingestion takes over a second. */
+function slowDocument(): string {
+  const properties: Record<string, unknown> = {};
+  for (let index = 0; index < 120_000; index += 1) {
+    properties[`p${index}`] = {
+      description: `Property ${index}`,
+      maxLength: 64,
+      type: "string",
+    };
+  }
+  return JSON.stringify({
+    components: { schemas: { Dense: { properties, type: "object" } } },
+    info: { title: "Slow", version: "1.0.0" },
+    openapi: "3.1.0",
+    paths: {},
+  });
+}
+
 async function createProject(configSource?: string): Promise<string> {
   const project = await makeTemporaryDirectory();
   await mkdir(path.join(project, "docs"));
-  await writeFile(
-    path.join(project, "openapi.yaml"),
-    "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n",
-  );
+  await writeFile(path.join(project, "openapi.yaml"), VALID_DOCUMENT);
   await writeFile(
     path.join(project, "specra.config.ts"),
     configSource ??

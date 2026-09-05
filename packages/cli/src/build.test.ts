@@ -1,5 +1,6 @@
 import { createServer, type Server } from "node:http";
 import {
+  chmod,
   cp,
   lstat,
   mkdir,
@@ -360,11 +361,119 @@ components:
     expect(genuine.ok).toBe(true);
   });
 
+  it("times out and cancels slow ingestion without leaving artifacts behind", async () => {
+    const project = await createProject(VALID);
+    expect((await buildProject({ cwd: project })).ok).toBe(true);
+    await writeFile(path.join(project, "openapi.yaml"), slowDocument());
+
+    const timedOut = await buildProject({ cwd: project, sourceTimeoutMs: 100 });
+    expect(timedOut).toMatchObject({
+      ok: false,
+      outcome: "validation-failure",
+    });
+    expect(
+      timedOut.diagnostics.map((diagnostic) => [
+        diagnostic.code,
+        diagnostic.path,
+      ]),
+    ).toEqual([["INGESTION_TIMEOUT", "source/openapi.yaml"]]);
+    await expect(
+      lstat(path.join(project, ".specra", "artifacts")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await readdir(path.join(project, ".specra"))).toEqual([]);
+
+    const aborter = new AbortController();
+    const abortTimer = setTimeout(() => aborter.abort(), 300);
+    await expect(
+      runIngestionIsolated({
+        entries: ["openapi.yaml"],
+        limits: DEFAULT_INGESTION_LIMITS,
+        project: { name: "Example" },
+        projectRoot: await realpath(project),
+        signal: aborter.signal,
+        timeoutMs: 30_000,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "cancelled" });
+    clearTimeout(abortTimer);
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 700);
+    const cancelled = await buildProject({
+      cwd: project,
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    expect(cancelled.outcome).toBe("cancelled");
+    expect(cancelled.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
+      "CANCELLED",
+    ]);
+    expect(await readdir(path.join(project, ".specra"))).toEqual([]);
+  }, 30_000);
+
+  it("fails closed when the artifact path is a file or its parent is read-only", async () => {
+    const project = await createProject(VALID);
+    const specra = path.join(project, ".specra");
+    await mkdir(specra);
+    await writeFile(path.join(specra, "artifacts"), "not a directory");
+    // A regular file at the artifact path is caught while the build context
+    // is created, before any ingestion or write is attempted.
+    const blocked = await buildProject({ cwd: project });
+    expect(blocked).toMatchObject({
+      diagnostics: [
+        expect.objectContaining({
+          code: "CONFIG_PATH_INVALID",
+          path: "artifact",
+        }),
+      ],
+      ok: false,
+      outcome: "validation-failure",
+    });
+    expect(await readFile(path.join(specra, "artifacts"), "utf8")).toBe(
+      "not a directory",
+    );
+    expect(await readdir(specra)).toEqual(["artifacts"]);
+    await rm(path.join(specra, "artifacts"));
+
+    expect((await buildProject({ cwd: project })).ok).toBe(true);
+    const documentation = await readFile(
+      path.join(specra, "artifacts", "documentation.json"),
+      "utf8",
+    );
+    if (process.platform === "win32" || process.getuid?.() === 0) return;
+    await writeFile(
+      path.join(project, "openapi.yaml"),
+      VALID.replace("operationId: ping", "operationId: pong"),
+    );
+    await chmod(specra, 0o500);
+    try {
+      const readOnly = await buildProject({ cwd: project });
+      expect(readOnly).toMatchObject({
+        ok: false,
+        outcome: "internal-failure",
+      });
+      expect(readOnly.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(
+        ["ARTIFACT_WRITE_FAILED"],
+      );
+    } finally {
+      await chmod(specra, 0o700);
+    }
+    expect(
+      await readFile(
+        path.join(specra, "artifacts", "documentation.json"),
+        "utf8",
+      ),
+    ).toBe(documentation);
+    expect(await readdir(specra)).toEqual(["artifacts"]);
+  });
+
   it("keeps createBuildContext free of ingestion and honours cancellation", async () => {
     const project = await createProject("not: valid openapi");
     const context = await createBuildContext({ cwd: project });
     expect(context.ok).toBe(true);
-    if (context.ok) expect(context.ingestion.statistics.documents).toBe(0);
+    if (context.ok) {
+      expect(context.context.paths.openapi).toHaveLength(1);
+      expect("ingestion" in context).toBe(false);
+    }
     const validated = await validateProject({ cwd: project });
     expect(validated.ok).toBe(false);
     expect(validated.diagnostics[0]?.code).toBe("SOURCE_UNSUPPORTED_VERSION");
@@ -378,6 +487,44 @@ components:
     expect(cancelled.outcome).toBe("cancelled");
   });
 });
+
+/**
+ * A valid, node-dense document (about 9 MiB, 120,000 described properties)
+ * that takes the ingestion host well over a second to parse, so timeouts and
+ * cancellation can be observed while ingestion is genuinely running.
+ */
+function slowDocument(): string {
+  const properties: Record<string, unknown> = {};
+  for (let index = 0; index < 120_000; index += 1) {
+    properties[`p${index}`] = {
+      description: `Property ${index}`,
+      maxLength: 64,
+      type: "string",
+    };
+  }
+  return JSON.stringify({
+    components: { schemas: { Dense: { properties, type: "object" } } },
+    info: { title: "Slow", version: "1.0.0" },
+    openapi: "3.1.0",
+    paths: {
+      "/dense": {
+        get: {
+          operationId: "readDense",
+          responses: {
+            "200": {
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Dense" },
+                },
+              },
+              description: "ok",
+            },
+          },
+        },
+      },
+    },
+  });
+}
 
 async function host(
   project: string,

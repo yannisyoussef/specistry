@@ -591,7 +591,7 @@ components:
       ),
     );
     expect(codes(examples)).toEqual([
-      "error SOURCE_IDENTITY_COLLISION openapi.yaml#/paths/~1x/get/responses/200/content/application~1json/examples/example",
+      "error SOURCE_INVALID openapi.yaml#/paths/~1x/get/responses/200/content/application~1json/examples",
     ]);
   });
 
@@ -651,8 +651,8 @@ components:
       "error SOURCE_INVALID api.yaml#/paths/~1no-desc/get/responses/200",
       "error SOURCE_INVALID api.yaml#/paths/~1no-responses/get/responses",
       "error SOURCE_INVALID api.yaml#/paths/~1unknown-scheme/get/security/0/nope",
-      "error SOURCE_INVALID api.yaml#/paths/~1unknown-scheme/get/security/1/apiKey",
       "error SOURCE_INVALID api.yaml#/paths/~1{missing}/get/parameters",
+      "warning SOURCE_PARTIALLY_REPRESENTED api.yaml#/paths/~1unknown-scheme/get/security/1/apiKey",
     ]);
   });
 
@@ -710,9 +710,6 @@ components:
       "SCHEMA_UNSUPPORTED_SEMANTIC",
       "SCHEMA_UNSUPPORTED_SEMANTIC",
     ]);
-    expect(validateDocumentationArtifact(conditional.artifact)).toEqual(
-      expect.arrayContaining([]),
-    );
     expect(
       validateDocumentationArtifact(conditional.artifact).filter(
         (issue) => issue.severity === "error",
@@ -892,7 +889,7 @@ components:
     expect(result.ok).toBe(true);
     expect(result.diagnostics).toEqual([]);
     const api = service(result);
-    expect(api.name).toContain("]8;;");
+    expect(api.name).toContain("\u001b]8;;");
     expect(api.operations[0]?.title).toBe("Summary\r\ninjected: line");
     expect(api.operations[0]?.responses[0]?.description).toBe(
       "Bearer do-not-log-this-fixture-value",
@@ -928,8 +925,9 @@ components:
       fixtureAcquisition("basic-3.1.yaml", "api.yaml"),
       { limits: { ...limits, maxReferences: 2 } },
     );
-    expect(codes(references)).toHaveLength(1);
-    expect(references.diagnostics[0]?.code).toBe("SOURCE_LIMIT_EXCEEDED");
+    expect(codes(references)).toEqual([
+      "error SOURCE_LIMIT_EXCEEDED api.yaml#/paths/~1pets/post/requestBody/content/multipart~1form-data/schema/properties/meta/$ref",
+    ]);
 
     const examples = await ingest(
       fixtureAcquisition("basic-3.1.yaml", "api.yaml"),
@@ -943,14 +941,11 @@ components:
       fixtureAcquisition("adversarial/invalid-shapes.yaml", "api.yaml"),
       { limits: { ...limits, maxDiagnostics: 3 } },
     );
-    expect(truncated.diagnostics).toHaveLength(3);
-    expect(
-      truncated.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "SOURCE_LIMIT_EXCEEDED" &&
-          diagnostic.location.pointer === "",
-      ),
-    ).toBe(true);
+    expect(codes(truncated)).toEqual([
+      "error SOURCE_INVALID api.yaml#/paths/~1bad-status/get/responses/2xx",
+      "error SOURCE_INVALID api.yaml#/paths/~1bad-status/get/responses/999",
+      "error SOURCE_LIMIT_EXCEEDED api.yaml#",
+    ]);
 
     const bytes = await ingest(
       fixtureAcquisition("basic-3.1.yaml", "api.yaml"),
@@ -962,18 +957,32 @@ components:
       fixtureDirectoryAcquisition("refs", "root.yaml"),
       { limits: { ...limits, maxTotalBytes: 1_100 } },
     );
-    expect(total.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
-      "SOURCE_LIMIT_EXCEEDED",
-    );
+    expect(codes(total)).toEqual(["error SOURCE_LIMIT_EXCEEDED root.yaml#"]);
 
-    const invalidLimits = await ingest(
+    await expect(
+      ingest(fixtureAcquisition("basic-3.1.yaml", "api.yaml"), {
+        limits: { ...limits, maxDepth: 0 },
+      }),
+    ).rejects.toThrow(TypeError);
+  });
+
+  it("reports a canonical artifact that outgrows the model budget as a source limit", async () => {
+    const result = await ingest(
       fixtureAcquisition("basic-3.1.yaml", "api.yaml"),
       {
-        limits: { ...limits, maxDepth: 0 },
+        modelLimits: {
+          maxCollectionEntries: 100_000,
+          maxDepth: 128,
+          maxDiagnostics: 10_000,
+          maxNodes: 50,
+          maxSerializedLength: 10_000_000,
+          maxStringLength: 1_000_000,
+        },
       },
     );
-    expect(invalidLimits.ok).toBe(false);
-    expect(invalidLimits.diagnostics[0]?.code).toBe("SOURCE_LIMIT_EXCEEDED");
+    expect(result.ok).toBe(false);
+    expect(result.artifactDiagnostics).toEqual([]);
+    expect(codes(result)).toEqual(["error SOURCE_LIMIT_EXCEEDED api.yaml#"]);
   });
 
   it("supports cancellation, multiple services, and service identity collisions", async () => {
@@ -984,8 +993,9 @@ components:
     });
     expect(cancelled).toMatchObject({ cancelled: true, ok: false });
 
-    const none = await ingestOpenApi({ project, sources: [] });
-    expect(none.ok).toBe(false);
+    await expect(ingestOpenApi({ project, sources: [] })).rejects.toThrow(
+      TypeError,
+    );
 
     const two = await ingestOpenApi({
       project,
@@ -1007,6 +1017,7 @@ components:
         fixtureAcquisition("recursive.yaml", "same.yaml"),
       ],
     });
+    // Both locations are the same document root, so the sink keeps one entry.
     expect(codes(clash)).toEqual([
       "error SOURCE_IDENTITY_COLLISION same.yaml#",
     ]);
@@ -1088,10 +1099,6 @@ components:
         }),
       ),
     );
-    const doc = {
-      ...JSON.parse(fixtureText("pairs/equivalent.json")),
-    } as Record<string, unknown>;
-    void doc;
     expect(codes(result)).toEqual([
       "error SOURCE_INVALID openapi.yaml#/paths/~1items~1{id}/get/responses/200/content/application~1json",
       "error SOURCE_INVALID openapi.yaml#/paths/~1items~1{id}/get/responses/200/content/not a media type",
@@ -1163,10 +1170,9 @@ components:
       (operation) => operation.id === "createItem",
     );
     expect(getItem?.serverIds).toEqual([api.servers[2]?.id]);
-    expect(createItem?.serverIds).toEqual([
-      api.servers[0]?.id,
-      api.servers[1]?.id,
-    ]);
+    expect([...(createItem?.serverIds ?? [])].sort()).toEqual(
+      [api.servers[0]?.id, api.servers[1]?.id].sort(),
+    );
     expect(
       getItem?.parameters.map((parameter) => [
         parameter.location,

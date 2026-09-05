@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
@@ -27,6 +27,7 @@ export default defineConfig({
       },
     },
     environment: "node",
+    exclude: [...configDefaults.exclude, "tests/performance/**"],
     include: ["packages/**/*.test.ts", "tests/**/*.test.{ts,tsx}"],
     reporters: ["default"],
     testTimeout: 10_000,

@@ -13,3 +13,4 @@ test-results/
 !.env.example
 *.pem
 *.key
+tests/performance/measurements.json

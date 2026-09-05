@@ -94,7 +94,7 @@ describe("project acquisition policy", () => {
     expect(isDocumentId("ok/file.yaml")).toBe(true);
     expect(isDocumentId("a b.yaml")).toBe(true);
     expect(isDocumentId("x".repeat(1_025))).toBe(false);
-    expect(isDocumentId("bad.yaml")).toBe(false);
+    expect(isDocumentId("bad\u0007.yaml")).toBe(false);
   });
 });
 
