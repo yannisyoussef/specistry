@@ -141,7 +141,8 @@ describe("specra validate with authored content", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(summary(result.diagnostics)).toEqual([
-      "e CONTENT_ASSET_OUTSIDE_ROOT source/docs/index.md:13:1",
+      "e CONTENT_ASSET_OUTSIDE_ROOT source/docs/index.md:9:1",
+      "e CONTENT_ASSET_OUTSIDE_ROOT source/docs/index.md:14:1",
       "e CONTENT_SOURCE_OUTSIDE_ROOT source/docs/linked.md",
       "w NAVIGATION_PAGE_ORPHANED source/docs/orphan.md:1:1",
     ]);
@@ -165,7 +166,8 @@ describe("specra validate with authored content", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(summary(result.diagnostics)).toEqual([
-      "e CONTENT_ASSET_TOO_LARGE source/docs/index.md:13:1",
+      "e CONTENT_ASSET_TOO_LARGE source/docs/index.md:9:1",
+      "e CONTENT_ASSET_TOO_LARGE source/docs/index.md:14:1",
       "e CONTENT_ASSET_UNSUPPORTED config#/branding/logo",
     ]);
   });
@@ -236,6 +238,16 @@ describe("specra build with authored content", () => {
       '"src":"assets/8a8489932558b153.png"',
     );
     expect(JSON.stringify(home?.body)).not.toContain("images/diagram.png");
+    // The hero media poster is rewritten to the same content-addressed asset.
+    const hero = home?.body[0];
+    expect(hero?.kind === "hero" && hero.media?.poster).toBe(
+      "assets/8a8489932558b153.png",
+    );
+    expect(hero?.kind === "hero" && hero.media?.link).toEqual({
+      href: "/docs/introduction",
+      label: "Read the introduction",
+      target: "page",
+    });
     const steps = content.pages.find(
       (page) => page.route === "/docs/guides/first-steps",
     );
