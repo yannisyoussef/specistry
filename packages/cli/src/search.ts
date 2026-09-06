@@ -27,7 +27,10 @@ export interface SearchBuildOutput {
   readonly terms: number;
 }
 
-function projectionInput(content: ContentBuildOutput): ProjectionInput {
+function projectionInput(
+  content: ContentBuildOutput,
+  operationTerms?: ReadonlyMap<string, readonly string[]>,
+): ProjectionInput {
   const artifact = parseDocumentationArtifact(content.documentationJson);
   const pages: readonly ContentPage[] =
     content.contentJson === undefined
@@ -37,18 +40,23 @@ function projectionInput(content: ContentBuildOutput): ProjectionInput {
     content.navigationJson === undefined
       ? undefined
       : parseNavigationArtifact(content.navigationJson);
-  return { artifact, navigation, pages };
+  return { artifact, navigation, operationTerms, pages };
 }
 
 /** Number of search documents the project would produce. */
-export function countSearchDocuments(content: ContentBuildOutput): number {
-  return projectSearchDocuments(projectionInput(content)).documents.length;
+export function countSearchDocuments(
+  content: ContentBuildOutput,
+  operationTerms?: ReadonlyMap<string, readonly string[]>,
+): number {
+  return projectSearchDocuments(projectionInput(content, operationTerms))
+    .documents.length;
 }
 
 export function buildSearchArtifact(
   content: ContentBuildOutput,
+  operationTerms?: ReadonlyMap<string, readonly string[]>,
 ): SearchBuildOutput {
-  const built = buildSearch(projectionInput(content));
+  const built = buildSearch(projectionInput(content, operationTerms));
   return {
     documents: built.statistics.documents,
     json: built.json,

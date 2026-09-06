@@ -79,6 +79,128 @@ const navigationNodeSchema: z.ZodType<NavigationNodeInput> = z.lazy(() =>
   ]),
 );
 
+/**
+ * Environment keys name the base URL in generated code examples and in the
+ * reader's environment selector, so they are identifiers, not free text.
+ */
+const environmentId = z
+  .string()
+  .regex(
+    /^[A-Za-z0-9][A-Za-z0-9._~-]{0,79}$/,
+    "Environment names are identifiers: letters, digits, and . _ ~ -.",
+  );
+
+/**
+ * Explicit SDK example mappings (SPEC-008). A project declares each SDK it
+ * ships and, per operation, the exact code a developer would write with it.
+ * Specra renders that code as authored text; it never infers, generates, or
+ * executes SDK calls. Everything is JSON-serializable data: no callbacks,
+ * no components. `examples` is either inline or a relative path to a JSON
+ * file `{ "examples": [...] }` with the same records, and each record holds
+ * its code inline or in a relative source file.
+ */
+export const SDK_LANGUAGES = [
+  "csharp",
+  "go",
+  "java",
+  "javascript",
+  "kotlin",
+  "php",
+  "python",
+  "ruby",
+  "rust",
+  "swift",
+  "text",
+  "typescript",
+] as const;
+
+export type SdkLanguage = (typeof SDK_LANGUAGES)[number];
+
+const HTTP_METHODS = [
+  "DELETE",
+  "GET",
+  "HEAD",
+  "OPTIONS",
+  "PATCH",
+  "POST",
+  "PUT",
+  "TRACE",
+] as const;
+
+const sdkId = z
+  .string()
+  .regex(
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+    "SDK ids are lower-case kebab-case identifiers.",
+  )
+  .max(64);
+
+/** Where an SDK example applies: the contract operationId, or method + path (+ service). */
+export type SdkExampleTarget =
+  | string
+  | {
+      readonly method: (typeof HTTP_METHODS)[number];
+      readonly path: string;
+      /** The service (OpenAPI document title or canonical service id) for multi-service projects. */
+      readonly service?: string | undefined;
+    };
+
+const sdkExampleTarget: z.ZodType<SdkExampleTarget> = z.union([
+  z.string().trim().min(1).max(200),
+  z
+    .object({
+      method: z.enum(HTTP_METHODS),
+      path: z.string().min(1).max(2_048).startsWith("/"),
+      service: z.string().trim().min(1).max(200).optional(),
+    })
+    .strict(),
+]);
+
+export const MAX_SDK_EXAMPLE_CHARACTERS = 16 * 1_024;
+
+const sdkExampleSchema = z
+  .object({
+    operation: sdkExampleTarget,
+    code: z.string().min(1).max(MAX_SDK_EXAMPLE_CHARACTERS).optional(),
+    file: relativePath.optional(),
+    title: z.string().trim().min(1).max(120).optional(),
+    description: z.string().trim().min(1).max(1_000).optional(),
+  })
+  .strict()
+  .refine(
+    (example) => (example.code === undefined) !== (example.file === undefined),
+    "An SDK example provides exactly one of `code` or `file`.",
+  );
+
+export type SdkExampleInput = z.input<typeof sdkExampleSchema>;
+export type SdkExampleRecord = z.output<typeof sdkExampleSchema>;
+
+const sdkSchema = z
+  .object({
+    id: sdkId,
+    label: z.string().trim().min(1).max(80),
+    language: z.enum(SDK_LANGUAGES),
+    package: z.string().trim().min(1).max(214).optional(),
+    coverage: z.enum(["complete", "partial"]).default("partial"),
+    examples: z
+      .union([z.array(sdkExampleSchema).max(5_000), relativePath])
+      .default([]),
+  })
+  .strict();
+
+export type SdkConfig = z.output<typeof sdkSchema>;
+
+/** The shape of an SDK examples file named by `sdks[].examples`. */
+export const sdkExamplesFileSchema = z
+  .object({ examples: z.array(sdkExampleSchema).max(5_000) })
+  .strict();
+
+export function parseSdkExamplesFile(
+  value: unknown,
+): z.output<typeof sdkExamplesFileSchema> {
+  return sdkExamplesFileSchema.parse(value);
+}
+
 export const specraConfigSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -97,9 +219,8 @@ export const specraConfigSchema = z
       })
       .strict()
       .optional(),
-    environments: z
-      .record(z.string().min(1).max(80), environmentSchema)
-      .default({}),
+    environments: z.record(environmentId, environmentSchema).default({}),
+    sdks: z.array(sdkSchema).max(32).default([]),
     playground: z
       .object({
         mode: z.enum(["browser", "disabled"]).default("disabled"),

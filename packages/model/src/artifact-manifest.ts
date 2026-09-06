@@ -42,6 +42,15 @@ export interface ArtifactSearchRecord {
   readonly documents: number;
 }
 
+/** The snippets artifact (SPEC-008): protocol projections and SDK examples. */
+export interface ArtifactSnippetsRecord {
+  readonly version: number;
+  readonly bytes: number;
+  readonly sha256: string;
+  readonly operations: number;
+  readonly sdkExamples: number;
+}
+
 export interface ArtifactBranding {
   /** Artifact-relative asset paths and the validated accent (SPEC-006). */
   readonly logo?: string;
@@ -61,10 +70,13 @@ export interface ArtifactManifest {
     readonly navigation?: string;
     /** Present when the build generated search (SPEC-007). */
     readonly search?: string;
+    /** Present when the build generated code samples (SPEC-008). */
+    readonly snippets?: string;
   };
   readonly assets?: readonly ArtifactAssetRecord[];
   readonly branding?: ArtifactBranding;
   readonly search?: ArtifactSearchRecord;
+  readonly snippets?: ArtifactSnippetsRecord;
   readonly sources: readonly ArtifactSourceRecord[];
   readonly statistics: ArtifactStatistics;
   /** A written artifact never carries errors; warnings are counted. */
@@ -111,10 +123,13 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
       "documentation",
       "navigation",
       "search",
+      "snippets",
     ]) ||
     value.files.documentation !== ARTIFACT_DOCUMENTATION_FILENAME ||
     (value.files.search !== undefined &&
       !ARTIFACT_FILENAME.test(String(value.files.search))) ||
+    (value.files.snippets !== undefined &&
+      !ARTIFACT_FILENAME.test(String(value.files.snippets))) ||
     (value.files.content !== undefined &&
       !ARTIFACT_FILENAME.test(String(value.files.content))) ||
     (value.files.navigation !== undefined &&
@@ -200,6 +215,35 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
       version: value.search.version,
     };
   }
+  let snippets: ArtifactSnippetsRecord | undefined;
+  if (value.snippets !== undefined || value.files.snippets !== undefined) {
+    if (
+      !isRecord(value.snippets) ||
+      !hasOnlyKeys(value.snippets, [
+        "bytes",
+        "operations",
+        "sdkExamples",
+        "sha256",
+        "version",
+      ]) ||
+      !isCount(value.snippets.version) ||
+      !isCount(value.snippets.bytes) ||
+      !isCount(value.snippets.operations) ||
+      !isCount(value.snippets.sdkExamples) ||
+      typeof value.snippets.sha256 !== "string" ||
+      !SHA256.test(value.snippets.sha256) ||
+      value.files.snippets === undefined
+    ) {
+      throw new TypeError("Artifact manifest snippets record is invalid.");
+    }
+    snippets = {
+      bytes: value.snippets.bytes,
+      operations: value.snippets.operations,
+      sdkExamples: value.snippets.sdkExamples,
+      sha256: value.snippets.sha256,
+      version: value.snippets.version,
+    };
+  }
   if (!Array.isArray(value.sources)) {
     throw new TypeError("Artifact manifest sources must be a list.");
   }
@@ -265,11 +309,15 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
       ...(value.files.search === undefined
         ? {}
         : { search: value.files.search as string }),
+      ...(value.files.snippets === undefined
+        ? {}
+        : { snippets: value.files.snippets as string }),
     },
     generator: "specra",
     modelVersion: DOCUMENT_MODEL_VERSION,
     project: { id: value.project.id, name: value.project.name },
     ...(search === undefined ? {} : { search }),
+    ...(snippets === undefined ? {} : { snippets }),
     sources,
     statistics: {
       documents: statistics.documents,
@@ -295,6 +343,7 @@ const MANIFEST_KEYS = [
   "modelVersion",
   "project",
   "search",
+  "snippets",
   "sources",
   "statistics",
 ];

@@ -189,6 +189,7 @@ describe("specra build with authored content", () => {
       "content.json",
       "navigation.json",
       "search.json",
+      "snippets.json",
       "assets/8a8489932558b153.png",
     ]);
     const artifacts = path.join(project, ".specra", "artifacts");
@@ -200,6 +201,13 @@ describe("specra build with authored content", () => {
       documentation: "documentation.json",
       navigation: "navigation.json",
       search: "search.json",
+      snippets: "snippets.json",
+    });
+    // The snippets artifact is recorded the same way (SPEC-008).
+    expect(manifest.snippets).toMatchObject({
+      operations: result.snippets.operations,
+      sdkExamples: 0,
+      version: 1,
     });
     // The search artifact is recorded with its version, size, and digest.
     expect(manifest.search).toMatchObject({
@@ -338,7 +346,7 @@ describe("specra build with authored content", () => {
     const project = await copyFixture("navigation");
     const artifacts = path.join(project, ".specra", "artifacts");
     expect((await buildProject({ cwd: project })).ok).toBe(true);
-    expect(await filesUnder(artifacts)).toHaveLength(6);
+    expect(await filesUnder(artifacts)).toHaveLength(7);
     await writeFile(
       path.join(project, "docs", "broken.md"),
       "---\ntitle: Broken\n---\n\n<Nope />\n",
@@ -353,7 +361,7 @@ describe("specra build with authored content", () => {
     // Repairing the page restores the full artifact set atomically.
     await rm(path.join(project, "docs", "broken.md"));
     expect((await buildProject({ cwd: project })).ok).toBe(true);
-    expect(await filesUnder(artifacts)).toHaveLength(6);
+    expect(await filesUnder(artifacts)).toHaveLength(7);
   });
 
   it("builds an API-only project without content artifacts", async () => {
@@ -376,6 +384,7 @@ describe("specra build with authored content", () => {
       "documentation.json",
       "manifest.json",
       "search.json",
+      "snippets.json",
     ]);
     const manifest = parseArtifactManifest(
       await readFile(
