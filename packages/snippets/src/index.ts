@@ -59,6 +59,13 @@ import {
   type SnippetToken,
   type SnippetTokenClass,
 } from "./types.js";
+import {
+  renderPathTemplate,
+  serializeCookieParameter,
+  serializeHeaderParameter,
+  serializePathParameter,
+  serializeQueryParameter,
+} from "./serialize.js";
 import { validateBaseUrl } from "./url.js";
 
 /**
@@ -90,6 +97,11 @@ export {
   sanitizeLine,
   sanitizeText,
   secretPlaceholderFor,
+  renderPathTemplate,
+  serializeCookieParameter,
+  serializeHeaderParameter,
+  serializePathParameter,
+  serializeQueryParameter,
   serializeSnippetsArtifact,
   SNIPPET_LIMITS,
   SNIPPETS_ARTIFACT_FILENAME,
