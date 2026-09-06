@@ -13,6 +13,11 @@ export {
 } from "./contracts.js";
 export type {
   ArtifactSummary,
+  CatalogResult,
+  CatalogSummary,
+  ReleaseOptions,
+  ReleaseResult,
+  ReleaseSummary,
   BuildContext,
   BuildPaths,
   BuildResult,
@@ -36,3 +41,8 @@ export {
   createBuildContext,
   validateProject,
 } from "./orchestrator.js";
+export {
+  deprecateRelease,
+  releaseProject,
+  selectCurrentRelease,
+} from "./release.js";

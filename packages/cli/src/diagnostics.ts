@@ -34,6 +34,49 @@ const messages: Readonly<Record<DiagnosticCode, string>> = {
     "A playground environment does not resolve to an exact https (or loopback http) origin.",
   PLAYGROUND_OPERATION_UNSUPPORTED:
     "The operation cannot be executed from the browser playground (cookie parameter, forbidden header, or an authentication method browsers cannot use); code examples remain available.",
+  VERSION_ID_INVALID:
+    "The version id is not a path-safe documentation release identifier (letters, digits, dots, underscores, hyphens; not a reserved name).",
+  VERSION_ALREADY_EXISTS:
+    "A release with this version id already exists with different content; releases are immutable.",
+  VERSION_NOT_FOUND: "No retained release has this version id.",
+  VERSION_IS_CURRENT:
+    "The current release cannot be deprecated; select another current release first.",
+  CATALOG_INVALID:
+    "The release catalog is corrupt or unsupported; restore it from backup.",
+  CANDIDATE_MISSING:
+    "No candidate artifact was found; run `specra build` before releasing.",
+  CANDIDATE_INVALID:
+    "The candidate artifact does not match its manifest; rebuild it before releasing.",
+  RELEASE_MANIFEST_INVALID:
+    "A retained release is corrupt or was tampered with; restore it from backup.",
+  RELEASE_WRITE_FAILED:
+    "The release could not be written; nothing was promoted.",
+  RELEASE_LOCKED:
+    "Another release operation holds the catalog lock; retry shortly.",
+  RELEASE_LIMIT_EXCEEDED:
+    "The catalog already retains the maximum number of releases.",
+  DIFF_TRUNCATED:
+    "The structured diff exceeded the candidate budget; later candidates were dropped.",
+  REDIRECT_CYCLE: "The redirect is part of a cycle.",
+  REDIRECT_DESTINATION_INVALID:
+    "The redirect destination is not an internal documentation route.",
+  REDIRECT_DESTINATION_NOT_FOUND:
+    "The redirect destination is not a route of this release.",
+  REDIRECT_LIMIT_EXCEEDED:
+    "The project declares more redirects than the limit.",
+  REDIRECT_SOURCE_DUPLICATE: "Two redirects share a source path.",
+  REDIRECT_SOURCE_INVALID:
+    "The redirect source is not an internal documentation route.",
+  REDIRECT_SOURCE_SHADOWS_ROUTE:
+    "The redirect source is a live route of this release.",
+  CHANGELOG_CANDIDATE_UNKNOWN:
+    "The changelog references a diff candidate that does not exist.",
+  CHANGELOG_CANDIDATE_UNREVIEWED:
+    "A structured diff candidate is neither described by a changelog item nor listed as omitted; review .specra/candidates/diff.json and write changelog/<version>.json.",
+  CHANGELOG_INVALID:
+    "The changelog source does not match the changelog contract.",
+  CHANGELOG_OPERATION_NOT_FOUND:
+    "The changelog item names an operation this release does not contain.",
   SNIPPETS_BUILD_FAILED:
     "The code samples could not be generated from the build artifacts.",
   SNIPPET_BODY_TRUNCATED:
@@ -83,6 +126,7 @@ const SEVERITY_RANK: Readonly<Record<DiagnosticSeverity, number>> = {
 };
 
 const CLI_WARNINGS: ReadonlySet<DiagnosticCode> = new Set([
+  "DIFF_TRUNCATED",
   "PLAYGROUND_OPERATION_UNSUPPORTED",
   "SDK_EXAMPLE_MISSING",
   "SNIPPET_BODY_TRUNCATED",
