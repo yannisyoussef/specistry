@@ -7,6 +7,7 @@ import { gzipSync } from "node:zlib";
 
 import { parseContentArtifact, parseNavigationArtifact } from "@specra/content";
 import { parseDocumentationArtifact } from "@specra/model";
+import { parseSnippetsArtifact } from "@specra/snippets";
 import {
   buildSearch,
   parseSearchArtifact,
@@ -109,11 +110,29 @@ async function measureArtifacts(
       (total, service) => total + service.operations.length,
       0,
     ) ?? 0;
+  // SDK labels are indexed with mapped operations (SPEC-008); the build
+  // derives them from the snippets artifact it wrote alongside.
+  const operationTerms = new Map<string, readonly string[]>();
+  try {
+    const snippets = parseSnippetsArtifact(
+      await readFile(path.join(artifacts, "snippets.json"), "utf8"),
+    );
+    const labels = new Map(snippets.sdks.map((sdk) => [sdk.id, sdk.label]));
+    for (const [key, examples] of Object.entries(snippets.sdkExamples)) {
+      operationTerms.set(
+        key,
+        examples.flatMap((example) => labels.get(example.sdk) ?? []),
+      );
+    }
+  } catch {
+    // Older artifact without snippets.
+  }
+  const input = { artifact, navigation, operationTerms, pages };
   const projectStart = performance.now();
-  const projection = projectSearchDocuments({ artifact, navigation, pages });
+  const projection = projectSearchDocuments(input);
   const projectMs = performance.now() - projectStart;
   const indexStart = performance.now();
-  const built = buildSearch({ artifact, navigation, pages });
+  const built = buildSearch(input);
   const indexMs = performance.now() - indexStart - projectMs;
   const serializeStart = performance.now();
   const json = built.json;
