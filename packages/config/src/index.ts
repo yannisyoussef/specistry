@@ -255,6 +255,45 @@ const redirectSchema = z
   })
   .strict();
 
+/**
+ * Documentation quality policy (SPEC-011). The configuration layer checks
+ * shape only: `@specra/quality` owns the rule catalogue and reports an
+ * unknown rule id as a diagnostic, so a typo can never quietly weaken a
+ * gate. Nothing here is executable, and there is no plugin hook.
+ */
+const qualityRuleId = z
+  .string()
+  .regex(
+    /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/,
+    "A rule id is lower-case ASCII words joined by hyphens.",
+  )
+  .max(64);
+
+const suppressionSchema = z
+  .object({
+    rule: qualityRuleId,
+    target: z.string().trim().min(1).max(200),
+    reason: z.string().trim().min(1).max(200),
+    expires: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "An expiry is a UTC date, YYYY-MM-DD.")
+      .optional(),
+  })
+  .strict();
+
+const qualitySchema = z
+  .object({
+    rules: z
+      .record(qualityRuleId, z.enum(["off", "info", "warning", "error"]))
+      .default({}),
+    failOn: z.enum(["error", "warning", "info", "never"]).default("error"),
+    maxWarnings: z.number().int().min(0).max(1_000_000).optional(),
+    suppressions: z.array(suppressionSchema).max(1_000).default([]),
+  })
+  .strict();
+
+export type QualityConfig = z.output<typeof qualitySchema>;
+
 export const specraConfigSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -276,6 +315,11 @@ export const specraConfigSchema = z
     environments: z.record(environmentId, environmentSchema).default({}),
     sdks: z.array(sdkSchema).max(32).default([]),
     redirects: z.array(redirectSchema).max(10_000).default([]),
+    quality: qualitySchema.default({
+      failOn: "error",
+      rules: {},
+      suppressions: [],
+    }),
     playground: playgroundSchema.default({
       environments: [],
       mode: "disabled",
