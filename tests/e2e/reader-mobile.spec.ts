@@ -166,6 +166,50 @@ test.describe("mobile reader", () => {
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });
 
+  test("offers the Code section inline with a bottom bar link and touch-sized controls", async ({
+    page,
+  }) => {
+    await page.goto(OPERATION);
+    const rail = page.getByRole("complementary", { name: "Code" });
+    await expect(rail).toBeVisible();
+    // The rail sits inline after the header, before the sections.
+    const railBox = await rail.boundingBox();
+    const authBox = await page
+      .getByRole("region", { name: "Authentication" })
+      .boundingBox();
+    expect((railBox?.y ?? 0) < (authBox?.y ?? 0)).toBe(true);
+    const bar = page.getByRole("navigation", { name: "Code" });
+    const link = bar.getByRole("link", { name: "Code" });
+    await expect(link).toBeVisible();
+    const linkBox = await link.boundingBox();
+    expect(linkBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+    // The bar stays fixed at the bottom of the viewport while scrolling.
+    await page
+      .getByRole("region", { name: "Responses" })
+      .scrollIntoViewIfNeeded();
+    const viewport = page.viewportSize();
+    const barBox = await bar.boundingBox();
+    expect((barBox?.y ?? 0) + (barBox?.height ?? 0)).toBeLessThanOrEqual(
+      viewport?.height ?? 0,
+    );
+    await link.click();
+    await expect(rail).toBeInViewport();
+    const language = rail.getByRole("combobox", { name: "Language" });
+    await expect(language).toBeVisible();
+    expect((await language.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(
+      44,
+    );
+    await language.selectOption({ label: "Python" });
+    await expect(
+      rail.locator(".code-switcher__panel:not([hidden]) pre"),
+    ).toContainText("requests.post(");
+    expect(await horizontalOverflow(page)).toBe(0);
+    await page.setViewportSize({ height: 640, width: 320 });
+    await page.goto(OPERATION);
+    await expect(rail).toBeVisible();
+    expect(await horizontalOverflow(page)).toBe(0);
+  });
+
   test("reflows the longest paths and parameter lists at 320 CSS px", async ({
     page,
   }) => {

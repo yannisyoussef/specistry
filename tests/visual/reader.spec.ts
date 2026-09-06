@@ -343,3 +343,95 @@ test.describe("search", () => {
     await expect(page).toHaveScreenshot("search-mobile-320-dark.png");
   });
 });
+
+/**
+ * Code rail states (SPEC-008 §143): the endpoint with the rail on desktop
+ * in both modes, each protocol language, a JSON and a multipart body, an
+ * auth alternative, an operation with and without SDK mappings, the laptop
+ * width, the folded tablet section, mobile 375 and 320, and a long snippet.
+ * Language panels are selected through the real control after hydration.
+ */
+test.describe("code rail", () => {
+  const rail = (page: Page) =>
+    page.getByRole("complementary", { name: "Code" });
+
+  async function selectLanguage(page: Page, label: string): Promise<void> {
+    const control = rail(page).getByRole("combobox", { name: "Language" });
+    await expect(control).toBeVisible();
+    await control.selectOption({ label });
+    await expect(
+      rail(page).locator(".code-switcher__panel:not([hidden])"),
+    ).toBeVisible();
+  }
+
+  test("endpoint with rail · desktop light and dark", async ({ page }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, OPERATION, "light");
+    await selectLanguage(page, "cURL");
+    await expect(page).toHaveScreenshot("code-rail-desktop-light.png");
+    await settle(page, OPERATION, "dark");
+    await selectLanguage(page, "cURL");
+    await expect(page).toHaveScreenshot("code-rail-desktop-dark.png");
+  });
+
+  test("every protocol language on the rail", async ({ page }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, OPERATION, "light");
+    for (const [label, name] of [
+      ["HTTP", "http"],
+      ["JavaScript", "javascript"],
+      ["TypeScript", "typescript"],
+      ["Java", "java"],
+      ["Python", "python"],
+    ] as const) {
+      await selectLanguage(page, label);
+      await expect(rail(page)).toHaveScreenshot(`code-language-${name}.png`);
+    }
+  });
+
+  test("multipart body, bearer alternative, SDK example, and no SDK", async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/api/domains/upload-domain-logo", "light");
+    await selectLanguage(page, "cURL");
+    await expect(rail(page)).toHaveScreenshot("code-multipart-curl.png");
+    await settle(page, `${OPERATION}?auth=1`, "dark");
+    await selectLanguage(page, "HTTP");
+    await expect(rail(page)).toHaveScreenshot("code-auth-bearer-http.png");
+    await settle(page, OPERATION, "light");
+    await selectLanguage(page, "TypeScript SDK");
+    await expect(rail(page)).toHaveScreenshot("code-sdk-typescript.png");
+    await settle(page, "/api/inboxes/delete-inbox", "light");
+    await selectLanguage(page, "cURL");
+    await expect(rail(page)).toHaveScreenshot("code-no-sdk.png");
+  });
+
+  test("laptop 1366, tablet 1024 inline section, mobile 375 and 320", async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewports.laptop);
+    await settle(page, OPERATION, "light");
+    await selectLanguage(page, "cURL");
+    await expect(page).toHaveScreenshot("code-rail-laptop-light.png");
+    await page.setViewportSize({ height: 768, width: 1024 });
+    await settle(page, OPERATION, "light");
+    await selectLanguage(page, "cURL");
+    await expect(page).toHaveScreenshot("code-inline-tablet-light.png");
+    await page.setViewportSize(viewports.mobile);
+    await settle(page, OPERATION, "dark");
+    await selectLanguage(page, "cURL");
+    await expect(page).toHaveScreenshot("code-mobile-375-dark.png");
+    await page.setViewportSize({ height: 640, width: 320 });
+    await settle(page, OPERATION, "light");
+    await selectLanguage(page, "Java");
+    await expect(page).toHaveScreenshot("code-mobile-320-light.png");
+  });
+
+  test("long snippet scrolls inside its surface", async ({ page }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/api/webhooks/create-webhook", "dark");
+    await selectLanguage(page, "Java");
+    await expect(rail(page)).toHaveScreenshot("code-long-java-dark.png");
+  });
+});

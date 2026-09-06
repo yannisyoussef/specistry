@@ -11,6 +11,7 @@ import "./styles/reader.css";
 import "./styles/schema.css";
 import "./styles/content.css";
 import "./styles/search.css";
+import "./styles/code.css";
 
 import { Shell } from "../components/reader/shell";
 import { loadReaderArtifact } from "../lib/reader/artifact";

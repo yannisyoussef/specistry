@@ -193,7 +193,10 @@ test.describe("desktop reader", () => {
       .grantPermissions(["clipboard-read", "clipboard-write"]);
     await copy.click();
     await expect(copy).toHaveText("✓ Copied");
-    await expect(page.getByRole("status")).toHaveText("Copied POST /inboxes");
+    // The Code rail carries its own copy controls and status regions.
+    await expect(page.locator(".endpoint-line").getByRole("status")).toHaveText(
+      "Copied POST /inboxes",
+    );
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
       "POST /inboxes",
     );
@@ -212,9 +215,16 @@ test.describe("desktop reader", () => {
       (node) => getComputedStyle(node).outlineStyle,
     );
     expect(outline).toBe("solid");
-    const border = await page
-      .locator("main")
-      .evaluate((node) => getComputedStyle(node).borderTopStyle);
+    // With the Code rail the document panel is painted by a pseudo-element
+    // (docs/design/reader-v1.md); the border must survive either way.
+    const border = await page.locator("main").evaluate((node) => {
+      const own = getComputedStyle(node).borderTopStyle;
+      if (own === "solid") return own;
+      const column = node.querySelector(".operation--with-code");
+      return column === null
+        ? own
+        : getComputedStyle(column, "::before").borderTopStyle;
+    });
     expect(border).toBe("solid");
   });
 

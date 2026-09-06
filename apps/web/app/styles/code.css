@@ -1,0 +1,414 @@
+/*
+ * Code rail (SPEC-008; design screens 5d/5e, 3f, 6n). The operation page is
+ * header, Code rail, and sections in one column. From the rail breakpoint
+ * the document panel becomes a transparent grid: a pseudo-element paints
+ * the document panel behind the header and sections, and the rail is its
+ * own glass panel in the second column, sticky under the header. Widths are
+ * measured so the document column never drops below 600 px on laptops
+ * (docs/design/reader-v1.md, Layout).
+ */
+
+:root {
+  --w-rail: 380px;
+  --w-rail-laptop: 340px;
+  --w-rail-wide: 480px;
+  --rail-breakpoint: 1280px;
+}
+
+.code-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  scroll-margin-top: calc(
+    var(--w-header) + var(--glass-gap) * 2 + var(--space-4)
+  );
+}
+
+.code-rail__bar {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.code-rail__title {
+  background: var(--primary-bg);
+  border-radius: var(--radius-sm);
+  color: var(--primary-fg);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1;
+  margin: 0;
+  padding: 7px 12px;
+}
+
+.code-rail__mode {
+  color: var(--text-muted);
+}
+
+.code-rail__example {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.code-rail__example-title {
+  color: var(--text-strong);
+  font-size: 13.5px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.code-rail__example-note,
+.code-rail__note {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.code-rail__note code {
+  font-size: 12px;
+}
+
+.code-figure__detail {
+  color: var(--text-faint);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.code-figure .code-block__pre {
+  font-size: 12.5px;
+  line-height: 1.7;
+  max-height: 480px;
+  overflow: auto;
+}
+
+/* Selectors */
+.code-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.code-switcher__label {
+  display: flex;
+  position: relative;
+}
+
+/* The chevron is drawn with borders: a data: image would be blocked by
+ * `img-src 'self'` and a background image cannot follow forced colours. */
+.code-switcher__label::after,
+.code-options__field::after {
+  border-bottom: 1.5px solid var(--text-muted);
+  border-right: 1.5px solid var(--text-muted);
+  bottom: 14px;
+  content: "";
+  height: 6px;
+  pointer-events: none;
+  position: absolute;
+  right: 12px;
+  transform: rotate(45deg);
+  width: 6px;
+}
+
+.code-switcher__select,
+.code-options__select {
+  appearance: none;
+  background-color: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-strong);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  height: 32px;
+  line-height: 1;
+  min-width: 0;
+  padding: 0 28px 0 10px;
+}
+
+.code-switcher__select {
+  width: 100%;
+}
+
+.code-switcher__select:focus-visible,
+.code-options__select:focus-visible {
+  outline: 3px solid var(--brand-ink);
+  outline-offset: 2px;
+}
+
+.code-switcher__more {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.code-switcher__more:not([open]) {
+  padding-bottom: 0;
+}
+
+.code-switcher__summary {
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: var(--space-3) 0;
+}
+
+.code-switcher__more > .code-rail__example + .code-rail__example {
+  margin-top: var(--space-4);
+}
+
+.code-options {
+  display: grid;
+  gap: var(--space-2) var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.code-options__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  position: relative;
+}
+
+.code-options__label {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.code-options__apply {
+  align-self: end;
+  height: 32px;
+}
+
+/* Mobile bottom action bar (design 6n): a real link to the inline Code section. */
+.code-bar {
+  display: none;
+}
+
+/* Rail layout */
+@media (min-width: 1280px) {
+  .document:has(> .operation--with-code) {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    contain: none;
+    padding: 0;
+  }
+
+  .operation--with-code {
+    display: grid;
+    gap: 0 var(--glass-gap);
+    grid-template-columns: minmax(0, 1fr) var(--w-rail-laptop);
+    grid-template-rows: auto auto 1fr;
+    margin: 0;
+    max-width: none;
+    position: relative;
+  }
+
+  /* The document panel, painted behind the header and sections. */
+  .operation--with-code::before {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--panel-shadow);
+    content: "";
+    grid-column: 1;
+    grid-row: 1 / span 3;
+  }
+
+  .operation--with-code > .operation__header,
+  .operation--with-code > .operation__body {
+    box-sizing: border-box;
+    grid-column: 1;
+    margin: 0 auto;
+    max-width: calc(var(--w-doc) + 2 * var(--space-5));
+    padding: 0 var(--space-5);
+    position: relative;
+    width: 100%;
+  }
+
+  .operation--with-code > .operation__header {
+    grid-row: 1;
+    padding-top: 44px;
+  }
+
+  .operation--with-code > .operation__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-7);
+    grid-row: 3;
+    padding-bottom: var(--space-9);
+    padding-top: var(--space-7);
+  }
+
+  .operation--with-code > .code-rail {
+    align-self: start;
+    backdrop-filter: var(--panel-blur);
+    -webkit-backdrop-filter: var(--panel-blur);
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--panel-shadow);
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    max-height: calc(100vh - var(--w-header) - var(--glass-gap) * 3);
+    overflow-y: auto;
+    padding: var(--space-5) var(--space-5) var(--space-6);
+    position: sticky;
+    top: calc(var(--w-header) + var(--glass-gap) * 2);
+  }
+
+  .document:has(> .operation--with-code) {
+    padding: 0;
+  }
+}
+
+@media (min-width: 1440px) {
+  .operation--with-code {
+    grid-template-columns: minmax(0, 1fr) var(--w-rail);
+  }
+
+  .operation--with-code > .operation__header,
+  .operation--with-code > .operation__body {
+    max-width: calc(var(--w-doc) + 2 * var(--space-7));
+    padding-left: var(--space-7);
+    padding-right: var(--space-7);
+  }
+}
+
+@media (min-width: 1600px) {
+  .operation--with-code {
+    grid-template-columns: minmax(0, 1fr) var(--w-rail-wide);
+  }
+
+  .operation--with-code > .operation__header,
+  .operation--with-code > .operation__body {
+    max-width: calc(var(--w-doc) + 2 * var(--space-8));
+    padding-left: var(--space-8);
+    padding-right: var(--space-8);
+  }
+}
+
+@media (min-width: 1920px) {
+  .operation--with-code > .operation__header,
+  .operation--with-code > .operation__body {
+    max-width: calc(var(--w-doc-max) + 2 * var(--space-8));
+  }
+}
+
+/* Inline rail (tablet and mobile): a bordered section after the header. */
+@media (max-width: 1279px) {
+  .operation--with-code > .code-rail {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-panel);
+    padding: var(--space-4);
+  }
+
+  .operation--with-code > .operation__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-7);
+  }
+}
+
+@media (max-width: 767px) {
+  /* Sticky at the end of the article: it rides the viewport bottom while
+   * the article scrolls and settles after the last section, and unlike a
+   * fixed element it is not captured by the panel's containment. */
+  .code-bar {
+    backdrop-filter: var(--overlay-blur);
+    -webkit-backdrop-filter: var(--overlay-blur);
+    background: var(--overlay-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-panel);
+    bottom: var(--glass-gap);
+    box-shadow: var(--panel-shadow);
+    display: flex;
+    margin-top: var(--space-6);
+    padding: var(--space-2);
+    position: sticky;
+    z-index: 15;
+  }
+
+  .code-bar__action {
+    flex: 1;
+    height: var(--touch-target);
+    justify-content: center;
+  }
+
+  .operation--with-code > .code-rail {
+    padding: var(--space-3);
+  }
+
+  .operation--with-code > .operation__body {
+    gap: var(--space-6);
+  }
+
+  .code-switcher__select,
+  .code-options__select {
+    height: var(--touch-target);
+  }
+
+  .code-switcher__label::after,
+  .code-options__field::after {
+    bottom: 20px;
+  }
+
+  .code-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .code-rail {
+    scroll-behavior: auto;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .operation--with-code > .code-rail,
+  .code-bar {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--surface);
+  }
+}
+
+@media (forced-colors: active) {
+  .code-rail__title {
+    border: 1px solid CanvasText;
+    forced-color-adjust: none;
+    background: CanvasText;
+    color: Canvas;
+  }
+
+  .code-switcher__select,
+  .code-options__select {
+    border-color: CanvasText;
+  }
+
+  .code-switcher__label::after,
+  .code-options__field::after {
+    border-color: CanvasText;
+  }
+
+  .operation--with-code::before,
+  .operation--with-code > .code-rail,
+  .code-bar,
+  .code-switcher__more {
+    border-color: CanvasText;
+  }
+}
