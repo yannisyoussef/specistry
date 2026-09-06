@@ -10,6 +10,7 @@ import { buildContent } from "./content.js";
 import { buildSearchArtifact, countSearchDocuments } from "./search.js";
 import { buildPlayground } from "./playground.js";
 import { buildSnippets } from "./snippets.js";
+import { writeDiffCandidates } from "./release.js";
 import { loadConfigIsolated } from "./config-loader.js";
 import {
   ARTIFACT_DIRECTORY,
@@ -270,8 +271,25 @@ export async function buildProject(
       createDiagnostic("ARTIFACT_WRITE_FAILED", artifactPath("")),
     ]);
   }
+  // Structured diff candidates for changelog review (SPEC-010): private,
+  // derived from the exact candidate just written and the comparison base.
+  const candidates = await writeDiffCandidates(
+    context,
+    content.documentationJson,
+    options.from,
+  );
+  if (!candidates.ok) {
+    return {
+      diagnostics: sortDiagnostics(candidates.diagnostics),
+      ok: false,
+      outcome: "validation-failure",
+    };
+  }
   return {
     artifacts: written.artifacts,
+    ...(candidates.candidates === undefined
+      ? {}
+      : { candidates: candidates.candidates }),
     content: { assets: content.assets.length, pages: content.pages },
     context,
     diagnostics,

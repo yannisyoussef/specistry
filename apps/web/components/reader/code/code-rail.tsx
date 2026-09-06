@@ -18,17 +18,20 @@ import { CodeSwitcher } from "./code-switcher";
  */
 export function CodeRail({
   action,
+  historical,
   playground,
   view,
 }: Readonly<{
   action: string;
+  historical?:
+    { readonly currentHref: string; readonly currentLabel: string } | undefined;
   playground?: PlaygroundView | undefined;
   view: CodeView;
 }>) {
   return (
     <aside aria-labelledby="code-heading" className="code-rail" id="code">
       <RailModes
-        code={<CodePanel action={action} view={view} />}
+        code={<CodePanel action={action} historical={historical} view={view} />}
         eyebrow={
           view.sdks.length > 0 &&
           view.panels.some((panel) => panel.option.group === "sdk")
@@ -43,10 +46,27 @@ export function CodeRail({
 
 function CodePanel({
   action,
+  historical,
   view,
-}: Readonly<{ action: string; view: CodeView }>) {
+}: Readonly<{
+  action: string;
+  historical?:
+    { readonly currentHref: string; readonly currentLabel: string } | undefined;
+  view: CodeView;
+}>) {
   return (
     <>
+      {historical === undefined ? null : (
+        // Historical releases never execute (SPEC-010 §43): the examples
+        // stay, and Try it lives on the current version.
+        <p className="code-rail__note code-rail__note--historical">
+          Try it is available on the current version only.{" "}
+          <a href={historical.currentHref}>
+            Open this operation in {historical.currentLabel}
+          </a>
+          .
+        </p>
+      )}
       {view.fields.length === 0 ? null : (
         <CodeOptions action={action} fields={view.fields} />
       )}

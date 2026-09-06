@@ -12,6 +12,8 @@ const OPERATION = "/api/inboxes/create-inbox";
 const TESTINBOX_URL = "http://127.0.0.1:3100";
 /** The edge fixture (long names, many responses, hostile text) on port 3101. */
 const EDGE_URL = "http://127.0.0.1:3101";
+/** The two-release fixture served in release mode (SPEC-010) on port 3102. */
+const VERSIONED_URL = "http://127.0.0.1:3102";
 
 async function settle(
   page: Page,
@@ -513,5 +515,66 @@ test.describe("playground", () => {
         }),
     ).toBeVisible();
     await expect(page).toHaveScreenshot("playground-mobile-375-dark.png");
+  });
+});
+
+/**
+ * Versioning states (SPEC-010 §197): the header version menu open on the
+ * current release, a deprecated historical page with its banner, the
+ * published changelog, and a historical operation page whose rail keeps
+ * Code but explains where Try it lives, on desktop and on a phone.
+ */
+test.describe("versioning", () => {
+  test("version menu open and historical banner · desktop", async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/docs/v2/quickstart", "light", VERSIONED_URL);
+    await page.locator(".version-menu summary").click();
+    await expect(
+      page.getByRole("list", { name: "Documentation versions" }),
+    ).toBeVisible();
+    await expect(page).toHaveScreenshot("versioning-menu-desktop-light.png");
+    await settle(page, "/docs/v1/getting-started", "dark", VERSIONED_URL);
+    await expect(page).toHaveScreenshot(
+      "versioning-deprecated-desktop-dark.png",
+    );
+  });
+
+  test("changelog page and historical operation · desktop", async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/docs/v2/changelog", "light", VERSIONED_URL);
+    await expect(page).toHaveScreenshot(
+      "versioning-changelog-desktop-light.png",
+      {
+        fullPage: true,
+      },
+    );
+    await settle(
+      page,
+      "/api/v1/inboxes/get-raw-message",
+      "light",
+      VERSIONED_URL,
+    );
+    await expect(page).toHaveScreenshot(
+      "versioning-historical-operation-desktop-light.png",
+    );
+  });
+
+  test("deprecated page and changelog · mobile", async ({ page }) => {
+    await page.setViewportSize(viewports.mobile);
+    await settle(page, "/docs/v1/getting-started", "light", VERSIONED_URL);
+    await expect(page).toHaveScreenshot(
+      "versioning-deprecated-mobile-light.png",
+    );
+    await settle(page, "/docs/v2/changelog", "dark", VERSIONED_URL);
+    await expect(page).toHaveScreenshot(
+      "versioning-changelog-mobile-dark.png",
+      {
+        fullPage: true,
+      },
+    );
   });
 });

@@ -251,9 +251,22 @@ Theming uses validated design tokens with contrast-aware defaults. Arbitrary CSS
 
 The initial search port consumes version-scoped `SearchDocument` records produced at build time and returns typed result IDs. A local compressed index loads on demand; implementation remains replaceable. Search indexes visible normalized text, never secrets or hidden examples.
 
-Documentation releases are explicit config entries, not application deployments. Immutable retained versions use `/docs/{version}` and are self-canonical. `/docs` is a convenience alias that issues a non-permanent `302` or `307` redirect to the configured current immutable version; it is not emitted in the sitemap. Redirects are validated, sitemaps include retained public versions, and search is version-scoped by default.
+Documentation releases are explicit `specra release <version>` promotions, not application deployments (SPEC-010, [ADR-016](../adr/016-immutable-documentation-releases.md)). `@specra/release` (pure; depends on model and content only) owns the version grammar, the release manifest and catalog contracts, the route table with semantic identities, redirect validation, the conservative structured diff, and the changelog contracts; the CLI does the I/O: verify the candidate, derive routes and redirects, validate the changelog, stage, fsync, verify, and promote with one atomic rename into `.specra/releases/<version>`, then update `catalog.json` under a lock.
 
-Contract diffing will produce structured candidate changes linked to source pointers. Authors review and edit changelog entries before publication.
+```mermaid
+flowchart LR
+  build["specra build\n.specra/artifacts (candidate)"] --> diff[".specra/candidates/diff.json\n(private, value-free)"]
+  diff --> author["changelog/<version>.json\n(human-reviewed)"]
+  build --> release["specra release <version>\nverify → stage → fsync → rename"]
+  author --> release
+  release --> store[".specra/releases/<version>\nrelease.json + components + routes + redirects + changelog"]
+  store --> catalog["catalog.json\ncurrent + retained releases"]
+  catalog --> reader["reader: /docs/{v}, /api/{v}\n307 aliases, 308 frozen redirects, 404 unknown"]
+```
+
+Immutable retained versions use `/docs/{version}` and `/api/{version}` and are self-canonical. `/`, `/docs`, and `/api` are mutable aliases that issue a `307` to the explicit current release and never appear in sitemaps; the sitemap is an index of one partitioned sitemap per release. The reader reads the small catalog first, then the requested release's manifest and digest-verified components into a bounded cache (four releases), so memory does not grow with the catalog. Navigation, search, snippets, SDK examples, assets, and the playground policy are scoped to the release being read; only the current release executes requests and contributes `connect-src` origins.
+
+Contract diffing produces deterministic, identity-based candidates (service, group, operation, schema added/removed/changed with aspects, digests instead of values, no rename guessing, no scoring) in a private directory the reader never reads. Authors disposition every candidate in `changelog/<version>.json`; only their text is published at `/docs/{version}/changelog`. SPEC-011 consumes the same structural diff port for `specra diff` and quality gates.
 
 ## Configuration
 

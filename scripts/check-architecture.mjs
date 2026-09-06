@@ -53,6 +53,16 @@ const boundaries = new Map([
       constrained: true,
     },
   ],
+  // Releases freeze artifact sets (SPEC-010): the package holds the release
+  // manifest, catalog, route table, redirect, structured-diff, and changelog
+  // contracts as pure data logic; the CLI does the filesystem work.
+  [
+    "@specra/release",
+    {
+      allowed: new Set(["@specra/content", "@specra/model"]),
+      constrained: true,
+    },
+  ],
   [
     "@specra/cli",
     {
@@ -62,6 +72,7 @@ const boundaries = new Map([
         "@specra/model",
         "@specra/openapi",
         "@specra/playground",
+        "@specra/release",
         "@specra/search",
         "@specra/snippets",
       ]),
@@ -76,6 +87,7 @@ const boundaries = new Map([
         "@specra/content",
         "@specra/model",
         "@specra/playground",
+        "@specra/release",
         "@specra/search",
         "@specra/snippets",
       ]),
@@ -142,6 +154,7 @@ const clientForbiddenPackages = new Set([
   "@specra/content",
   "@specra/openapi",
   "@specra/playground",
+  "@specra/release",
   "@specra/search",
   "@specra/snippets",
 ]);

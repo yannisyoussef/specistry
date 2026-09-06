@@ -3,7 +3,6 @@ import type {
   SchemaBlockRef,
 } from "../../../lib/reader/operation-view";
 import { schemaFocusHref } from "../../../lib/reader/operation-view";
-import { API_ROOT } from "../../../lib/reader/projection";
 import type {
   SchemaContext,
   SchemaView,
@@ -22,17 +21,19 @@ import { contextLabel, SchemaBlock } from "./schema-block";
 export function SchemaFocusPage({
   block,
   context,
+  apiRoot,
   operation,
   trail,
   view,
 }: Readonly<{
+  apiRoot: string;
   block: SchemaBlockRef;
   context: SchemaContext;
   operation: OperationView;
   trail: readonly TrailEntry[];
   view: SchemaView;
 }>) {
-  const singleService = operation.service.href === API_ROOT;
+  const singleService = operation.service.href === apiRoot;
   const current = trail.at(-1);
   const heading = current?.label ?? view.name ?? view.label;
   const operationHref = operation.summary.href;
@@ -41,7 +42,7 @@ export function SchemaFocusPage({
       <div className="page-header">
         <Breadcrumb
           items={[
-            { href: API_ROOT, label: "API reference" },
+            { href: apiRoot, label: "API reference" },
             ...(singleService
               ? []
               : [

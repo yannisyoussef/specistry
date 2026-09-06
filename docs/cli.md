@@ -32,6 +32,24 @@ Options (both commands):
 
 Use `specra --help` for top-level help and `specra <command> --help` for the exact command contract.
 
+## Release commands
+
+Once a project has authors ready to publish, three catalog commands (SPEC-010) turn a candidate build into an immutable documentation release and manage the mutable `current` pointer. The full workflow, version grammar, redirect and changelog rules are in the [versioning reference](versioning.md).
+
+```bash
+specra release v2 --current --label "2.0" --date 2026-09-05
+specra current v1
+specra deprecate v1
+```
+
+| Command               | Meaning                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `release <version>`   | Verify the candidate in `.specra/artifacts` byte for byte, derive the release's route table and frozen redirects, validate `changelog/<version>.json` against the diff candidates, and promote one immutable release set atomically into `.specra/releases/<version>`; identical re-release is a no-op, different content fails with `VERSION_ALREADY_EXISTS`; the first release becomes current |
+| `current <version>`   | Point the catalog's `current` alias at a retained release (used for rollback too); no release directory is touched                                                                                                                                                                                                                                                                               |
+| `deprecate <version>` | Mark a retained release deprecated in the catalog (still served, with a notice); the current release cannot be deprecated                                                                                                                                                                                                                                                                        |
+
+`release` options: `--current` (select after promotion), `--from <version>` (comparison base for the changelog's diff candidates; default the current release), `--no-diff` (no comparison, no changelog required), `--label <text>` (1–40 printable characters shown in the version menu), `--date <YYYY-MM-DD>`, plus `--root`, `--json`, and the timeouts of `build`. When a catalog exists, `build` also compares the candidate with the current release (or `--from`) and writes structured candidates to `.specra/candidates/diff.json`; the reader never serves that directory.
+
 ## What validation proves
 
 A successful validation proves that:
@@ -88,7 +106,7 @@ Success JSON has this stable shape (`artifacts.files` and `artifacts.bytes` appe
 }
 ```
 
-`search.documents` counts the search documents the project produces (SPEC-007); `snippets.operations` and `snippets.sdkExamples` count the code-sample projections and authored SDK examples (SPEC-008); `build` also lists `search.json` and `snippets.json` among the artifact files. `diagnostics` on a successful result contains warnings only. Failure JSON contains `ok: false` and ordered diagnostics with `code`, fixed value-safe `message`, optional safe `path`, and `severity` (`error` or `warning`). It contains no timestamps, process IDs, absolute machine paths, config or source values, exception messages, or stack traces.
+`candidates` (`build` only, when the project has released versions) reports the comparison base, the number of structured diff candidates written to `.specra/candidates/diff.json`, and whether the bounded output was truncated (SPEC-010); `release` returns `release` (`version`, `digest`, `current`, `unchanged`, `components`, `bytes`, `directory`, `changelog`, `from`, `candidates`) and `current`/`deprecate` return `catalog` (`current` and every retained release with its digest, state, and changelog flag). `search.documents` counts the search documents the project produces (SPEC-007); `snippets.operations` and `snippets.sdkExamples` count the code-sample projections and authored SDK examples (SPEC-008); `build` also lists `search.json` and `snippets.json` among the artifact files. `diagnostics` on a successful result contains warnings only. Failure JSON contains `ok: false` and ordered diagnostics with `code`, fixed value-safe `message`, optional safe `path`, and `severity` (`error` or `warning`). It contains no timestamps, process IDs, absolute machine paths, config or source values, exception messages, or stack traces.
 
 Content diagnostics additionally carry `line` and `column` (1-based) for the offending node; the human report prints them as `[source/docs/guides/attachments.md:42:7]`. `path` uses one grammar for every diagnostic: `scope[#pointer]` where the pointer is an RFC 6901 JSON pointer. Scopes are `config` (`specra.config.ts` data, with `*` for user-chosen record keys and numeric indices for list positions, for example `config#/environments/*/baseUrl` or `config#/openapi/1`), `cli` (command options, `cli#/root`), `source/<project-relative path>` (a source document and pointer, for example `source/schemas/user.yaml#/properties/id`), and `artifact` (the artifact directory or a canonical model pointer). Errors sort before warnings, then by code, then by path with numeric pointer segments compared numerically, then by line and column.
 
@@ -135,6 +153,28 @@ Configuration and orchestration codes are stable within this contract; source co
 | `PLAYGROUND_ENVIRONMENT_NOT_FOUND`      | Fix: `playground.environments` names an environment that is not configured                                                                                                                                       |
 | `PLAYGROUND_ENVIRONMENT_ORIGIN_INVALID` | Fix: the approved environment's base URL is not an exact HTTPS (or loopback HTTP) origin without credentials, query, or fragment                                                                                 |
 | `PLAYGROUND_OPERATION_UNSUPPORTED`      | Warning: the operation needs a cookie, a forbidden header, or an authentication scheme browsers cannot produce; it renders with an explanation instead of a form (see the [playground reference](playground.md)) |
+| `VERSION_ID_INVALID`                    | Fix: use letters, digits, `.`, `_`, `-` (at most 64, alphanumeric at both ends, no `..`, not a reserved routing name, not a case variant of an existing release)                                                 |
+| `VERSION_ALREADY_EXISTS`                | Fix: the release exists with different content; publish a new version id instead                                                                                                                                 |
+| `VERSION_NOT_FOUND`                     | Fix: the version is not in the catalog                                                                                                                                                                           |
+| `VERSION_IS_CURRENT`                    | Fix: select another release as current before deprecating this one                                                                                                                                               |
+| `CATALOG_INVALID`                       | Report: `.specra/releases/catalog.json` is malformed, names a missing current, or disagrees with a release manifest; restore it from backup                                                                      |
+| `CANDIDATE_MISSING`                     | Fix: run `specra build` before `specra release`                                                                                                                                                                  |
+| `CANDIDATE_INVALID`                     | Fix: the candidate no longer matches its manifest (edited or partially written); run `specra build` again                                                                                                        |
+| `RELEASE_MANIFEST_INVALID`              | Report: a retained release's manifest or component digests do not verify                                                                                                                                         |
+| `RELEASE_WRITE_FAILED`                  | Check permissions; remove a symlinked `.specra/releases` or version directory                                                                                                                                    |
+| `RELEASE_LOCKED`                        | Re-run: another release or catalog command holds the store lock                                                                                                                                                  |
+| `RELEASE_LIMIT_EXCEEDED`                | Fix: the catalog holds the maximum of 200 releases                                                                                                                                                               |
+| `DIFF_TRUNCATED`                        | Warning: more than 10,000 diff candidates; the file holds the first 10,000 in canonical order                                                                                                                    |
+| `REDIRECT_SOURCE_INVALID`               | Fix: a redirect `from` is not an internal unversioned path (`/`, `/docs/…`, `/api/…`)                                                                                                                            |
+| `REDIRECT_DESTINATION_INVALID`          | Fix: a redirect `to` is not an internal path with an optional anchor                                                                                                                                             |
+| `REDIRECT_SOURCE_DUPLICATE`             | Fix: two redirects share a source                                                                                                                                                                                |
+| `REDIRECT_SOURCE_SHADOWS_ROUTE`         | Fix: the source is a live route of this release                                                                                                                                                                  |
+| `REDIRECT_DESTINATION_NOT_FOUND`        | Fix: the destination is neither a route of this release nor another redirect source                                                                                                                              |
+| `REDIRECT_CYCLE`                        | Fix: redirects loop                                                                                                                                                                                              |
+| `CHANGELOG_INVALID`                     | Fix: `changelog/<version>.json` is not a valid changelog source (shape, kinds, dates, lengths, text characters)                                                                                                  |
+| `CHANGELOG_CANDIDATE_UNKNOWN`           | Fix: an item names a candidate id that the comparison did not produce                                                                                                                                            |
+| `CHANGELOG_CANDIDATE_UNREVIEWED`        | Fix: a diff candidate is neither described by an item nor listed under `omitted` (or the changelog file is missing while candidates exist)                                                                       |
+| `CHANGELOG_OPERATION_NOT_FOUND`         | Fix: an item's `operation` matches no operation of the release (or of the compared release for removals)                                                                                                         |
 | `CANCELLED`                             | Re-run when ready                                                                                                                                                                                                |
 | `INTERNAL_ERROR`                        | Re-run and report a reproducible failure without secrets                                                                                                                                                         |
 
@@ -180,7 +220,7 @@ Authored content and navigation codes (SPEC-006) are reported at `source/docs/<f
 Consumers can validate or build without spawning a process:
 
 ```typescript
-import { buildProject, validateProject } from "@specra/cli";
+import { buildProject, releaseProject, validateProject } from "@specra/cli";
 
 const controller = new AbortController();
 const result = await validateProject({
@@ -196,7 +236,16 @@ if (result.ok) {
 
 const built = await buildProject({ root: "./documentation" });
 if (built.ok) console.log(built.artifacts.files);
+
+const released = await releaseProject({
+  root: "./documentation",
+  version: "v2",
+  current: true,
+});
+if (released.ok) console.log(released.release.digest);
 ```
+
+`releaseProject`, `selectCurrentRelease`, and `deprecateRelease` mirror the three catalog commands with the same options and results as their `--json` output.
 
 `createBuildContext` exposes the configuration and path stage alone for future command composition; it performs no ingestion and returns a `ContextResult` that carries only the context. A successful `BuildContext` contains the canonical project/config paths, validated config v1, resolved source paths, fixed artifact root, and caller cancellation signal. It deliberately contains no parser, renderer, content compiler, terminal, or process-exit object. Successful `validateProject` and `buildProject` results add an `ingestion` summary (project-relative source paths with byte sizes and SHA-256 digests, plus statistics) and warning diagnostics; `buildProject` adds the artifact summary.
 

@@ -9,7 +9,6 @@ import {
   type ResponseView,
   type SecurityAlternativeView,
 } from "../../lib/reader/operation-view";
-import { API_ROOT } from "../../lib/reader/projection";
 import { CodeRail } from "./code/code-rail";
 import { CopyButton } from "./copy-button";
 import {
@@ -36,15 +35,22 @@ import {
  * inline after the header everywhere else without duplicating markup.
  */
 export function OperationPage({
+  apiRoot,
   code,
+  historical,
   playground,
   view,
 }: Readonly<{
+  /** Root of the reference routes for breadcrumbs (`/api` or `/api/<version>`). */
+  apiRoot: string;
   code?: CodeView | undefined;
+  /** Historical release: Try it is disabled; link to the current counterpart. */
+  historical?:
+    { readonly currentHref: string; readonly currentLabel: string } | undefined;
   playground?: PlaygroundView | undefined;
   view: OperationView;
 }>) {
-  const singleService = view.service.href === API_ROOT;
+  const singleService = view.service.href === apiRoot;
   return (
     <article
       className={`document__column operation${code === undefined ? "" : " operation--with-code"}`}
@@ -52,7 +58,7 @@ export function OperationPage({
       <div className="page-header operation__header">
         <Breadcrumb
           items={[
-            { href: API_ROOT, label: "API reference" },
+            { href: apiRoot, label: "API reference" },
             ...(singleService
               ? []
               : [{ href: view.service.href, label: view.service.name }]),
@@ -83,6 +89,7 @@ export function OperationPage({
       {code === undefined ? null : (
         <CodeRail
           action={view.summary.href}
+          historical={historical}
           playground={playground}
           view={code}
         />

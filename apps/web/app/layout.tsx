@@ -13,14 +13,18 @@ import "./styles/content.css";
 import "./styles/search.css";
 import "./styles/code.css";
 import "./styles/playground.css";
+import "./styles/versioning.css";
 
 import { Shell } from "../components/reader/shell";
-import { loadReaderArtifact } from "../lib/reader/artifact";
+import { loadReaderFor, versionSwitchTargets } from "../lib/reader/release";
 import { siteName, siteUrl } from "../lib/reader/metadata";
 import { THEME_COOKIE, readThemeMode, safeReturnPath } from "../lib/theme";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { content, index } = await loadReaderArtifact();
+  const requestHeaders = await headers();
+  const { content, index } = await loadReaderFor(
+    safeReturnPath(requestHeaders.get("x-specra-pathname") ?? "/"),
+  );
   const base = siteUrl(index);
   const favicon = content?.branding?.favicon;
   return {
@@ -46,11 +50,19 @@ function accentDeclaration(accent: string | undefined): string | undefined {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const [{ content, index, search }, cookieStore, requestHeaders] =
-    await Promise.all([loadReaderArtifact(), cookies(), headers()]);
-  const mode = readThemeMode(cookieStore.get(THEME_COOKIE)?.value);
+  const [cookieStore, requestHeaders] = await Promise.all([
+    cookies(),
+    headers(),
+  ]);
   const forwarded = requestHeaders.get("x-specra-pathname") ?? "/";
   const currentPath = safeReturnPath(forwarded);
+  const { content, index, roots, search, version } =
+    await loadReaderFor(currentPath);
+  const versionTargets =
+    version === undefined
+      ? []
+      : await versionSwitchTargets(currentPath, version.id);
+  const mode = readThemeMode(cookieStore.get(THEME_COOKIE)?.value);
   const nonce = nonceFrom(requestHeaders.get("content-security-policy"));
   const accent = accentDeclaration(content?.branding?.accent);
   return (
@@ -81,7 +93,10 @@ export default async function RootLayout({
           currentPath={currentPath}
           index={index}
           mode={mode}
+          roots={roots}
           searchPath={search?.path}
+          version={version}
+          versionTargets={versionTargets}
         >
           {children}
         </Shell>

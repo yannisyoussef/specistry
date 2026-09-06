@@ -49,6 +49,29 @@ export type DiagnosticCode =
   | "PLAYGROUND_ENVIRONMENT_NOT_FOUND"
   | "PLAYGROUND_ENVIRONMENT_ORIGIN_INVALID"
   | "PLAYGROUND_OPERATION_UNSUPPORTED"
+  | "VERSION_ID_INVALID"
+  | "VERSION_ALREADY_EXISTS"
+  | "VERSION_NOT_FOUND"
+  | "VERSION_IS_CURRENT"
+  | "CATALOG_INVALID"
+  | "CANDIDATE_MISSING"
+  | "CANDIDATE_INVALID"
+  | "RELEASE_MANIFEST_INVALID"
+  | "RELEASE_WRITE_FAILED"
+  | "RELEASE_LOCKED"
+  | "RELEASE_LIMIT_EXCEEDED"
+  | "DIFF_TRUNCATED"
+  | "REDIRECT_CYCLE"
+  | "REDIRECT_DESTINATION_INVALID"
+  | "REDIRECT_DESTINATION_NOT_FOUND"
+  | "REDIRECT_LIMIT_EXCEEDED"
+  | "REDIRECT_SOURCE_DUPLICATE"
+  | "REDIRECT_SOURCE_INVALID"
+  | "REDIRECT_SOURCE_SHADOWS_ROUTE"
+  | "CHANGELOG_CANDIDATE_UNKNOWN"
+  | "CHANGELOG_CANDIDATE_UNREVIEWED"
+  | "CHANGELOG_INVALID"
+  | "CHANGELOG_OPERATION_NOT_FOUND"
   | "SNIPPET_BODY_TRUNCATED"
   | "SNIPPET_HEADER_SKIPPED"
   | "SNIPPET_SERVER_UNUSABLE"
@@ -131,6 +154,8 @@ export interface BuildContext {
 }
 
 export interface ValidationOptions {
+  /** Comparison base for diff candidates on `build` (SPEC-010). */
+  readonly from?: string;
   readonly configTimeoutMs?: number;
   readonly sourceTimeoutMs?: number;
   readonly cwd?: string;
@@ -205,7 +230,68 @@ export interface ArtifactSummary {
 
 export type BuildSuccess = ValidationSuccess & {
   readonly artifacts: ArtifactSummary;
+  /** Structured diff candidates written to the private candidates directory (SPEC-010). */
+  readonly candidates?: {
+    readonly from: string;
+    readonly count: number;
+    readonly truncated: boolean;
+  };
 };
+
+export interface ReleaseOptions extends ValidationOptions {
+  readonly version: string;
+  /** Select the release as current after promotion. */
+  readonly current?: boolean;
+  /** Comparison base for diff candidates; defaults to the current release. */
+  readonly from?: string;
+  readonly noDiff?: boolean;
+  readonly label?: string;
+  readonly date?: string;
+}
+
+export interface ReleaseSummary {
+  readonly version: string;
+  readonly digest: string;
+  readonly current: string;
+  /** True when an identical release already existed (idempotent no-op). */
+  readonly unchanged: boolean;
+  readonly components: readonly string[];
+  readonly bytes: number;
+  readonly directory: string;
+  readonly changelog: boolean;
+  readonly from?: string;
+  readonly candidates?: number;
+}
+
+export type ReleaseResult =
+  | {
+      readonly context: BuildContext;
+      readonly diagnostics: readonly Diagnostic[];
+      readonly ok: true;
+      readonly outcome: "success";
+      readonly release: ReleaseSummary;
+    }
+  | FailureResult;
+
+export interface CatalogSummary {
+  readonly current: string;
+  readonly releases: readonly {
+    readonly version: string;
+    readonly digest: string;
+    readonly state: "deprecated" | "supported";
+    readonly changelog: boolean;
+  }[];
+}
+
+export type CatalogResult =
+  | {
+      readonly context: BuildContext;
+      readonly diagnostics: readonly Diagnostic[];
+      readonly ok: true;
+      readonly outcome: "success";
+      readonly catalog: CatalogSummary;
+    }
+  | FailureResult;
 
 export type BuildResult = BuildSuccess | FailureResult;
 

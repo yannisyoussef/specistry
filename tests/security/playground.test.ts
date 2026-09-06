@@ -41,6 +41,10 @@ describe("no proxy, no forwarding", () => {
       "apps/web/app/theme/route.ts",
       "apps/web/app/search/[name]/route.ts",
       "apps/web/app/assets/[name]/route.ts",
+      // SPEC-010: sitemap index and per-release sitemaps, rendered from the
+      // catalog and route tables; they fetch nothing.
+      "apps/web/app/sitemap.xml/route.ts",
+      "apps/web/app/sitemaps/[name]/route.ts",
     ]);
     for (const file of routes) {
       const relative = path.relative(root, file);

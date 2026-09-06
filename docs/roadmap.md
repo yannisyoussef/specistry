@@ -110,6 +110,7 @@ Each slice is a deployable or author-visible vertical increment. Its work item m
 - **Tests/security:** historical build reproducibility, cross-version links, redirect/open-redirect cases, sitemap/canonical SEO, diff semantics, unpublished-candidate isolation.
 - **Docs/DoD:** release/retention/migration/changelog workflow and operational guidance for the selected canonical-URL policy are complete.
 - **Dependencies/risks/reviewers:** SPEC-006 through SPEC-009; risks are duplicate indexing, stale links, and misleading diffs; Product/DX, SEO/frontend, OpenAPI, QA, security.
+- **Outcome:** implemented ([ADR-016](adr/016-immutable-documentation-releases.md), [versioning reference](versioning.md)): `specra release`/`current`/`deprecate`, an immutable release store with manifests and an explicit catalog, versioned self-canonical routes with 307 aliases and frozen 308 redirects, release-scoped reader loading, structured diff candidates under `.specra/candidates`, and the human-reviewed changelog; the structural diff port is what SPEC-011 consumes.
 
 ## SPEC-011 — Documentation quality gates and diff CLI
 

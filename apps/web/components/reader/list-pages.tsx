@@ -1,5 +1,4 @@
 import {
-  API_ROOT,
   type ReaderGroup,
   type ReaderIndex,
   type ReaderOperationSummary,
@@ -36,7 +35,7 @@ export function HomePage({ index }: Readonly<{ index: ReaderIndex }>) {
           <SafeText className="lede" text={description} />
         )}
         <div className="hero__actions">
-          <a className="button button--primary" href={API_ROOT}>
+          <a className="button button--primary" href={index.apiRoot}>
             API reference
           </a>
         </div>
@@ -129,15 +128,20 @@ export function ReferencePage({ index }: Readonly<{ index: ReaderIndex }>) {
 }
 
 export function ServicePage({
+  apiRoot,
   operationCount,
   service,
-}: Readonly<{ operationCount: number; service: ReaderService }>) {
+}: Readonly<{
+  apiRoot: string;
+  operationCount: number;
+  service: ReaderService;
+}>) {
   return (
     <article className="document__column">
       <div className="page-header">
         <Breadcrumb
           items={[
-            { href: API_ROOT, label: "API reference" },
+            { href: apiRoot, label: "API reference" },
             { label: service.name },
           ]}
         />
@@ -165,10 +169,12 @@ export function ServicePage({
 }
 
 export function GroupPage({
+  apiRoot,
   group,
   service,
   singleService,
 }: Readonly<{
+  apiRoot: string;
   group: ReaderGroup;
   service: ReaderService;
   singleService: boolean;
@@ -178,7 +184,7 @@ export function GroupPage({
       <div className="page-header">
         <Breadcrumb
           items={[
-            { href: API_ROOT, label: "API reference" },
+            { href: apiRoot, label: "API reference" },
             ...(singleService
               ? []
               : [{ href: service.href, label: service.name }]),

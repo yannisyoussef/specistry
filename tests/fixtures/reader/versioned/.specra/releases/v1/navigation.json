@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "items": [
+        {
+          "kind": "page",
+          "label": "Getting started",
+          "route": "/docs/getting-started"
+        },
+        {
+          "kind": "page",
+          "label": "Authentication",
+          "route": "/docs/authentication"
+        }
+      ],
+      "kind": "section",
+      "label": "Start"
+    },
+    {
+      "kind": "api",
+      "label": "API reference"
+    }
+  ],
+  "navigationVersion": 1
+}

@@ -1,0 +1,258 @@
+{
+  "contentVersion": 1,
+  "pages": [
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Welcome to "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "version 2"
+                }
+              ],
+              "kind": "strong"
+            },
+            {
+              "kind": "text",
+              "value": ". Start with the "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "quickstart"
+                }
+              ],
+              "href": "/docs/quickstart",
+              "kind": "link",
+              "target": "page"
+            },
+            {
+              "kind": "text",
+              "value": " and read\nabout "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "authentication"
+                }
+              ],
+              "href": "/docs/authentication",
+              "kind": "link",
+              "target": "page"
+            },
+            {
+              "kind": "text",
+              "value": ". Wait for a message with\n"
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Wait for message"
+                }
+              ],
+              "href": "/api/inboxes/wait-for-message",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "kind": "paragraph"
+        }
+      ],
+      "description": "Version 2 of the Versioned API.",
+      "headings": [],
+      "id": "",
+      "route": "/",
+      "slug": "",
+      "sourcePath": "docs/index.md",
+      "text": "Welcome to version 2. Start with the quickstart and read\nabout authentication. Wait for a message with\nWait for message.",
+      "title": "Versioned API docs"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Version 2 authenticates with "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "bearer tokens"
+                }
+              ],
+              "kind": "strong"
+            },
+            {
+              "kind": "text",
+              "value": " only. API keys were retired."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Tokens"
+            }
+          ],
+          "depth": 2,
+          "id": "tokens",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Send "
+            },
+            {
+              "kind": "code",
+              "value": "Authorization: Bearer <token>"
+            },
+            {
+              "kind": "text",
+              "value": " on every request."
+            }
+          ],
+          "kind": "paragraph"
+        }
+      ],
+      "description": "Bearer tokens in version 2.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "tokens",
+          "text": "Tokens"
+        }
+      ],
+      "id": "authentication",
+      "route": "/docs/authentication",
+      "slug": "authentication",
+      "sourcePath": "docs/authentication.md",
+      "text": "Version 2 authenticates with bearer tokens only. API keys were retired.TokensTokens\nSend Authorization: Bearer <token> on every request.",
+      "title": "Authentication"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Create an inbox"
+            }
+          ],
+          "depth": 2,
+          "id": "create-an-inbox",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Call "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Create inbox"
+                }
+              ],
+              "href": "/api/inboxes/create-inbox",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " with a label."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Wait for a message"
+            }
+          ],
+          "depth": 2,
+          "id": "wait-for-a-message",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Version 2 replaces polling with "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Wait for message"
+                }
+              ],
+              "href": "/api/inboxes/wait-for-message",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": ". The token keyword for search is "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "waterfall"
+                }
+              ],
+              "kind": "strong"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "kind": "paragraph"
+        }
+      ],
+      "description": "Create an inbox and wait for a message in version 2.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "create-an-inbox",
+          "text": "Create an inbox"
+        },
+        {
+          "depth": 2,
+          "id": "wait-for-a-message",
+          "text": "Wait for a message"
+        }
+      ],
+      "id": "quickstart",
+      "route": "/docs/quickstart",
+      "slug": "quickstart",
+      "sourcePath": "docs/quickstart.md",
+      "text": "Create an inboxCreate an inbox\nCall Create inbox with a label.Wait for a messageWait for a message\nVersion 2 replaces polling with Wait for message. The token keyword for search is waterfall.",
+      "title": "Quickstart"
+    }
+  ]
+}

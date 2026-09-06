@@ -31,6 +31,8 @@ export interface ReaderProject {
 
 export interface ReaderIndex {
   readonly project: ReaderProject;
+  /** Root of the reference routes: `/api`, or `/api/<version>` for a release. */
+  readonly apiRoot: string;
   readonly version: Pick<DocumentationVersion, "id" | "label" | "status">;
   readonly services: readonly ReaderService[];
   /** With one service, group and operation routes omit the service segment. */
@@ -91,8 +93,9 @@ export type RouteTarget =
 /** Builds the reader index for the current documentation version. */
 export function createReaderIndex(
   artifact: DocumentationArtifact,
+  apiRoot: string = API_ROOT,
 ): ReaderIndex {
-  const tree = buildApiRouteTree(artifact);
+  const tree = buildApiRouteTree(artifact, { apiRoot });
   const { version } = tree;
   const projected = tree.services.map((route): ReaderService => {
     const service = version.services.find((entry) => entry.id === route.id);
@@ -151,6 +154,7 @@ export function createReaderIndex(
   });
   const { project } = artifact.model;
   return {
+    apiRoot,
     operationCount: projected.reduce(
       (total, service) => total + service.operationCount,
       0,
@@ -177,7 +181,9 @@ export function resolveRoute(
   segments: readonly string[],
 ): RouteTarget | undefined {
   if (segments.some((segment) => !isSafeSegment(segment))) return undefined;
-  const version = buildApiRouteTree(artifact).version;
+  const version = buildApiRouteTree(artifact, {
+    apiRoot: index.apiRoot,
+  }).version;
   let rest = segments;
   let service: ReaderService | undefined;
   if (index.singleService) {

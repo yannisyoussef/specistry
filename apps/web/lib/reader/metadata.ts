@@ -1,5 +1,6 @@
 import type { ContentPage } from "@specra/content";
 import type { ReaderIndex, ReaderOperationSummary } from "./projection";
+import { LEGACY_ROOTS, type ReaderRoots } from "./scope";
 
 /**
  * Page metadata rules: every route gets a unique title in the form
@@ -21,14 +22,17 @@ export function siteName(index: ReaderIndex): string {
   return `${index.project.name} API`;
 }
 
-export function homeMetadata(index: ReaderIndex): PageMetadata {
+export function homeMetadata(
+  index: ReaderIndex,
+  roots: ReaderRoots = LEGACY_ROOTS,
+): PageMetadata {
   return {
     description: summarize(
       index.project.description ??
         index.services[0]?.description ??
         `${index.project.name} API reference: ${index.operationCount} documented operations.`,
     ),
-    path: "/",
+    path: roots.home,
     title: siteName(index),
   };
 }
@@ -38,7 +42,7 @@ export function referenceMetadata(index: ReaderIndex): PageMetadata {
     description: summarize(
       `API reference for ${index.project.name}: ${index.operationCount} operations across ${index.services.reduce((total, service) => total + service.groups.length, 0)} groups.`,
     ),
-    path: "/api",
+    path: index.apiRoot,
     title: `API reference | ${siteName(index)}`,
   };
 }
@@ -148,8 +152,13 @@ export function pageMetadata(
 export function indexablePaths(
   index: ReaderIndex,
   authored: readonly string[] = [],
+  roots: ReaderRoots = LEGACY_ROOTS,
 ): readonly string[] {
-  const paths = [...(authored.includes("/") ? [] : ["/"]), ...authored, "/api"];
+  const paths = [
+    ...(authored.includes(roots.home) ? [] : [roots.home]),
+    ...authored,
+    index.apiRoot,
+  ];
   for (const service of index.services) {
     if (!index.singleService) paths.push(service.href);
     for (const group of service.groups) {

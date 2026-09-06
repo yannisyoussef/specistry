@@ -2,10 +2,17 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 
-import { GroupPage, ServicePage } from "../../../components/reader/list-pages";
+import {
+  GroupPage,
+  ReferencePage,
+  ServicePage,
+} from "../../../components/reader/list-pages";
 import { OperationPage } from "../../../components/reader/operation-page";
 import { SchemaFocusPage } from "../../../components/reader/schema/schema-focus-page";
-import { loadReaderArtifact } from "../../../lib/reader/artifact";
+import {
+  loadReaderArtifact,
+  type ReaderArtifact,
+} from "../../../lib/reader/artifact";
 import { createCodeView, type CodeView } from "../../../lib/reader/code-view";
 import {
   groupMetadata,
@@ -21,6 +28,13 @@ import {
 } from "../../../lib/reader/operation-view";
 import { createPlaygroundView } from "../../../lib/reader/playground-view";
 import { resolveRoute, type RouteTarget } from "../../../lib/reader/projection";
+import {
+  loadReaderRelease,
+  readerMode,
+  versionOfPath,
+  versionSwitchTargets,
+} from "../../../lib/reader/release";
+import { referenceMetadata } from "../../../lib/reader/metadata";
 import {
   createSchemaView,
   LOCATOR_PATTERN,
@@ -79,11 +93,38 @@ function resolveFocus(
   return { block, target, view };
 }
 
+/**
+ * The artifact set for `/api/<segments>`: the candidate, or in release
+ * mode the release named by the first segment (SPEC-010 §20, §22). The
+ * remaining segments are the reference route inside that release.
+ */
+const readerFor = cache(
+  async (
+    key: string,
+  ): Promise<
+    { reader: ReaderArtifact; rest: readonly string[] } | undefined
+  > => {
+    const segments = key === "" ? [] : key.split("/");
+    if ((await readerMode()) === "candidate") {
+      return { reader: await loadReaderArtifact(), rest: segments };
+    }
+    const version = await versionOfPath(`/api/${key}`);
+    if (version === undefined || segments[0] !== version) return undefined;
+    return {
+      reader: await loadReaderRelease(version),
+      rest: segments.slice(1),
+    };
+  },
+);
+
 // Metadata and the page resolve the same route once per request.
 const resolveSegments = cache(
-  async (key: string): Promise<RouteTarget | undefined> => {
-    const { artifact, index } = await loadReaderArtifact();
-    return resolveRoute(index, artifact, key === "" ? [] : key.split("/"));
+  async (key: string): Promise<RouteTarget | "index" | undefined> => {
+    const scoped = await readerFor(key);
+    if (scoped === undefined) return undefined;
+    if (scoped.rest.length === 0) return "index";
+    const { artifact, index } = scoped.reader;
+    return resolveRoute(index, artifact, scoped.rest);
   },
 );
 
@@ -95,10 +136,11 @@ const operationViewFor = cache(
 
 /** The Code rail for the operation and the validated `env`/`body`/`auth` query. */
 async function codeViewFor(
+  key: string,
   operation: OperationView,
   query: Record<string, string | string[] | undefined>,
 ): Promise<CodeView | undefined> {
-  const { snippets } = await loadReaderArtifact();
+  const snippets = (await readerFor(key))?.reader.snippets;
   if (snippets === undefined) return undefined;
   return createCodeView(snippets, operation, {
     auth: query.auth,
@@ -107,22 +149,38 @@ async function codeViewFor(
   });
 }
 
-async function resolve(params: Params["params"]): Promise<RouteTarget> {
+async function resolve(params: Params["params"]): Promise<{
+  key: string;
+  reader: ReaderArtifact;
+  target: RouteTarget | "index";
+}> {
   const { segments } = await params;
-  const target = await resolveSegments(segments.join("/"));
+  const key = segments.join("/");
+  const target = await resolveSegments(key);
+  const scoped = await readerFor(key);
   // Unknown routes are normally rewritten to the 404 page by proxy.ts; this
   // remains the fallback when the proxy did not run.
-  if (target === undefined) notFound();
-  return target;
+  if (target === undefined || scoped === undefined) notFound();
+  return { key, reader: scoped.reader, target };
 }
 
 export async function generateMetadata({
   params,
   searchParams,
 }: Params): Promise<Metadata> {
-  const target = await resolve(params);
-  const { index } = await loadReaderArtifact();
+  const { key, reader, target } = await resolve(params);
+  const { index } = reader;
   let metadata: PageMetadata;
+  if (target === "index") {
+    metadata = referenceMetadata(index);
+    return {
+      ...(siteUrl(index) === undefined
+        ? {}
+        : { alternates: { canonical: metadata.path } }),
+      description: metadata.description,
+      title: metadata.title,
+    };
+  }
   if (target.kind === "operation") {
     const query = await searchParams;
     if (query.schema !== undefined) {
@@ -166,6 +224,7 @@ export async function generateMetadata({
         target.operation.description,
       );
       const code = await codeViewFor(
+        key,
         operationViewFor(target),
         await searchParams,
       );
@@ -186,8 +245,9 @@ export async function generateMetadata({
 }
 
 export default async function ApiRoute({ params, searchParams }: Params) {
-  const target = await resolve(params);
-  const { index } = await loadReaderArtifact();
+  const { key, reader, target } = await resolve(params);
+  const { index } = reader;
+  if (target === "index") return <ReferencePage index={index} />;
   if (target.kind === "operation") {
     const query = await searchParams;
     if (query.schema !== undefined) {
@@ -197,6 +257,7 @@ export default async function ApiRoute({ params, searchParams }: Params) {
       if (focus !== undefined) {
         return (
           <SchemaFocusPage
+            apiRoot={index.apiRoot}
             block={focus.block}
             context={focus.block.context}
             operation={operation}
@@ -211,6 +272,7 @@ export default async function ApiRoute({ params, searchParams }: Params) {
     case "service":
       return (
         <ServicePage
+          apiRoot={index.apiRoot}
           operationCount={index.operationCount}
           service={target.service}
         />
@@ -218,6 +280,7 @@ export default async function ApiRoute({ params, searchParams }: Params) {
     case "group":
       return (
         <GroupPage
+          apiRoot={index.apiRoot}
           group={target.group}
           service={target.service}
           singleService={index.singleService}
@@ -225,11 +288,35 @@ export default async function ApiRoute({ params, searchParams }: Params) {
       );
     case "operation": {
       const view = operationViewFor(target);
-      const { playground } = await loadReaderArtifact();
+      // Historical releases never execute (SPEC-010 §43): only the current
+      // release's own policy reaches the island.
+      const historical =
+        reader.version !== undefined && !reader.version.current;
+      let counterpart:
+        { currentHref: string; currentLabel: string } | undefined;
+      if (historical && reader.version !== undefined) {
+        const targets = await versionSwitchTargets(
+          view.summary.href,
+          reader.version.id,
+        );
+        const current = targets.find(
+          (entry) => entry.id === reader.version?.currentId,
+        );
+        counterpart = {
+          currentHref: current?.href ?? `/docs/${reader.version.currentId}`,
+          currentLabel: reader.version.currentLabel,
+        };
+      }
       return (
         <OperationPage
-          code={await codeViewFor(view, await searchParams)}
-          playground={createPlaygroundView(playground, view)}
+          apiRoot={index.apiRoot}
+          code={await codeViewFor(key, view, await searchParams)}
+          historical={counterpart}
+          playground={
+            historical
+              ? undefined
+              : createPlaygroundView(reader.playground, view)
+          }
           view={view}
         />
       );

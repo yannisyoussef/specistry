@@ -24,8 +24,11 @@ import {
 } from "@specra/playground";
 import { parseSnippetsArtifact, type SnippetsArtifact } from "@specra/snippets";
 
+import type { ReleaseManifest } from "@specra/release";
+
 import { createReaderContent, type ReaderContent } from "./content";
 import { createReaderIndex, type ReaderIndex } from "./projection";
+import { LEGACY_ROOTS, type ReaderRoots, type ReaderVersion } from "./scope";
 
 /**
  * The reader's only input: the artifact directory written by `specra build`.
@@ -52,6 +55,17 @@ export interface ReaderArtifact {
   readonly playground?: ReaderPlayground;
   /** Project-relative artifact directory; never an absolute machine path. */
   readonly directory: string;
+  /** Route roots this artifact set is served under (SPEC-010). */
+  readonly roots: ReaderRoots;
+  /** The release being served; absent in candidate (unversioned) mode. */
+  readonly version?: ReaderVersion;
+}
+
+export interface ArtifactSetOptions {
+  readonly roots: ReaderRoots;
+  readonly version?: ReaderVersion;
+  /** When set, every component is verified against the release manifest before parsing. */
+  readonly release?: ReleaseManifest;
 }
 
 export interface ReaderSearch {
@@ -120,35 +134,64 @@ export function resetReaderArtifactCache(): void {
 export async function readReaderArtifact(
   root: string,
 ): Promise<ReaderArtifact> {
-  const directory = path.join(root, ARTIFACT_DIRECTORY);
-  const hint = `Run \`specra build\` in the project (${PROJECT_ROOT_VARIABLE} currently resolves to the ${
-    process.env[PROJECT_ROOT_VARIABLE] ? "configured root" : "working directory"
-  }) and rebuild the reader.`;
-  const manifestText = await readArtifactFile(
-    directory,
-    ARTIFACT_MANIFEST_FILENAME,
-    hint,
+  return await readArtifactSet(
+    path.join(root, ARTIFACT_DIRECTORY),
+    ARTIFACT_DIRECTORY,
+    {
+      roots: LEGACY_ROOTS,
+    },
   );
+}
+
+/**
+ * Reads one artifact set (the candidate, or a release directory). With a
+ * release manifest, each component's bytes must match the recorded digest
+ * and size before it is parsed, so a component swapped in from another
+ * release is refused even when it is well-formed on its own.
+ */
+export async function readArtifactSet(
+  absolute: string,
+  directory: string,
+  options: ArtifactSetOptions,
+): Promise<ReaderArtifact> {
+  const hint =
+    options.release === undefined
+      ? `Run \`specra build\` in the project (${PROJECT_ROOT_VARIABLE} currently resolves to the ${
+          process.env[PROJECT_ROOT_VARIABLE]
+            ? "configured root"
+            : "working directory"
+        }) and rebuild the reader.`
+      : "Restore the release store from backup or re-run `specra release`; the reader never falls back to another version.";
+  const files = new ArtifactFiles(absolute, directory, hint, options.release);
+  const manifestText = await files.read(ARTIFACT_MANIFEST_FILENAME, "manifest");
   let manifest: ArtifactManifest;
   try {
     manifest = parseArtifactManifest(manifestText);
   } catch (error) {
     throw new ReaderArtifactError(
-      `The artifact manifest in ${ARTIFACT_DIRECTORY} is not a supported Specra manifest (${describe(error)}).`,
+      `The artifact manifest in ${directory} is not a supported Specra manifest (${describe(error)}).`,
       hint,
     );
   }
-  const documentationText = await readArtifactFile(
-    directory,
+  if (
+    options.release !== undefined &&
+    manifest.project.id !== options.release.project.id
+  ) {
+    throw new ReaderArtifactError(
+      `The release manifest in ${directory} describes project "${options.release.project.id}" but the artifact manifest belongs to "${manifest.project.id}".`,
+      hint,
+    );
+  }
+  const documentationText = await files.read(
     manifest.files.documentation,
-    hint,
+    "documentation",
   );
   let artifact: DocumentationArtifact;
   try {
     artifact = parseDocumentationArtifact(documentationText);
   } catch (error) {
     throw new ReaderArtifactError(
-      `The canonical artifact ${ARTIFACT_DIRECTORY}/${manifest.files.documentation} failed model validation (${describe(error)}).`,
+      `The canonical artifact ${directory}/${manifest.files.documentation} failed model validation (${describe(error)}).`,
       hint,
     );
   }
@@ -173,20 +216,80 @@ export async function readReaderArtifact(
       hint,
     );
   }
-  const content = await readContent(directory, manifest, hint);
-  const search = await readSearch(directory, manifest, hint);
-  const snippets = await readSnippets(directory, manifest, hint);
-  const playground = await readPlayground(directory, manifest, hint);
+  const content = await readContent(
+    files,
+    directory,
+    manifest,
+    hint,
+    options.roots,
+  );
+  const search = await readSearch(files, directory, manifest, hint);
+  const snippets = await readSnippets(files, directory, manifest, hint);
+  const playground = await readPlayground(files, directory, manifest, hint);
   return {
     artifact,
     ...(content === undefined ? {} : { content }),
-    directory: ARTIFACT_DIRECTORY,
-    index: createReaderIndex(artifact),
+    directory,
+    index: createReaderIndex(artifact, options.roots.api),
     manifest,
     ...(playground === undefined ? {} : { playground }),
+    roots: options.roots,
     ...(search === undefined ? {} : { search }),
     ...(snippets === undefined ? {} : { snippets }),
+    ...(options.version === undefined ? {} : { version: options.version }),
   };
+}
+
+type ComponentName =
+  | "content"
+  | "documentation"
+  | "manifest"
+  | "navigation"
+  | "playground"
+  | "search"
+  | "snippets";
+
+/** Reads artifact files and, for a release, verifies them against its manifest first. */
+class ArtifactFiles {
+  public constructor(
+    private readonly absolute: string,
+    private readonly directory: string,
+    private readonly hint: string,
+    private readonly release: ReleaseManifest | undefined,
+  ) {}
+
+  public async read(name: string, component: ComponentName): Promise<string> {
+    let text: string;
+    try {
+      text = await readFile(path.join(this.absolute, name), "utf8");
+    } catch (error) {
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? String((error as { code: unknown }).code)
+          : "unknown";
+      throw new ReaderArtifactError(
+        code === "ENOENT"
+          ? `No canonical artifact was found at ${this.directory}/${name}.`
+          : `The canonical artifact ${this.directory}/${name} could not be read (${code}).`,
+        this.hint,
+      );
+    }
+    if (this.release !== undefined) {
+      const record = this.release.components[component];
+      if (
+        record === undefined ||
+        record.file !== name ||
+        record.bytes !== Buffer.byteLength(text, "utf8") ||
+        record.sha256 !== createHash("sha256").update(text).digest("hex")
+      ) {
+        throw new ReaderArtifactError(
+          `The release component ${this.directory}/${name} does not match the release manifest; the release set is inconsistent.`,
+          this.hint,
+        );
+      }
+    }
+    return text;
+  }
 }
 
 /**
@@ -196,6 +299,7 @@ export async function readReaderArtifact(
  * offers a single environment or widens the CSP by one origin.
  */
 async function readPlayground(
+  files: ArtifactFiles,
   directory: string,
   manifest: ArtifactManifest,
   hint: string,
@@ -206,18 +310,14 @@ async function readPlayground(
   ) {
     return undefined;
   }
-  const text = await readArtifactFile(
-    directory,
-    manifest.files.playground,
-    hint,
-  );
+  const text = await files.read(manifest.files.playground, "playground");
   const sha256 = createHash("sha256").update(text).digest("hex");
   if (
     sha256 !== manifest.playground.sha256 ||
     Buffer.byteLength(text, "utf8") !== manifest.playground.bytes
   ) {
     throw new ReaderArtifactError(
-      `The playground artifact ${ARTIFACT_DIRECTORY}/${manifest.files.playground} does not match the digest recorded in the manifest.`,
+      `The playground artifact ${directory}/${manifest.files.playground} does not match the digest recorded in the manifest.`,
       hint,
     );
   }
@@ -229,7 +329,7 @@ async function readPlayground(
       Object.keys(artifact.operations).length !== manifest.playground.operations
     ) {
       throw new ReaderArtifactError(
-        `The artifact manifest and the playground artifact ${ARTIFACT_DIRECTORY}/${manifest.files.playground} disagree about environments or operations.`,
+        `The artifact manifest and the playground artifact ${directory}/${manifest.files.playground} disagree about environments or operations.`,
         hint,
       );
     }
@@ -244,7 +344,7 @@ async function readPlayground(
   } catch (error) {
     if (error instanceof ReaderArtifactError) throw error;
     throw new ReaderArtifactError(
-      `The playground artifact ${ARTIFACT_DIRECTORY}/${manifest.files.playground} failed validation (${describe(error)}).`,
+      `The playground artifact ${directory}/${manifest.files.playground} failed validation (${describe(error)}).`,
       hint,
     );
   }
@@ -256,6 +356,7 @@ async function readPlayground(
  * counts and pass the strict parser before any example is generated from it.
  */
 async function readSnippets(
+  files: ArtifactFiles,
   directory: string,
   manifest: ArtifactManifest,
   hint: string,
@@ -266,14 +367,14 @@ async function readSnippets(
   ) {
     return undefined;
   }
-  const text = await readArtifactFile(directory, manifest.files.snippets, hint);
+  const text = await files.read(manifest.files.snippets, "snippets");
   const sha256 = createHash("sha256").update(text).digest("hex");
   if (
     sha256 !== manifest.snippets.sha256 ||
     Buffer.byteLength(text, "utf8") !== manifest.snippets.bytes
   ) {
     throw new ReaderArtifactError(
-      `The snippets artifact ${ARTIFACT_DIRECTORY}/${manifest.files.snippets} does not match the digest recorded in the manifest.`,
+      `The snippets artifact ${directory}/${manifest.files.snippets} does not match the digest recorded in the manifest.`,
       hint,
     );
   }
@@ -297,7 +398,7 @@ async function readSnippets(
   } catch (error) {
     if (error instanceof ReaderArtifactError) throw error;
     throw new ReaderArtifactError(
-      `The snippets artifact ${ARTIFACT_DIRECTORY}/${manifest.files.snippets} failed validation (${describe(error)}).`,
+      `The snippets artifact ${directory}/${manifest.files.snippets} failed validation (${describe(error)}).`,
       hint,
     );
   }
@@ -310,6 +411,7 @@ async function readSnippets(
  * with fresh content. The reader serves the bytes it validated here.
  */
 async function readSearch(
+  files: ArtifactFiles,
   directory: string,
   manifest: ArtifactManifest,
   hint: string,
@@ -317,14 +419,14 @@ async function readSearch(
   if (manifest.files.search === undefined || manifest.search === undefined) {
     return undefined;
   }
-  const text = await readArtifactFile(directory, manifest.files.search, hint);
+  const text = await files.read(manifest.files.search, "search");
   const sha256 = createHash("sha256").update(text).digest("hex");
   if (
     sha256 !== manifest.search.sha256 ||
     Buffer.byteLength(text, "utf8") !== manifest.search.bytes
   ) {
     throw new ReaderArtifactError(
-      `The search artifact ${ARTIFACT_DIRECTORY}/${manifest.files.search} does not match the digest recorded in the manifest.`,
+      `The search artifact ${directory}/${manifest.files.search} does not match the digest recorded in the manifest.`,
       hint,
     );
   }
@@ -344,7 +446,7 @@ async function readSearch(
   } catch (error) {
     if (error instanceof ReaderArtifactError) throw error;
     throw new ReaderArtifactError(
-      `The search artifact ${ARTIFACT_DIRECTORY}/${manifest.files.search} failed validation (${describe(error)}).`,
+      `The search artifact ${directory}/${manifest.files.search} failed validation (${describe(error)}).`,
       hint,
     );
   }
@@ -356,9 +458,11 @@ async function readSearch(
  * cross-checked against the manifest's page count before any page renders.
  */
 async function readContent(
+  files: ArtifactFiles,
   directory: string,
   manifest: ArtifactManifest,
   hint: string,
+  roots: ReaderRoots,
 ): Promise<ReaderContent | undefined> {
   if (
     manifest.files.content === undefined ||
@@ -375,15 +479,10 @@ async function readContent(
     }
     return undefined;
   }
-  const contentText = await readArtifactFile(
-    directory,
-    manifest.files.content,
-    hint,
-  );
-  const navigationText = await readArtifactFile(
-    directory,
+  const contentText = await files.read(manifest.files.content, "content");
+  const navigationText = await files.read(
     manifest.files.navigation,
-    hint,
+    "navigation",
   );
   try {
     const content = parseContentArtifact(contentText);
@@ -397,32 +496,16 @@ async function readContent(
         hint,
       );
     }
-    return createReaderContent(content.pages, navigation, manifest.branding);
+    return createReaderContent(
+      content.pages,
+      navigation,
+      manifest.branding,
+      roots,
+    );
   } catch (error) {
     if (error instanceof ReaderArtifactError) throw error;
     throw new ReaderArtifactError(
-      `The authored content artifacts in ${ARTIFACT_DIRECTORY} failed validation (${describe(error)}).`,
-      hint,
-    );
-  }
-}
-
-async function readArtifactFile(
-  directory: string,
-  name: string,
-  hint: string,
-): Promise<string> {
-  try {
-    return await readFile(path.join(directory, name), "utf8");
-  } catch (error) {
-    const code =
-      typeof error === "object" && error !== null && "code" in error
-        ? String((error as { code: unknown }).code)
-        : "unknown";
-    throw new ReaderArtifactError(
-      code === "ENOENT"
-        ? `No canonical artifact was found at ${ARTIFACT_DIRECTORY}/${name}.`
-        : `The canonical artifact ${ARTIFACT_DIRECTORY}/${name} could not be read (${code}).`,
+      `The authored content artifacts in ${directory} failed validation (${describe(error)}).`,
       hint,
     );
   }

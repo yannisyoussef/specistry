@@ -1,9 +1,15 @@
+import type { CommandName } from "./arguments.js";
 import {
   ARTIFACT_DIRECTORY,
   type BuildResult,
+  type CatalogResult,
   type Diagnostic,
+  type ReleaseResult,
   type ValidationResult,
 } from "./contracts.js";
+
+type CommandResult =
+  BuildResult | CatalogResult | ReleaseResult | ValidationResult;
 
 export const ROOT_HELP = `Specra — deterministic developer documentation tooling
 
@@ -12,7 +18,10 @@ Usage:
 
 Commands:
   validate   Validate configuration, project paths, and OpenAPI sources
-  build      Validate and write the canonical documentation artifact
+  build      Validate and write the candidate documentation artifact
+  release    Promote the candidate into an immutable documentation release
+  current    Select the release the current aliases point to
+  deprecate  Mark a retained release as deprecated
 
 Run 'specra <command> --help' for command options.
 `;
@@ -47,23 +56,137 @@ Usage:
   specra build [options]
 
 ${COMMON_OPTIONS}
+  --from <version>              Compare the candidate with this retained release
+                                (default: the current release, when one exists)
+
 Build performs the same validation and then writes documentation.json,
 manifest.json, search.json, snippets.json, playground.json, and any content artifacts
 atomically to ${ARTIFACT_DIRECTORY}. A failed build removes any
 previous artifact directory so stale output never represents the current input.
+The artifact is a mutable candidate: rebuild as often as you like. When the
+project has released versions, build also writes structured diff candidates to
+.specra/candidates/diff.json for changelog review; they are never served.
 
 Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelled.
 `;
 
+export const RELEASE_HELP = `Promote the candidate artifact into an immutable documentation release
+
+Usage:
+  specra release <version> [options]
+
+${COMMON_OPTIONS}
+  --current                     Select the new release as current
+  --from <version>              Compare with this retained release for the
+                                changelog review (default: the current release)
+  --no-diff                     Release without a comparison base
+  --label <text>                Display label for the version selector
+  --date <YYYY-MM-DD>           Author-provided release date
+
+The version id is a documentation release identity (v1, v1.2, 2026-09): letters,
+digits, dots, underscores, and hyphens, never a reserved name. Release verifies
+the candidate in ${ARTIFACT_DIRECTORY} against its manifest, derives the route
+table and the configured redirects, validates changelog/<version>.json against
+the structured diff candidates, stages the exact bytes, and promotes them with
+one atomic rename into .specra/releases/<version>. An identical release is an
+idempotent no-op; a different one fails: releases are immutable. The first
+release becomes current; later ones only with --current.
+
+Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelled.
+`;
+
+export const CURRENT_HELP = `Select the release the current aliases point to
+
+Usage:
+  specra current <version> [options]
+
+${COMMON_OPTIONS}
+Rewrites only the catalog pointer under .specra/releases/catalog.json; no
+release content changes. /, /docs, and /api redirect non-permanently to the
+selected release, and pointing back to an older release is a documentation
+rollback.
+
+Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelled.
+`;
+
+export const DEPRECATE_HELP = `Mark a retained release as deprecated
+
+Usage:
+  specra deprecate <version> [options]
+
+${COMMON_OPTIONS}
+Sets the catalog lifecycle state; the reader labels the release and shows a
+deprecation notice on its pages. The current release cannot be deprecated and
+nothing is deleted.
+
+Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelled.
+`;
+
+export const COMMAND_HELP: Readonly<Record<CommandName, string>> = {
+  build: BUILD_HELP,
+  current: CURRENT_HELP,
+  deprecate: DEPRECATE_HELP,
+  release: RELEASE_HELP,
+  validate: VALIDATE_HELP,
+};
+
+const FAILURE_TITLES: Readonly<Record<CommandName, string>> = {
+  build: "Specra build failed",
+  current: "Specra current selection failed",
+  deprecate: "Specra deprecation failed",
+  release: "Specra release failed",
+  validate: "Specra validation failed",
+};
+
 export function formatHumanResult(
-  result: BuildResult | ValidationResult,
-  command: "build" | "validate" = "validate",
+  result: CommandResult,
+  command: CommandName = "validate",
 ): string {
   if (!result.ok) {
     const lines = [
-      command === "build" ? "Specra build failed" : "Specra validation failed",
+      FAILURE_TITLES[command],
       "",
       ...formatDiagnostics(result.diagnostics),
+      "",
+    ];
+    return lines.join("\n");
+  }
+  if ("release" in result) {
+    const { release } = result;
+    const lines = [
+      release.unchanged
+        ? `Specra release ${sanitizeTerminal(release.version)} already exists with identical content; nothing changed.`
+        : `Specra release ${sanitizeTerminal(release.version)} promoted.`,
+      `Project: ${sanitizeTerminal(result.context.config.name)}`,
+      `Release: ${release.directory} (${release.components.join(", ")}; ${release.bytes} bytes)`,
+      `Identity: ${release.digest}`,
+      `Current: ${sanitizeTerminal(release.current)}`,
+      release.from === undefined
+        ? "Diff candidates: none (no comparison base)"
+        : `Diff candidates: ${release.candidates ?? 0} compared with ${sanitizeTerminal(release.from)}`,
+      `Changelog: ${release.changelog ? "published" : "none"}`,
+    ];
+    if (result.diagnostics.length > 0) {
+      lines.push(
+        "",
+        `Warnings (${result.diagnostics.length}):`,
+        ...formatDiagnostics(result.diagnostics),
+      );
+    }
+    lines.push("");
+    return lines.join("\n");
+  }
+  if ("catalog" in result) {
+    const { catalog } = result;
+    const lines = [
+      command === "deprecate"
+        ? "Specra release deprecated."
+        : "Specra current release selected.",
+      `Current: ${sanitizeTerminal(catalog.current)}`,
+      ...catalog.releases.map(
+        (release) =>
+          `  ${sanitizeTerminal(release.version)}${release.version === catalog.current ? " (current)" : ""} · ${release.state}${release.changelog ? " · changelog" : ""}`,
+      ),
       "",
     ];
     return lines.join("\n");
@@ -84,6 +207,11 @@ export function formatHumanResult(
     lines.push(
       `Artifacts: ${result.artifacts.directory} (${result.artifacts.files.join(", ")}; ${result.artifacts.bytes} bytes)`,
     );
+    if (result.candidates !== undefined) {
+      lines.push(
+        `Diff candidates: ${result.candidates.count} compared with ${sanitizeTerminal(result.candidates.from)}${result.candidates.truncated ? " (truncated)" : ""} in .specra/candidates/diff.json`,
+      );
+    }
   } else {
     lines.push(`Artifacts: ${ARTIFACT_DIRECTORY}`);
   }
@@ -98,9 +226,7 @@ export function formatHumanResult(
   return lines.join("\n");
 }
 
-export function formatJsonResult(
-  result: BuildResult | ValidationResult,
-): string {
+export function formatJsonResult(result: CommandResult): string {
   const diagnostics = result.diagnostics.map((diagnostic) => ({
     code: diagnostic.code,
     ...(diagnostic.column === undefined ? {} : { column: diagnostic.column }),
@@ -109,6 +235,12 @@ export function formatJsonResult(
     ...(diagnostic.path === undefined ? {} : { path: diagnostic.path }),
     severity: diagnostic.severity,
   }));
+  if (result.ok && "release" in result) {
+    return `${JSON.stringify({ diagnostics, ok: true, release: result.release })}\n`;
+  }
+  if (result.ok && "catalog" in result) {
+    return `${JSON.stringify({ catalog: result.catalog, diagnostics, ok: true })}\n`;
+  }
   const output = result.ok
     ? {
         artifacts:
@@ -119,6 +251,9 @@ export function formatJsonResult(
                 files: result.artifacts.files,
               }
             : { directory: ARTIFACT_DIRECTORY },
+        ...("candidates" in result && result.candidates !== undefined
+          ? { candidates: result.candidates }
+          : {}),
         content: result.content,
         diagnostics,
         ok: true,

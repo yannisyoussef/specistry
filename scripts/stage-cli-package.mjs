@@ -41,6 +41,7 @@ const stagedDependencies = [
   "@specra/model",
   "@specra/openapi",
   "@specra/playground",
+  "@specra/release",
   "@specra/search",
   "@specra/snippets",
   "zod",
@@ -68,6 +69,7 @@ const workspacePackages = [
   "model",
   "openapi",
   "playground",
+  "release",
   "search",
   "snippets",
 ];
@@ -189,6 +191,7 @@ const stagedCliManifest = {
     "@specra/model": manifests.model.version,
     "@specra/openapi": manifests.openapi.version,
     "@specra/playground": manifests.playground.version,
+    "@specra/release": manifests.release.version,
     "@specra/search": manifests.search.version,
     "@specra/snippets": manifests.snippets.version,
     zod: cliManifest.dependencies.zod,

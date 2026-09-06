@@ -26,6 +26,9 @@ importers:
       '@specra/playground':
         specifier: workspace:*
         version: link:packages/playground
+      '@specra/release':
+        specifier: workspace:*
+        version: link:packages/release
       '@specra/search':
         specifier: workspace:*
         version: link:packages/search
@@ -107,6 +110,9 @@ importers:
       '@specra/playground':
         specifier: workspace:*
         version: link:../../packages/playground
+      '@specra/release':
+        specifier: workspace:*
+        version: link:../../packages/release
       '@specra/search':
         specifier: workspace:*
         version: link:../../packages/search
@@ -153,6 +159,9 @@ importers:
       '@specra/playground':
         specifier: workspace:*
         version: link:../playground
+      '@specra/release':
+        specifier: workspace:*
+        version: link:../release
       '@specra/search':
         specifier: workspace:*
         version: link:../search
@@ -251,6 +260,19 @@ importers:
       '@specra/snippets':
         specifier: workspace:*
         version: link:../snippets
+    devDependencies:
+      '@types/node':
+        specifier: 24.13.3
+        version: 24.13.3
+
+  packages/release:
+    dependencies:
+      '@specra/content':
+        specifier: workspace:*
+        version: link:../content
+      '@specra/model':
+        specifier: workspace:*
+        version: link:../model
     devDependencies:
       '@types/node':
         specifier: 24.13.3

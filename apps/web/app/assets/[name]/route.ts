@@ -9,6 +9,7 @@ import {
   loadReaderArtifact,
   projectRoot,
 } from "../../../lib/reader/artifact";
+import { readerMode, releaseForAsset } from "../../../lib/reader/release";
 
 /**
  * Serves documentation assets copied by `specra build`. The name must be a
@@ -35,10 +36,13 @@ export async function GET(
 ): Promise<NextResponse> {
   const { name } = await context.params;
   if (!ASSET_NAME.test(name)) return new NextResponse(null, { status: 404 });
-  const { manifest } = await loadReaderArtifact();
-  const record = manifest.assets?.find(
-    (asset) => asset.path === `${ARTIFACT_ASSETS_DIRECTORY}/${name}`,
-  );
+  // Assets are content-addressed, so in release mode any retained release
+  // that lists the name may serve it (SPEC-010 §68); identical names mean
+  // identical bytes, and the size is checked against the release manifest.
+  const record =
+    (await readerMode()) === "candidate"
+      ? candidateAsset(await loadReaderArtifact(), name)
+      : await releaseForAsset(name);
   if (record === undefined) return new NextResponse(null, { status: 404 });
   const extension = name.slice(name.lastIndexOf(".") + 1);
   let bytes: Buffer;
@@ -46,7 +50,7 @@ export async function GET(
     bytes = await readFile(
       path.join(
         projectRoot(),
-        ARTIFACT_DIRECTORY,
+        record.directory,
         ARTIFACT_ASSETS_DIRECTORY,
         name,
       ),
@@ -68,4 +72,16 @@ export async function GET(
     "x-content-type-options": "nosniff",
   };
   return new NextResponse(new Uint8Array(bytes), { headers, status: 200 });
+}
+
+function candidateAsset(
+  reader: Awaited<ReturnType<typeof loadReaderArtifact>>,
+  name: string,
+): { readonly directory: string; readonly bytes: number } | undefined {
+  const record = reader.manifest.assets?.find(
+    (asset) => asset.path === `${ARTIFACT_ASSETS_DIRECTORY}/${name}`,
+  );
+  return record === undefined
+    ? undefined
+    : { bytes: record.bytes, directory: ARTIFACT_DIRECTORY };
 }

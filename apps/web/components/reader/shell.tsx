@@ -7,12 +7,19 @@ import {
   type ReaderContent,
   type SidebarNode,
 } from "../../lib/reader/content";
-import { API_ROOT, type ReaderIndex } from "../../lib/reader/projection";
+import type { ReaderIndex } from "../../lib/reader/projection";
+import type { VersionSwitchTarget } from "../../lib/reader/release";
+import {
+  LEGACY_ROOTS,
+  type ReaderRoots,
+  type ReaderVersion,
+} from "../../lib/reader/scope";
 import { THEME_LABELS, THEME_MODES, type ThemeMode } from "../../lib/theme";
 import { MobileNav } from "./mobile-nav";
 import { MethodLabel } from "./primitives";
 import { SearchTrigger } from "./search/search-trigger";
 import { SidebarScroll } from "./sidebar-scroll";
+import { VersionBanner, VersionMenu } from "./versioning";
 
 /**
  * Reader shell: glass header, one composed navigation (authored sections and
@@ -29,6 +36,11 @@ export interface ShellProps {
   readonly searchPath?: string | undefined;
   readonly currentPath: string;
   readonly mode: ThemeMode;
+  /** Route roots of the artifact set being served (SPEC-010). */
+  readonly roots?: ReaderRoots | undefined;
+  /** The release being served, with the catalog for the selector. */
+  readonly version?: ReaderVersion | undefined;
+  readonly versionTargets?: readonly VersionSwitchTarget[] | undefined;
   readonly children: ReactNode;
 }
 
@@ -48,12 +60,21 @@ export function Shell({
   currentPath,
   index,
   mode,
+  roots = LEGACY_ROOTS,
   searchPath,
+  version,
+  versionTargets = [],
 }: ShellProps) {
   const docs = hasDocs(content);
   const inApi =
-    currentPath === API_ROOT || currentPath.startsWith(`${API_ROOT}/`);
+    currentPath === roots.api || currentPath.startsWith(`${roots.api}/`);
+  const changelogHref = `${roots.docs}/changelog`;
+  const inChangelog =
+    version?.changelog === true && currentPath === changelogHref;
   const logo = content?.branding?.logo;
+  const currentTarget = versionTargets.find(
+    (target) => target.id === version?.currentId,
+  );
   return (
     <div className="shell">
       <a className="skip-link" href="#content">
@@ -66,7 +87,7 @@ export function Shell({
             label="Navigation"
             source={NAVIGATION_ID}
           />
-          <a className="wordmark" href="/">
+          <a className="wordmark" href={roots.home}>
             {logo === undefined ? (
               <span aria-hidden="true" className="wordmark__mark" />
             ) : (
@@ -87,9 +108,9 @@ export function Shell({
               {docs ? (
                 <li>
                   <a
-                    aria-current={inApi ? undefined : "page"}
+                    aria-current={inApi || inChangelog ? undefined : "page"}
                     className="tab"
-                    href="/"
+                    href={roots.home}
                   >
                     Guides
                   </a>
@@ -99,17 +120,33 @@ export function Shell({
                 <a
                   aria-current={inApi ? "page" : undefined}
                   className="tab"
-                  href={API_ROOT}
+                  href={index.apiRoot}
                 >
                   {apiLabel(index, content)}
                 </a>
               </li>
+              {version?.changelog === true ? (
+                <li>
+                  <a
+                    aria-current={inChangelog ? "page" : undefined}
+                    className="tab"
+                    href={changelogHref}
+                  >
+                    Changelog
+                  </a>
+                </li>
+              ) : null}
             </ul>
           </nav>
         </div>
-        {searchPath === undefined ? null : (
+        {searchPath === undefined && version === undefined ? null : (
           <div className="header__end">
-            <SearchTrigger path={searchPath} />
+            {searchPath === undefined ? null : (
+              <SearchTrigger path={searchPath} roots={roots} />
+            )}
+            {version === undefined ? null : (
+              <VersionMenu targets={versionTargets} version={version} />
+            )}
           </div>
         )}
       </header>
@@ -123,11 +160,18 @@ export function Shell({
             content={content}
             currentPath={currentPath}
             index={index}
+            roots={roots}
           />
         </div>
         <SidebarScroll target={SIDEBAR_ID} />
       </aside>
       <main className="shell__main panel document" id="content" tabIndex={-1}>
+        {version === undefined ? null : (
+          <VersionBanner
+            currentHref={currentTarget?.href ?? `/docs/${version.currentId}`}
+            version={version}
+          />
+        )}
         {children}
       </main>
       <footer className="shell__footer panel footer">
@@ -156,10 +200,12 @@ function ComposedNavigation({
   content,
   currentPath,
   index,
+  roots,
 }: Readonly<{
   content: ReaderContent | undefined;
   currentPath: string;
   index: ReaderIndex;
+  roots: ReaderRoots;
 }>) {
   if (!hasDocs(content) || content === undefined) {
     return (
@@ -168,7 +214,7 @@ function ComposedNavigation({
       </nav>
     );
   }
-  const nodes = sidebarNodes(content.navigation.items, currentPath);
+  const nodes = sidebarNodes(content.navigation.items, currentPath, roots);
   return (
     <nav aria-label="Documentation" className="nav-docs" id={NAVIGATION_ID}>
       <DocsNodes currentPath={currentPath} index={index} nodes={nodes} />
@@ -224,8 +270,10 @@ function DocsNodes({
               <div className="nav-api" key="api">
                 <span className="eyebrow nav-group__title nav-api__title">
                   <a
-                    aria-current={currentPath === API_ROOT ? "page" : undefined}
-                    href={API_ROOT}
+                    aria-current={
+                      currentPath === index.apiRoot ? "page" : undefined
+                    }
+                    href={index.apiRoot}
                   >
                     {node.label}
                   </a>

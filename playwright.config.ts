@@ -16,6 +16,9 @@ const fixtureProject = path.resolve("tests/fixtures/reader/testinbox");
 /** The adversarial fixture is served by a second reader on port 3101. */
 const edgeProject = path.resolve("tests/fixtures/reader/edge");
 export const EDGE_URL = "http://127.0.0.1:3101";
+/** The multi-version fixture (SPEC-010) is served in release mode on port 3102. */
+const versionedProject = path.resolve("tests/fixtures/reader/versioned");
+export const VERSIONED_URL = "http://127.0.0.1:3102";
 /** The fake target APIs the TestInbox playground is approved to reach. */
 export const TARGET_URL = "http://127.0.0.1:47391";
 export const STRICT_TARGET_URL = "http://127.0.0.1:47392";
@@ -81,6 +84,17 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
       url: EDGE_URL,
+    },
+    {
+      command: "pnpm --filter @specra/web start",
+      env: {
+        PORT: "3102",
+        SPECRA_PROJECT_ROOT: versionedProject,
+        SPECRA_SITE_URL: "https://versioned.example.test",
+      },
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+      url: `${VERSIONED_URL}/docs/v2`,
     },
     // The playground's fake target APIs (SPEC-009): one answers CORS, one
     // refuses it. Neither is ever reached by the reader server.

@@ -7,7 +7,8 @@ import {
   MIN_SOURCE_TIMEOUT_MS,
 } from "./contracts.js";
 
-export type CommandName = "build" | "validate";
+export type CommandName =
+  "build" | "current" | "deprecate" | "release" | "validate";
 
 export type ParsedArguments =
   | { readonly kind: "root-help" }
@@ -20,9 +21,31 @@ export type ParsedArguments =
       readonly kind: "command";
       readonly root: string;
       readonly sourceTimeoutMs: number;
+      /** Positional version id for `release`, `current`, and `deprecate`. */
+      readonly version?: string;
+      /** `--current` on `release`. */
+      readonly current: boolean;
+      /** `--from <version>` on `build` and `release`. */
+      readonly from?: string;
+      /** `--no-diff` on `release`. */
+      readonly noDiff: boolean;
+      readonly label?: string;
+      readonly date?: string;
     };
 
-const COMMANDS = new Set<CommandName>(["build", "validate"]);
+const COMMANDS = new Set<CommandName>([
+  "build",
+  "current",
+  "deprecate",
+  "release",
+  "validate",
+]);
+const VERSION_COMMANDS = new Set<CommandName>([
+  "current",
+  "deprecate",
+  "release",
+]);
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const HELP_FLAGS = new Set(["--help", "-h"]);
 
 export function parseArguments(args: readonly string[]): ParsedArguments {
@@ -50,6 +73,12 @@ export function parseArguments(args: readonly string[]): ParsedArguments {
   let sawRoot = false;
   let sawConfigTimeout = false;
   let sawSourceTimeout = false;
+  let version: string | undefined;
+  let current = false;
+  let from: string | undefined;
+  let noDiff = false;
+  let label: string | undefined;
+  let date: string | undefined;
 
   for (let index = 1; index < args.length; index += 1) {
     const argument = args[index];
@@ -99,18 +128,90 @@ export function parseArguments(args: readonly string[]): ParsedArguments {
       index += 1;
       continue;
     }
+    if (argument === "--current") {
+      if (command !== "release")
+        return usage("--current applies to release only.");
+      if (current) return usage("--current may be specified only once.");
+      current = true;
+      continue;
+    }
+    if (argument === "--no-diff") {
+      if (command !== "release")
+        return usage("--no-diff applies to release only.");
+      if (noDiff) return usage("--no-diff may be specified only once.");
+      noDiff = true;
+      continue;
+    }
+    if (argument === "--from") {
+      if (command !== "release" && command !== "build") {
+        return usage("--from applies to build and release only.");
+      }
+      if (from !== undefined)
+        return usage("--from may be specified only once.");
+      const value = args[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return usage("--from requires a version id.");
+      }
+      from = value;
+      index += 1;
+      continue;
+    }
+    if (argument === "--label" || argument === "--date") {
+      if (command !== "release")
+        return usage(`${argument} applies to release only.`);
+      const value = args[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return usage(`${argument} requires a value.`);
+      }
+      if (argument === "--label") {
+        if (label !== undefined)
+          return usage("--label may be specified only once.");
+        if (value.length > 80 || /[\u0000-\u001f\u007f]/.test(value)) {
+          return usage("--label is at most 80 characters of plain text.");
+        }
+        label = value;
+      } else {
+        if (date !== undefined)
+          return usage("--date may be specified only once.");
+        if (!DATE.test(value)) return usage("--date must be YYYY-MM-DD.");
+        date = value;
+      }
+      index += 1;
+      continue;
+    }
+    if (
+      argument !== undefined &&
+      !argument.startsWith("-") &&
+      VERSION_COMMANDS.has(command) &&
+      version === undefined
+    ) {
+      version = argument;
+      continue;
+    }
     return usage(
       argument?.startsWith("-") ? "Unknown option." : "Unexpected argument.",
     );
+  }
+  if (VERSION_COMMANDS.has(command) && version === undefined) {
+    return usage(`${command} requires a version id.`);
+  }
+  if (noDiff && from !== undefined) {
+    return usage("--no-diff and --from cannot be combined.");
   }
 
   return {
     command,
     configTimeoutMs,
+    current,
+    ...(date === undefined ? {} : { date }),
+    ...(from === undefined ? {} : { from }),
     json,
     kind: "command",
+    ...(label === undefined ? {} : { label }),
+    noDiff,
     root,
     sourceTimeoutMs,
+    ...(version === undefined ? {} : { version }),
   };
 }
 

@@ -232,6 +232,29 @@ const playgroundSchema = z
   })
   .strict();
 
+/**
+ * Author-reviewed route migrations (SPEC-010): internal documentation
+ * paths only, frozen with each release and validated against its route
+ * table by the build. No scheme, host, query, or encoded separator can
+ * appear, so a redirect never leaves the site.
+ */
+const redirectPath = z
+  .string()
+  .max(512)
+  .regex(
+    /^\/(?:(?:docs|api)(?:\/[a-z0-9]+(?:-[a-z0-9]+)*){0,6})?(?:#[a-z0-9]+(?:-[a-z0-9]+)*)?$/,
+    "Redirect paths are internal documentation routes such as /docs/old-page or /api/old/route.",
+  );
+const redirectSchema = z
+  .object({
+    from: redirectPath.refine(
+      (value) => !value.includes("#"),
+      "A redirect source cannot carry an anchor.",
+    ),
+    to: redirectPath,
+  })
+  .strict();
+
 export const specraConfigSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -252,6 +275,7 @@ export const specraConfigSchema = z
       .optional(),
     environments: z.record(environmentId, environmentSchema).default({}),
     sdks: z.array(sdkSchema).max(32).default([]),
+    redirects: z.array(redirectSchema).max(10_000).default([]),
     playground: playgroundSchema.default({
       environments: [],
       mode: "disabled",
