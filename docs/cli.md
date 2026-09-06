@@ -59,15 +59,22 @@ The location is beneath the canonical project root, separate from authored sourc
 
 Human success is written to stdout. Human validation/internal/cancellation diagnostics are written to stderr. With `--json`, a successful or failed result is the only content written to stdout and stderr stays empty. Config-process and ingestion-process stream and raw-descriptor output are captured and never mixed into either public format. Usage errors remain concise human output on stderr because parsing did not establish a valid machine-mode request.
 
-Success JSON has this stable shape (`artifacts.files` and `artifacts.bytes` appear for `build` only):
+Success JSON has this stable shape (`artifacts.files` and `artifacts.bytes` appear for `build` only; `content` counts authored pages and copied assets, both zero for an API-only project):
 
 ```json
 {
   "artifacts": {
     "bytes": 1234,
     "directory": ".specra/artifacts",
-    "files": ["documentation.json", "manifest.json"]
+    "files": [
+      "documentation.json",
+      "manifest.json",
+      "content.json",
+      "navigation.json",
+      "assets/5cb94515a1027e4c.svg"
+    ]
   },
+  "content": { "assets": 1, "pages": 9 },
   "diagnostics": [],
   "ok": true,
   "sources": [{ "bytes": 65, "path": "openapi.yaml", "sha256": "…" }],
@@ -82,7 +89,7 @@ Success JSON has this stable shape (`artifacts.files` and `artifacts.bytes` appe
 
 `diagnostics` on a successful result contains warnings only. Failure JSON contains `ok: false` and ordered diagnostics with `code`, fixed value-safe `message`, optional safe `path`, and `severity` (`error` or `warning`). It contains no timestamps, process IDs, absolute machine paths, config or source values, exception messages, or stack traces.
 
-`path` uses one grammar for every diagnostic: `scope[#pointer]` where the pointer is an RFC 6901 JSON pointer. Scopes are `config` (`specra.config.ts` data, with `*` for user-chosen record keys and numeric indices for list positions, for example `config#/environments/*/baseUrl` or `config#/openapi/1`), `cli` (command options, `cli#/root`), `source/<project-relative path>` (a source document and pointer, for example `source/schemas/user.yaml#/properties/id`), and `artifact` (the artifact directory or a canonical model pointer). Errors sort before warnings, then by code, then by path with numeric pointer segments compared numerically.
+Content diagnostics additionally carry `line` and `column` (1-based) for the offending node; the human report prints them as `[source/docs/guides/attachments.md:42:7]`. `path` uses one grammar for every diagnostic: `scope[#pointer]` where the pointer is an RFC 6901 JSON pointer. Scopes are `config` (`specra.config.ts` data, with `*` for user-chosen record keys and numeric indices for list positions, for example `config#/environments/*/baseUrl` or `config#/openapi/1`), `cli` (command options, `cli#/root`), `source/<project-relative path>` (a source document and pointer, for example `source/schemas/user.yaml#/properties/id`), and `artifact` (the artifact directory or a canonical model pointer). Errors sort before warnings, then by code, then by path with numeric pointer segments compared numerically, then by line and column.
 
 | Exit | Meaning                                                           |
 | ---: | ----------------------------------------------------------------- |
@@ -112,6 +119,43 @@ Configuration and orchestration codes are stable within this contract; source co
 | `ARTIFACT_WRITE_FAILED`    | Check permissions; remove a symlinked `.specra/artifacts`      |
 | `CANCELLED`                | Re-run when ready                                              |
 | `INTERNAL_ERROR`           | Re-run and report a reproducible failure without secrets       |
+
+Authored content and navigation codes (SPEC-006) are reported at `source/docs/<file>:line:column` or `config#/navigation/…`; warnings do not fail the build. The [content authoring reference](content-authoring.md) explains each rule.
+
+| Code                                | Severity | Action                                                                                |
+| ----------------------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `CONTENT_FRONTMATTER_MISSING`       | error    | Start the page with a `---` frontmatter block containing `title`                      |
+| `CONTENT_FRONTMATTER_INVALID`       | error    | Give `title` (and optional `description`, `sidebarTitle`, `slug`) valid string values |
+| `CONTENT_FRONTMATTER_UNKNOWN_FIELD` | error    | Remove keys the schema does not define                                                |
+| `CONTENT_PARSE_FAILED`              | error    | Fix the Markdown/MDX syntax at the reported location                                  |
+| `CONTENT_HEADING_H1`                | error    | Remove the body `#` heading; the title is the H1                                      |
+| `CONTENT_HEADING_SKIPPED`           | warning  | Do not skip heading levels                                                            |
+| `CONTENT_HTML_FORBIDDEN`            | error    | Replace raw HTML with Markdown or a component                                         |
+| `CONTENT_EXPRESSION_FORBIDDEN`      | error    | Remove `{…}` expressions                                                              |
+| `CONTENT_ESM_FORBIDDEN`             | error    | Remove `import`/`export` statements                                                   |
+| `CONTENT_COMPONENT_UNKNOWN`         | error    | Use Callout, Steps/Step, Cards/Card, Tabs/Tab, or CodeGroup                           |
+| `CONTENT_COMPONENT_NESTING_INVALID` | error    | Follow the documented parent/child rules and keep components block-level              |
+| `CONTENT_COMPONENT_PROP_INVALID`    | error    | Provide the required string props with allowed values                                 |
+| `CONTENT_LINK_SCHEME_FORBIDDEN`     | error    | Use relative, `/docs`, `/api`, `#anchor`, `https`, `http`, or `mailto` links          |
+| `CONTENT_LINK_TARGET_MISSING`       | error    | Point the link at an existing page or API route                                       |
+| `CONTENT_LINK_ANCHOR_MISSING`       | warning  | Point the fragment at an existing heading or section id                               |
+| `CONTENT_ASSET_NOT_FOUND`           | error    | Add the referenced image under the docs directory                                     |
+| `CONTENT_ASSET_OUTSIDE_ROOT`        | error    | Move the image under the docs directory                                               |
+| `CONTENT_ASSET_INVALID`             | error    | Use a relative path without absolute or malformed segments                            |
+| `CONTENT_ASSET_UNSUPPORTED`         | error    | Use PNG, JPEG, WebP, or GIF (logo also SVG without scripts; favicon also ICO)         |
+| `CONTENT_ASSET_TOO_LARGE`           | error    | Keep images under 2 MiB (20 MiB per project) and branding under 512 KiB               |
+| `CONTENT_BUDGET_EXCEEDED`           | error    | Split the page or shorten the block that exceeds a documented budget                  |
+| `CONTENT_UNSUPPORTED`               | error    | Remove footnotes, reference links, or inline images                                   |
+| `CONTENT_SOURCE_OUTSIDE_ROOT`       | error    | Remove the symlink that escapes the docs directory                                    |
+| `ROUTE_SLUG_INVALID`                | error    | Rename the file or folder to a kebab-case slug (at most four segments)                |
+| `ROUTE_COLLISION`                   | error    | Remove one of the files that resolve to the same route                                |
+| `NAVIGATION_PAGE_MISSING`           | error    | Reference an existing page slug in `navigation`                                       |
+| `NAVIGATION_PAGE_DUPLICATE`         | error    | List each page once                                                                   |
+| `NAVIGATION_PAGE_ORPHANED`          | warning  | Add the page to `navigation` or accept URL-only reachability                          |
+| `NAVIGATION_API_DUPLICATE`          | error    | Include `{ api: true }` at most once                                                  |
+| `NAVIGATION_DEPTH_EXCEEDED`         | error    | Nest sections at most two levels deep                                                 |
+| `NAVIGATION_LINK_INVALID`           | error    | Use an `https://` or `http://` URL for external links                                 |
+| `NAVIGATION_INVALID`                | error    | Correct the navigation node shape                                                     |
 
 ## Programmatic orchestration
 

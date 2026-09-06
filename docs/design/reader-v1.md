@@ -192,6 +192,10 @@ Schemas extend the endpoint anatomy rather than introducing a second visual syst
 - Forced colours: guides and chips take `CanvasText`, links take `LinkText`; reduced
   motion removes the chevron transition.
 
+## Authored pages
+
+Authored pages share the document column, type scale, and surfaces of the endpoint page. The frame is breadcrumbs (from the navigation trail), title, lede, an "On this page" outline (left rule, muted links, `##`/`###` only), the body, and a two-column previous/next pager that stacks on mobile. Body rhythm is `--space-4` between blocks with extra space above `##`/`###`. Components: callouts are tinted surfaces with a bordered glyph and the kind as text; steps are a numbered rail with a hairline connector; cards are `auto-fill` tiles with an arrow affordance; tabs and code groups are a bordered block whose header row becomes the tab list; code blocks keep the endpoint code surface with a header (title or language, copy control) and the nine syntax tokens (`--syn-*`). Tables live inside a bordered horizontal scroller. Images are bordered and never exceed the column. The sidebar composes authored sections (eyebrow titles) above the API reference, which is separated by a hairline and titled with the configured label. Branding: the accent replaces `--brand`, the logo replaces the mark at 20 px, the favicon comes from the assets route.
+
 ## Design deviations
 
 | Element                                     | Status   | Reason                                                                                                                                                                       |
@@ -200,10 +204,10 @@ Schemas extend the endpoint anatomy rather than introducing a second visual syst
 | One-line SDK example under the title        | deferred | SDK mapping is SPEC-008                                                                                                                                                      |
 | Search field and ⌘K palette                 | deferred | Search is SPEC-007; a dead search trigger would mislead                                                                                                                      |
 | Version selector                            | deferred | Versioning is SPEC-010                                                                                                                                                       |
-| Guides / SDKs / Examples / Changelog tabs   | deferred | Owned by SPEC-006/008/010; only existing tabs render                                                                                                                         |
+| Guides / SDKs / Examples / Changelog tabs   | adapted  | SPEC-006 renders `Docs` and `API reference` primary tabs when authored pages exist; SDKs, Examples, and Changelog remain with SPEC-008/010                                   |
 | Mobile bottom action bar (Code / Try it)    | deferred | Both actions belong to SPEC-008/009                                                                                                                                          |
-| Consumer logo and brand colour              | adapted  | Config exposes only logo/favicon paths today; the reader renders the project name as the wordmark and a neutral default `--brand` until SPEC-006 wires branding              |
+| Consumer logo and brand colour              | done     | SPEC-006: `branding.accent` sets `--brand` through a nonce style, `branding.logo` replaces the wordmark mark, `branding.favicon` sets the icon                               |
 | "Expand schema" links and schema drill-in   | adapted  | SPEC-005: inline disclosures plus a focused view with the reference's breadcrumb trail; variants are a disclosure list instead of a segmented control (see Schema rendering) |
 | Section collapse on mobile                  | adapted  | Sections stay open so deep links always land on visible content and no client script is required                                                                             |
-| Errors / Next sections on endpoint pages    | deferred | Error catalogue and page sequencing arrive with SPEC-006/010                                                                                                                 |
-| Homepage hero with install block and guides | adapted  | Authored content is SPEC-006; the home page is a minimal API-reference entry using the same type scale and surfaces                                                          |
+| Errors / Next sections on endpoint pages    | adapted  | SPEC-006 adds previous/next to authored pages with the API reference as one entry; an error catalogue on endpoint pages remains with SPEC-010                                |
+| Homepage hero with install block and guides | done     | SPEC-006: the authored `docs/index.*` page uses the display scale, cards, steps, and a code group; projects without docs keep the minimal API-reference entry                |

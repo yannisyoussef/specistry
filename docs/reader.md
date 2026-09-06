@@ -1,16 +1,18 @@
 # Reader reference
 
-The reader (`apps/web`) renders a project's canonical artifacts as an indexable API reference. It consumes only what `specra build` writes into `.specra/artifacts`; it never reads OpenAPI sources, never runs the ingestion pipeline, and never imports parser vocabulary (the architecture gate allows `apps/web` to depend on `@specra/model` and `@specra/config` only).
+The reader (`apps/web`) renders a project's canonical artifacts as an indexable API reference together with the authored pages of SPEC-006. It consumes only what `specra build` writes into `.specra/artifacts`; it never reads OpenAPI or Markdown sources, never runs the ingestion or content pipelines, and never imports parser vocabulary (the architecture gate allows `apps/web` to depend on `@specra/model`, `@specra/config`, and the artifact readers of `@specra/content` only).
 
 ## Pipeline
 
 ```text
 specra build
   → .specra/artifacts/documentation.json + manifest.json
-  → artifact loader (manifest + model validation, memoized per process)
+    (+ content.json, navigation.json, assets/ when the project has docs)
+  → artifact loader (manifest + model + content validation, memoized per process)
   → reader projection (services → groups → operations, slugs, views)
+  → reader content (pages by route, composed navigation, breadcrumbs, prev/next)
   → Next.js routes (React Server Components)
-  → three client islands (mobile drawer, copy control, sidebar scroll position)
+  → four client islands (mobile drawer, copy control, sidebar scroll position, tabs)
 ```
 
 Every route renders on demand from the memoized artifact so the per-request nonce policy applies (ADR-010). A missing, malformed, incompatible, or inconsistent artifact fails `next build` and `next start` with a message that names the file, includes the first model diagnostics, and tells you to run `specra build`; the reader never serves an empty site in its place. The artifact is loaded once per process (at startup through `instrumentation.ts`) and kept in memory; a very large artifact costs its parsed size in server heap, which is the documented trade for validation-once rendering.
@@ -35,7 +37,9 @@ The repository's own CI and browser suites point these at the committed TestInbo
 
 | Route                                       | Content                                                                             |
 | ------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `/`                                         | Project home: name, description, "API reference" entry, groups with endpoint counts |
+| `/`                                         | The authored `docs/index.*` page when present; otherwise the generated project home |
+| `/docs/<slug…>`                             | Authored pages (`docs/<path>.md` or `.mdx`); `/docs` redirects to `/`               |
+| `/assets/<sha256:16>.<ext>`                 | Images and branding copied by the build; served only by manifest name               |
 | `/api`                                      | API reference index: every group with its operations                                |
 | `/api/<group>`                              | One tag group (single-service projects)                                             |
 | `/api/<group>/<operation>`                  | Operation page                                                                      |
@@ -43,7 +47,13 @@ The repository's own CI and browser suites point these at the committed TestInbo
 | `/sitemap.xml`, `/robots.txt`               | Indexable routes and crawl policy (`/theme` is disallowed)                          |
 | `/theme`                                    | `POST` only: stores the light/dark/system choice in a cookie and redirects back     |
 
-Group slugs are slugified tag names; operation slugs are the contract `operationId` in kebab case or `<method>-<path>` without one; collisions gain `-2`, `-3` suffixes in canonical order. Service slugs come from the document's `info.title`. Groups follow the contract's declared tag order (the service's `tags`, SPEC-006); tags that operations use without declaring follow in case-folded alphabetical order, and the untagged `operations` group always comes last. A declared tag description is shown on the group page and the reference index. Unknown or malformed `/api/*` routes are rewritten by `proxy.ts` to a server-rendered 404 page with status 404, so crawlers and no-script clients receive real HTML rather than a client-rendered error shell. Operation pages expose deterministic deep links: `#authentication`, `#parameters`, `#parameters-<location>`, `#request-body`, `#request-body-<media>`, `#responses`, `#response-<status>`, and `#servers`. The full policy is ADR-010.
+Group slugs are slugified tag names; operation slugs are the contract `operationId` in kebab case or `<method>-<path>` without one; collisions gain `-2`, `-3` suffixes in canonical order. Service slugs come from the document's `info.title`. Groups follow the contract's declared tag order (the service's `tags`, SPEC-006); tags that operations use without declaring follow in case-folded alphabetical order, and the untagged `operations` group always comes last. A declared tag description is shown on the group page and the reference index. Unknown or malformed `/api/*` and `/docs/*` routes are rewritten by `proxy.ts` to a server-rendered 404 page with status 404, so crawlers and no-script clients receive real HTML rather than a client-rendered error shell. Operation pages expose deterministic deep links: `#authentication`, `#parameters`, `#parameters-<location>`, `#request-body`, `#request-body-<media>`, `#responses`, `#response-<status>`, and `#servers`. The full policy is ADR-010.
+
+## Authored pages and navigation
+
+An authored page renders breadcrumbs derived from its navigation trail (`Docs › section › title`), the frontmatter title as the only `<h1>`, the description as lede, an "On this page" outline of `##`/`###` headings (hidden on the homepage), the body, and previous/next links that follow the configured reading order with the API reference as one entry. The homepage uses the display type scale and no breadcrumbs. Every block of the content model has one explicit renderer: paragraphs, headings with anchor links, lists (task items announce "Done"/"To do"), blockquotes, tables inside a focusable horizontal scroller, images from the assets route, code blocks with a header, a copy control, build-time token classes and a focusable scroller, callouts (kind spelled out as text), steps as an ordered list whose titles continue the heading outline, cards, and tabs.
+
+The sidebar is one composed navigation: authored sections and pages in configured order with the generated API groups inserted at the `api` node (or after every page when nothing is configured), the current item marked with `aria-current`, external links marked with a cue and `rel="noopener noreferrer"`. The header shows `Docs` and `API reference` primary tabs when the project has docs; the mobile drawer clones the composed navigation. Branding replaces the wordmark mark with the configured logo, sets the favicon, and applies the accent through one nonce-bearing `<style>` that defines `--brand`. Tabs and code groups are progressive: the server renders every panel under a heading, and the client turns the headings into a WAI-ARIA tab list. The [content authoring reference](content-authoring.md) documents the source vocabulary; ADR-012 records the pipeline and route decisions.
 
 ## Operation page
 
@@ -125,6 +135,7 @@ Contracts above 150 operations switch to a compact navigation: every group is li
 
 - `proxy.ts` sets a per-request `Content-Security-Policy` with a nonce: `script-src 'self' 'nonce-…' 'strict-dynamic'`, `script-src-attr 'none'`, `style-src 'self' 'nonce-…'`, `object-src 'none'`, `frame-src 'none'`, `frame-ancestors 'none'`, `worker-src 'none'`, `manifest-src 'none'`, `media-src 'none'`, `form-action 'self'`, `base-uri 'self'`, `img-src 'self'`, `font-src 'self'`, `connect-src 'self'`, `upgrade-insecure-requests`. Development adds `'unsafe-eval'` for React's debugging tooling only. The proxy runs for every request (prefetch-shaped requests included), strips any inbound policy header, and overwrites the internal `x-specra-pathname` header so a client cannot spoof it. Fixed headers (`X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `X-Content-Type-Options`) come from `next.config.ts` and also cover static assets.
 - Canonical strings are rendered as text. Paired backticks become inline `<code>`; no Markdown, HTML, or link is interpreted, so `<script>`, event handlers, and `javascript:` URLs display literally.
+- Authored content arrives as a validated JSON content model, never as HTML or code: the renderer maps each node kind to a React element, spreads no authored attribute, and link targets and asset names were validated at build time. Assets are served only when the manifest lists them, from the fixed artifact directory, with `Cache-Control: immutable`, `nosniff`, and `default-src 'none'; sandbox`, so an SVG logo opened directly cannot run scripts. The consumer accent is a validated six-digit colour emitted in a nonce `<style>`; the proxy leaves the asset route's own policy in place and applies the page policy everywhere else.
 - Route segments must match the slug grammar before lookup; anything else is a 404.
 - The theme handler accepts `POST` only, rejects cross-site submissions (`Sec-Fetch-Site`, then `Origin` against the host) with 403, follows only printable-ASCII absolute same-origin paths, and sets an `HttpOnly`, `SameSite=Lax` cookie that is `Secure` behind HTTPS (direct or via `X-Forwarded-Proto`).
 - `SPECRA_SITE_URL` must be a bare origin; values with credentials, a path, a query, or a fragment are ignored.
@@ -138,14 +149,19 @@ The default deployment is the Node server (`next start`), which is required for 
 
 Measured on the TestInbox fixture (25 operations) and enforced in CI:
 
-| Measure                                      | Baseline | Budget                        |
-| -------------------------------------------- | -------- | ----------------------------- |
-| Operation page client JavaScript (gzip)      | 135.6 KB | 150 KiB (`pnpm check:bundle`) |
-| Route-specific chunks beyond the framework   | 5.0 KB   | 40 KiB                        |
-| Operation page HTML                          | ~77 KB   | 200 KiB (browser test)        |
-| Navigation with 600 operations (server HTML) | static   | no client nodes per item      |
-| Navigation above 150 operations              | compact  | one expanded group per page   |
-| Schema block, 200 properties (server HTML)   | ~69 KB   | 400 view nodes per block      |
-| Complex operation page HTML (edge fixture)   | ~456 KB  | 512 KiB (browser test)        |
+| Measure                                      | Baseline        | Budget                           |
+| -------------------------------------------- | --------------- | -------------------------------- |
+| Operation page client JavaScript (gzip)      | 135.6 KB        | 150 KiB (`pnpm check:bundle`)    |
+| Route-specific chunks beyond the framework   | 5.0 KB          | 40 KiB                           |
+| Operation page HTML                          | ~77 KB          | 200 KiB (browser test)           |
+| Navigation with 600 operations (server HTML) | static          | no client nodes per item         |
+| Navigation above 150 operations              | compact         | one expanded group per page      |
+| Schema block, 200 properties (server HTML)   | ~69 KB          | 400 view nodes per block         |
+| Complex operation page HTML (edge fixture)   | ~456 KB         | 512 KiB (browser test)           |
+| Authored page client JavaScript (gzip)       | 136.1 KB        | 150 KiB (`pnpm check:bundle`)    |
+| Authored route chunks (tabs island)          | 5.5 KB          | 40 KiB                           |
+| Authored guide HTML (quickstart)             | ~60 KB          | 200 KiB (browser test)           |
+| 1,000-page site build / peak RSS             | ~6 s / ~690 MiB | 120 s / 2 GiB (performance test) |
+| 1,000-page site largest page HTML            | ~13 KB          | 200 KiB                          |
 
 The framework bootstrap (React 19 and the Next runtime, about 130 KB gzip) dominates; the reader's own client code is the two islands.
