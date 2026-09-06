@@ -1,4 +1,4 @@
-import type { ContentArtifact } from "@specra/content";
+import type { ContentArtifact, ContentPage } from "@specra/content";
 import { describe, expect, it } from "vitest";
 
 import { evaluateQuality } from "./engine.js";
@@ -438,8 +438,9 @@ describe("authored content rules", () => {
       ...testinboxContent,
       pages: testinboxContent.pages.map((page, index) => {
         if (index !== 0) return page;
-        const { description: _description, ...rest } = page;
-        return rest;
+        const copy: Record<string, unknown> = { ...page };
+        delete copy["description"];
+        return copy as unknown as ContentPage;
       }),
     };
     const evaluation = evaluateQuality(
