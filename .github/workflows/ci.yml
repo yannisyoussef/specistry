@@ -63,6 +63,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm check:bundle
+      # Dogfoods the public `specra check` on a realistic project and proves
+      # the gate can fail (SPEC-011).
+      - run: pnpm check:quality
       - run: pnpm test:coverage
       - run: pnpm audit --audit-level high
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0

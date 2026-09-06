@@ -340,6 +340,89 @@ describe("CLI clean-room package", () => {
         ok: true,
       });
 
+      // SPEC-011: the packed CLI evaluates documentation quality, the
+      // configured gate actually fails on a real violation, and a governed
+      // suppression — not a silent bypass — makes it pass again.
+      const checked = command(executable, ["check", "--json"], project);
+      expect(checked.status, checked.stderr).toBe(0);
+      expect(checked.stderr).toBe("");
+      const evaluation = JSON.parse(checked.stdout) as {
+        ok: boolean;
+        quality: {
+          qualityFormat: number;
+          summary: { gate: string; error: number };
+          findings: { rule: string; target: { identity: string } }[];
+        };
+      };
+      expect(evaluation).toMatchObject({
+        ok: true,
+        quality: { qualityFormat: 1, summary: { error: 0, gate: "passed" } },
+      });
+      // Deterministic: the same artifacts and policy give the same bytes.
+      expect(command(executable, ["check", "--json"], project).stdout).toBe(
+        checked.stdout,
+      );
+
+      const violation = evaluation.quality.findings.find(
+        (finding) => finding.rule === "operation-description",
+      );
+      expect(
+        violation,
+        JSON.stringify(evaluation.quality.summary),
+      ).toBeDefined();
+      const failingConfig = `import { defineConfig } from "@specra/config";
+         export default defineConfig({
+           schemaVersion: 1,
+           name: "Clean room",
+           openapi: "./openapi.yaml",
+           navigation: ["quickstart", { api: true }],
+           environments: { production: { baseUrl: "https://example.test" } },
+           quality: { rules: { "operation-description": "error" } },
+           sdks: [{ id: "typescript", label: "TypeScript SDK", language: "typescript", package: "@clean-room/sdk", coverage: "complete", examples: [{ operation: "ping", file: "./sdk/ping.ts" }] }],
+         });`;
+      await writeFile(path.join(project, "specra.config.ts"), failingConfig);
+      const failed = command(executable, ["check"], project);
+      expect(failed.status).toBe(3);
+      expect(failed.stderr).toContain("Quality gate failed");
+      expect(failed.stderr).toContain("operation-description");
+
+      // A typo in the policy is a configuration error, not a quiet pass.
+      await writeFile(
+        path.join(project, "specra.config.ts"),
+        failingConfig.replace("operation-description", "operation-descriptin"),
+      );
+      const typo = command(executable, ["check", "--json"], project);
+      expect(typo.status).toBe(2);
+      expect(JSON.parse(typo.stdout)).toMatchObject({
+        diagnostics: [{ code: "QUALITY_RULE_UNKNOWN" }],
+        ok: false,
+      });
+
+      await writeFile(
+        path.join(project, "specra.config.ts"),
+        failingConfig.replace(
+          `quality: { rules: { "operation-description": "error" } },`,
+          `quality: { rules: { "operation-description": "error" }, suppressions: [{ rule: "operation-description", target: ${JSON.stringify(violation?.target.identity ?? "")}, reason: "Tracked in DOC-14; prose lands with the next release." }] },`,
+        ),
+      );
+      const suppressed = command(executable, ["check", "--json"], project);
+      expect(suppressed.status, suppressed.stderr).toBe(0);
+      const governed = JSON.parse(suppressed.stdout) as {
+        quality: { summary: { gate: string; suppressed: number } };
+      };
+      expect(governed.quality.summary).toMatchObject({
+        gate: "passed",
+        suppressed: 1,
+      });
+      // Restore the project's own configuration for the release workflow.
+      await writeFile(
+        path.join(project, "specra.config.ts"),
+        failingConfig.replace(
+          `quality: { rules: { "operation-description": "error" } },`,
+          "",
+        ),
+      );
+
       // SPEC-010: the packed CLI promotes the candidate into an immutable
       // release, diffs the next candidate against it, publishes the author's
       // changelog, and selects current; the reader then serves both versions
@@ -598,14 +681,67 @@ describe("CLI clean-room package", () => {
         { counterpart: true, href: "/docs/v2/migration", id: "v2" },
         { counterpart: false, href: "/docs/v1", id: "v1" },
       ]);
+
+      // SPEC-011: the public diff reads the retained releases, reports the
+      // same structural facts in both modes, and changes nothing.
+      const humanDiff = command(
+        executable,
+        ["diff", "--from", "v1", "--to", "v2"],
+        project,
+      );
+      expect(humanDiff.status, humanDiff.stderr).toBe(0);
+      expect(humanDiff.stdout).toContain("Specra diff v1 → v2");
+      expect(humanDiff.stdout).toContain("+ GET /pong");
+      const jsonDiff = command(
+        executable,
+        ["diff", "--from", "v1", "--to", "v2", "--json"],
+        project,
+      );
+      expect(jsonDiff.status, jsonDiff.stderr).toBe(0);
+      expect(jsonDiff.stderr).toBe("");
+      expect(JSON.parse(jsonDiff.stdout)).toMatchObject({
+        diff: {
+          candidates: [
+            {
+              id: "v1..v2:operation-added:openapi.yaml~pong",
+              kind: "operation-added",
+            },
+          ],
+          diffFormat: 1,
+          from: "v1",
+          to: "v2",
+        },
+        ok: true,
+      });
+      // Deterministic and read-only.
+      expect(
+        command(
+          executable,
+          ["diff", "--from", "v1", "--to", "v2", "--json"],
+          project,
+        ).stdout,
+      ).toBe(jsonDiff.stdout);
+      expect(await digestsOf("v1")).toEqual(v1Before);
+      const compatibility = command(
+        executable,
+        ["check", "--version", "v2", "--from", "v1", "--json"],
+        project,
+      );
+      expect(compatibility.status).toBe(0);
+      expect(JSON.parse(compatibility.stdout)).toMatchObject({
+        quality: {
+          comparison: { from: "v1" },
+          target: { kind: "release", version: "v2" },
+        },
+      });
     } finally {
       await rm(cleanRoom, { force: true, recursive: true });
     }
     // Pack, offline install, validate, two authored builds with the
-    // highlighter, two releases, and the reader take ~12 s uninstrumented
-    // and ~30 s under coverage on a GitHub runner; the ceiling is generous
-    // so timing never fails the case.
-  }, 180_000);
+    // highlighter, the quality gate cases, two releases, the public diff,
+    // and the reader take ~18 s uninstrumented and ~45 s under coverage on
+    // a GitHub runner; the ceiling is generous so timing never fails it.
+  }, 240_000);
 });
 
 function command(

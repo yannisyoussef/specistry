@@ -1,23 +1,23 @@
 [
   {
     "catalogBytes": 3536,
-    "firstBuildMs": 334,
+    "firstBuildMs": 1000,
     "kind": "twenty-releases",
-    "promotionMsAverage": 271,
-    "promotionMsMax": 279,
+    "promotionMsAverage": 483,
+    "promotionMsMax": 882,
     "storeBytes": 5303911,
     "storeBytesPerRelease": 265196
   },
   {
-    "cachedReleaseMs": 0.005,
-    "catalogHeapBytesDelta": 122720,
-    "catalogMs": 0.576,
-    "firstReleaseMs": 20,
-    "heapBytesAfterTouchingAll": 34988616,
+    "cachedReleaseMs": 0.008,
+    "catalogHeapBytesDelta": 128032,
+    "catalogMs": 0.741,
+    "firstReleaseMs": 30.986,
+    "heapBytesAfterTouchingAll": 35915216,
     "kind": "reader-memory",
     "loadedReleasesAfterTouchingAll": 4,
-    "rssBytesAfterTouchingAll": 132956160,
-    "secondReleaseMs": 11.504
+    "rssBytesAfterTouchingAll": 131923968,
+    "secondReleaseMs": 12.935
   },
   {
     "candidates": 4000,
@@ -33,16 +33,21 @@
       "schema-added": 0,
       "schema-changed": 0
     },
-    "diffMs": 21.6,
+    "diffMs": 23.6,
     "kind": "diff-10000",
     "outputBytes": 1049714,
-    "rssBytesDelta": 13418496,
+    "rssBytesDelta": 10797056,
     "truncated": false
   },
   {
     "kind": "sitemap-100000",
-    "ms": 73.8,
-    "partitions": ["v1.xml", "v2-1.xml", "v2-2.xml", "v2-3.xml"],
+    "ms": 77.3,
+    "partitions": [
+      "v1.xml",
+      "v2-1.xml",
+      "v2-2.xml",
+      "v2-3.xml"
+    ],
     "urlsInFirst": 45000
   }
 ]
