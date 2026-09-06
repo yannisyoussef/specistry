@@ -45,6 +45,10 @@ export type DiagnosticCode =
   | "ARTIFACT_WRITE_FAILED"
   | "SEARCH_BUILD_FAILED"
   | "SNIPPETS_BUILD_FAILED"
+  | "PLAYGROUND_BUILD_FAILED"
+  | "PLAYGROUND_ENVIRONMENT_NOT_FOUND"
+  | "PLAYGROUND_ENVIRONMENT_ORIGIN_INVALID"
+  | "PLAYGROUND_OPERATION_UNSUPPORTED"
   | "SNIPPET_BODY_TRUNCATED"
   | "SNIPPET_HEADER_SKIPPED"
   | "SNIPPET_SERVER_UNUSABLE"
@@ -178,6 +182,12 @@ export interface ValidationSuccess {
   readonly snippets: {
     readonly operations: number;
     readonly sdkExamples: number;
+  };
+  /** Browser-direct playground policy (SPEC-009). */
+  readonly playground: {
+    readonly enabled: boolean;
+    readonly environments: number;
+    readonly operations: number;
   };
   readonly ok: true;
   readonly outcome: "success";

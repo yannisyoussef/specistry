@@ -26,6 +26,14 @@ const messages: Readonly<Record<DiagnosticCode, string>> = {
     "The artifact directory could not be written or replaced atomically.",
   SEARCH_BUILD_FAILED:
     "The search index could not be generated from the build artifacts.",
+  PLAYGROUND_BUILD_FAILED:
+    "The playground policy could not be generated from the build artifacts.",
+  PLAYGROUND_ENVIRONMENT_NOT_FOUND:
+    "A playground environment names no configured environment.",
+  PLAYGROUND_ENVIRONMENT_ORIGIN_INVALID:
+    "A playground environment does not resolve to an exact https (or loopback http) origin.",
+  PLAYGROUND_OPERATION_UNSUPPORTED:
+    "The operation cannot be executed from the browser playground (cookie parameter, forbidden header, or an authentication method browsers cannot use); code examples remain available.",
   SNIPPETS_BUILD_FAILED:
     "The code samples could not be generated from the build artifacts.",
   SNIPPET_BODY_TRUNCATED:
@@ -75,6 +83,7 @@ const SEVERITY_RANK: Readonly<Record<DiagnosticSeverity, number>> = {
 };
 
 const CLI_WARNINGS: ReadonlySet<DiagnosticCode> = new Set([
+  "PLAYGROUND_OPERATION_UNSUPPORTED",
   "SDK_EXAMPLE_MISSING",
   "SNIPPET_BODY_TRUNCATED",
   "SNIPPET_HEADER_SKIPPED",

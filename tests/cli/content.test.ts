@@ -190,6 +190,7 @@ describe("specra build with authored content", () => {
       "navigation.json",
       "search.json",
       "snippets.json",
+      "playground.json",
       "assets/8a8489932558b153.png",
     ]);
     const artifacts = path.join(project, ".specra", "artifacts");
@@ -200,8 +201,14 @@ describe("specra build with authored content", () => {
       content: "content.json",
       documentation: "documentation.json",
       navigation: "navigation.json",
+      playground: "playground.json",
       search: "search.json",
       snippets: "snippets.json",
+    });
+    expect(manifest.playground).toMatchObject({
+      enabled: false,
+      environments: 0,
+      version: 1,
     });
     // The snippets artifact is recorded the same way (SPEC-008).
     expect(manifest.snippets).toMatchObject({
@@ -346,7 +353,7 @@ describe("specra build with authored content", () => {
     const project = await copyFixture("navigation");
     const artifacts = path.join(project, ".specra", "artifacts");
     expect((await buildProject({ cwd: project })).ok).toBe(true);
-    expect(await filesUnder(artifacts)).toHaveLength(7);
+    expect(await filesUnder(artifacts)).toHaveLength(8);
     await writeFile(
       path.join(project, "docs", "broken.md"),
       "---\ntitle: Broken\n---\n\n<Nope />\n",
@@ -361,7 +368,7 @@ describe("specra build with authored content", () => {
     // Repairing the page restores the full artifact set atomically.
     await rm(path.join(project, "docs", "broken.md"));
     expect((await buildProject({ cwd: project })).ok).toBe(true);
-    expect(await filesUnder(artifacts)).toHaveLength(7);
+    expect(await filesUnder(artifacts)).toHaveLength(8);
   });
 
   it("builds an API-only project without content artifacts", async () => {
@@ -385,6 +392,7 @@ describe("specra build with authored content", () => {
       "manifest.json",
       "search.json",
       "snippets.json",
+      "playground.json",
     ]);
     const manifest = parseArtifactManifest(
       await readFile(

@@ -12,6 +12,10 @@ import {
   SEARCH_FORMAT_VERSION,
 } from "@specra/search";
 import {
+  PLAYGROUND_ARTIFACT_FILENAME,
+  PLAYGROUND_FORMAT_VERSION,
+} from "@specra/playground";
+import {
   SNIPPETS_ARTIFACT_FILENAME,
   SNIPPETS_FORMAT_VERSION,
 } from "@specra/snippets";
@@ -53,6 +57,13 @@ export interface ArtifactWriteRequest {
     readonly json: string;
     readonly operations: number;
     readonly sdkExamples: number;
+  };
+  /** The playground policy artifact (SPEC-009); every build carries one. */
+  readonly playground: {
+    readonly json: string;
+    readonly enabled: boolean;
+    readonly environments: number;
+    readonly operations: number;
   };
   readonly project: { readonly id: string; readonly name: string };
   readonly ingestion: IngestionSummary;
@@ -123,6 +134,11 @@ export async function writeArtifacts(
       request.snippets.json,
       "utf8",
     );
+    await writeFile(
+      path.join(staging, PLAYGROUND_ARTIFACT_FILENAME),
+      request.playground.json,
+      "utf8",
+    );
     if (request.assets !== undefined && request.assets.length > 0) {
       const assetsDirectory = path.join(staging, ARTIFACT_ASSETS_DIRECTORY);
       await mkdir(assetsDirectory);
@@ -157,10 +173,15 @@ export async function writeArtifacts(
         Buffer.byteLength(request.contentJson, "utf8") +
         Buffer.byteLength(request.navigationJson, "utf8");
     }
-    files.push(SEARCH_ARTIFACT_FILENAME, SNIPPETS_ARTIFACT_FILENAME);
+    files.push(
+      SEARCH_ARTIFACT_FILENAME,
+      SNIPPETS_ARTIFACT_FILENAME,
+      PLAYGROUND_ARTIFACT_FILENAME,
+    );
     bytes +=
       Buffer.byteLength(request.search.json, "utf8") +
-      Buffer.byteLength(request.snippets.json, "utf8");
+      Buffer.byteLength(request.snippets.json, "utf8") +
+      Buffer.byteLength(request.playground.json, "utf8");
     for (const asset of request.assets ?? []) {
       files.push(`${ARTIFACT_ASSETS_DIRECTORY}/${asset.name}`);
       bytes += asset.bytes.byteLength;
@@ -269,6 +290,17 @@ function renderManifest(request: ArtifactWriteRequest): string {
         : {}),
       search: SEARCH_ARTIFACT_FILENAME,
       snippets: SNIPPETS_ARTIFACT_FILENAME,
+      playground: PLAYGROUND_ARTIFACT_FILENAME,
+    },
+    playground: {
+      bytes: Buffer.byteLength(request.playground.json, "utf8"),
+      enabled: request.playground.enabled,
+      environments: request.playground.environments,
+      operations: request.playground.operations,
+      sha256: createHash("sha256")
+        .update(request.playground.json)
+        .digest("hex"),
+      version: PLAYGROUND_FORMAT_VERSION,
     },
     search: {
       bytes: Buffer.byteLength(request.search.json, "utf8"),

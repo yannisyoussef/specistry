@@ -48,7 +48,7 @@ Usage:
 
 ${COMMON_OPTIONS}
 Build performs the same validation and then writes documentation.json,
-manifest.json, search.json, snippets.json, and any content artifacts
+manifest.json, search.json, snippets.json, playground.json, and any content artifacts
 atomically to ${ARTIFACT_DIRECTORY}. A failed build removes any
 previous artifact directory so stale output never represents the current input.
 
@@ -78,6 +78,7 @@ export function formatHumanResult(
     `Docs: ${result.content.pages} page(s), ${result.content.assets} asset(s)`,
     `Search: ${result.search.documents} document(s)`,
     `Code samples: ${result.snippets.operations} operation(s), ${result.snippets.sdkExamples} SDK example(s)`,
+    `Playground: ${result.playground.enabled ? `enabled for ${result.playground.environments} environment(s)` : "disabled"}`,
   ];
   if ("artifacts" in result) {
     lines.push(
@@ -121,6 +122,7 @@ export function formatJsonResult(
         content: result.content,
         diagnostics,
         ok: true,
+        playground: result.playground,
         search: result.search,
         snippets: result.snippets,
         sources: result.ingestion.sources,
