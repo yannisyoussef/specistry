@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,6 +17,7 @@ import { DocsPage } from "../../apps/web/components/reader/content/docs-page";
 import { Shell } from "../../apps/web/components/reader/shell";
 import { createReaderContent } from "../../apps/web/lib/reader/content";
 import { createReaderIndex } from "../../apps/web/lib/reader/projection";
+import { writeSyntheticSite } from "./content-generator.mjs";
 
 /**
  * Authored content at scale (SPEC-006): a synthetic 1,000-page site with
@@ -50,103 +51,13 @@ afterAll(async () => {
 const PAGES = 1_000;
 const SECTIONS = 20;
 
-function pageSource(section: number, index: number): string {
-  const lines: string[] = [
-    "---",
-    `title: Section ${section} page ${index}`,
-    `description: Synthetic page ${index} of section ${section} for the scale test.`,
-    "---",
-    "",
-    `<Callout type="note" title="Scope">`,
-    "",
-    `Page ${index} links to [the next page](./page-${(index + 1) % 50}) and [Ping](/api/health/ping).`,
-    "",
-    "</Callout>",
-    "",
-  ];
-  for (let heading = 1; heading <= 6; heading += 1) {
-    lines.push(`## Heading ${heading}`, "");
-    lines.push(
-      `Paragraph ${heading} with **strong**, _emphasis_, \`code\`, and a [link](#heading-${(heading % 6) + 1}).`,
-      "",
-    );
-    lines.push(
-      "```typescript",
-      `export function step${heading}(input: number): string {`,
-      `  // heading ${heading}`,
-      `  const value = input * ${heading} + ${index};`,
-      "  return `${value}`;",
-      "}",
-      "```",
-      "",
-    );
-  }
-  lines.push("| Column A | Column B | Column C |", "| --- | --- | --- |");
-  for (let row = 0; row < 10; row += 1)
-    lines.push(`| a${row} | b${row} | c${row} |`);
-  lines.push(
-    "",
-    "<Steps>",
-    "",
-    '<Step title="One">',
-    "",
-    "First.",
-    "",
-    "</Step>",
-    "",
-    '<Step title="Two">',
-    "",
-    "Second.",
-    "",
-    "</Step>",
-    "",
-    "</Steps>",
-    "",
-  );
-  return lines.join("\n");
-}
-
 async function createSite(): Promise<string> {
   const root = await mkdtemp(path.join(tmpdir(), "specra-content-scale-"));
   temporary.push(root);
-  await writeFile(
-    path.join(root, "openapi.yaml"),
-    [
-      "openapi: 3.1.0",
-      "info:",
-      "  title: Scale",
-      "  version: 1.0.0",
-      "paths:",
-      "  /ping:",
-      "    get:",
-      "      operationId: ping",
-      "      tags: [health]",
-      "      responses:",
-      '        "200":',
-      "          description: OK.",
-      "",
-    ].join("\n"),
-  );
-  const navigation: string[] = [];
-  let bytes = 0;
-  for (let section = 0; section < SECTIONS; section += 1) {
-    const directory = path.join(root, "docs", `section-${section}`);
-    await mkdir(directory, { recursive: true });
-    const items: string[] = [];
-    for (let index = 0; index < PAGES / SECTIONS; index += 1) {
-      const source = pageSource(section, index);
-      bytes += Buffer.byteLength(source, "utf8");
-      await writeFile(path.join(directory, `page-${index}.mdx`), source);
-      items.push(`"section-${section}/page-${index}"`);
-    }
-    navigation.push(
-      `{ section: "Section ${section}", items: [${items.join(", ")}] }`,
-    );
-  }
-  await writeFile(
-    path.join(root, "specra.config.ts"),
-    `export default { schemaVersion: 1, name: "Scale", openapi: "./openapi.yaml", navigation: [${navigation.join(", ")}, { api: true }] };`,
-  );
+  const bytes = await writeSyntheticSite(root, {
+    pages: PAGES,
+    sections: SECTIONS,
+  });
   evidence.push({ inputBytes: bytes, kind: "input", pages: PAGES });
   return root;
 }

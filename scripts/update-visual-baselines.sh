@@ -32,7 +32,7 @@ docker run --rm --platform linux/amd64 \
     export SPECRA_SITE_URL=https://docs.example.test
     pnpm --filter @specra/cli... build
     pnpm --filter @specra/web build
-    pnpm exec playwright test --project visual --update-snapshots
+    pnpm exec playwright test --project visual --update-snapshots all
     cp -R tests/visual/__screenshots__/. /out/
   '
 

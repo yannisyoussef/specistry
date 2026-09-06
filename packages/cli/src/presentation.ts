@@ -75,6 +75,7 @@ export function formatHumanResult(
     `Project: ${sanitizeTerminal(result.context.config.name)}`,
     `Sources: ${statistics.documents} document(s), ${statistics.operations} operation(s), ${statistics.schemas} schema(s)`,
     `Docs: ${result.content.pages} page(s), ${result.content.assets} asset(s)`,
+    `Search: ${result.search.documents} document(s)`,
   ];
   if ("artifacts" in result) {
     lines.push(
@@ -118,6 +119,7 @@ export function formatJsonResult(
         content: result.content,
         diagnostics,
         ok: true,
+        search: result.search,
         sources: result.ingestion.sources,
         statistics: result.ingestion.statistics,
       }

@@ -34,6 +34,14 @@ export interface ArtifactAssetRecord {
   readonly sha256: string;
 }
 
+/** The search artifact (SPEC-007): its format version and digest. */
+export interface ArtifactSearchRecord {
+  readonly version: number;
+  readonly bytes: number;
+  readonly sha256: string;
+  readonly documents: number;
+}
+
 export interface ArtifactBranding {
   /** Artifact-relative asset paths and the validated accent (SPEC-006). */
   readonly logo?: string;
@@ -51,9 +59,12 @@ export interface ArtifactManifest {
     /** Present when the project has authored content (SPEC-006). */
     readonly content?: string;
     readonly navigation?: string;
+    /** Present when the build generated search (SPEC-007). */
+    readonly search?: string;
   };
   readonly assets?: readonly ArtifactAssetRecord[];
   readonly branding?: ArtifactBranding;
+  readonly search?: ArtifactSearchRecord;
   readonly sources: readonly ArtifactSourceRecord[];
   readonly statistics: ArtifactStatistics;
   /** A written artifact never carries errors; warnings are counted. */
@@ -95,8 +106,15 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
     !isNonEmptyString(value.project.id) ||
     !isNonEmptyString(value.project.name) ||
     !isRecord(value.files) ||
-    !hasOnlyKeys(value.files, ["content", "documentation", "navigation"]) ||
+    !hasOnlyKeys(value.files, [
+      "content",
+      "documentation",
+      "navigation",
+      "search",
+    ]) ||
     value.files.documentation !== ARTIFACT_DOCUMENTATION_FILENAME ||
+    (value.files.search !== undefined &&
+      !ARTIFACT_FILENAME.test(String(value.files.search))) ||
     (value.files.content !== undefined &&
       !ARTIFACT_FILENAME.test(String(value.files.content))) ||
     (value.files.navigation !== undefined &&
@@ -161,6 +179,27 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
         : { logo: value.branding.logo as string }),
     };
   }
+  let search: ArtifactSearchRecord | undefined;
+  if (value.search !== undefined || value.files.search !== undefined) {
+    if (
+      !isRecord(value.search) ||
+      !hasOnlyKeys(value.search, ["bytes", "documents", "sha256", "version"]) ||
+      !isCount(value.search.version) ||
+      !isCount(value.search.bytes) ||
+      !isCount(value.search.documents) ||
+      typeof value.search.sha256 !== "string" ||
+      !SHA256.test(value.search.sha256) ||
+      value.files.search === undefined
+    ) {
+      throw new TypeError("Artifact manifest search record is invalid.");
+    }
+    search = {
+      bytes: value.search.bytes,
+      documents: value.search.documents,
+      sha256: value.search.sha256,
+      version: value.search.version,
+    };
+  }
   if (!Array.isArray(value.sources)) {
     throw new TypeError("Artifact manifest sources must be a list.");
   }
@@ -223,10 +262,14 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
       ...(value.files.navigation === undefined
         ? {}
         : { navigation: value.files.navigation as string }),
+      ...(value.files.search === undefined
+        ? {}
+        : { search: value.files.search as string }),
     },
     generator: "specra",
     modelVersion: DOCUMENT_MODEL_VERSION,
     project: { id: value.project.id, name: value.project.name },
+    ...(search === undefined ? {} : { search }),
     sources,
     statistics: {
       documents: statistics.documents,
@@ -251,6 +294,7 @@ const MANIFEST_KEYS = [
   "generator",
   "modelVersion",
   "project",
+  "search",
   "sources",
   "statistics",
 ];

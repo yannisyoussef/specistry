@@ -41,7 +41,7 @@ export default defineConfig({
     {
       name: "chromium-mobile",
       testDir: "./tests/e2e",
-      testIgnore: /(?:reader|content)\.spec\.ts/,
+      testIgnore: /(?:reader|content|search)\.spec\.ts/,
       use: { ...devices["Pixel 5"] },
     },
     {

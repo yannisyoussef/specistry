@@ -40,6 +40,7 @@ const stagedDependencies = [
   "@specra/content",
   "@specra/model",
   "@specra/openapi",
+  "@specra/search",
   "zod",
 ];
 const declaredDependencies = Object.keys(cliManifest.dependencies ?? {}).sort();
@@ -59,7 +60,7 @@ const zodDirectory = await realpath(
 const yamlDirectory = await realpath(
   path.join(repositoryRoot, "packages", "openapi", "node_modules", "yaml"),
 );
-const workspacePackages = ["config", "content", "model", "openapi"];
+const workspacePackages = ["config", "content", "model", "openapi", "search"];
 const manifests = Object.fromEntries(
   await Promise.all(
     workspacePackages.map(async (name) => [
@@ -96,18 +97,22 @@ await cp(yamlDirectory, path.join(destination, "node_modules", "yaml"), {
   recursive: true,
 });
 
-// The content package brings the Markdown parser and highlighter trees. Their
-// closure is resolved package by package from the workspace's pnpm layout
-// (each package's dependencies sit beside it or in the virtual store) and
-// staged flat, so the packed CLI carries exactly what the build needs.
-const contentDirectory = path.join(repositoryRoot, "packages", "content");
+// The content package brings the Markdown parser and highlighter trees and
+// the search package brings the engine. Their closure is resolved package by
+// package from the workspace's pnpm layout (each package's dependencies sit
+// beside it or in the virtual store) and staged flat, so the packed CLI
+// carries exactly what the build needs.
 const closure = new Map();
-const pendingClosure = Object.keys(manifests.content.dependencies ?? {}).filter(
-  (name) => !name.startsWith("@specra/"),
-);
-const closureOrigins = new Map(
-  pendingClosure.map((name) => [name, contentDirectory]),
-);
+const pendingClosure = [];
+const closureOrigins = new Map();
+for (const owner of ["content", "search"]) {
+  const ownerDirectory = path.join(repositoryRoot, "packages", owner);
+  for (const name of Object.keys(manifests[owner].dependencies ?? {})) {
+    if (name.startsWith("@specra/") || closureOrigins.has(name)) continue;
+    closureOrigins.set(name, ownerDirectory);
+    pendingClosure.push(name);
+  }
+}
 while (pendingClosure.length > 0) {
   const name = pendingClosure.pop();
   if (closure.has(name)) continue;
@@ -173,6 +178,7 @@ const stagedCliManifest = {
     "@specra/content": manifests.content.version,
     "@specra/model": manifests.model.version,
     "@specra/openapi": manifests.openapi.version,
+    "@specra/search": manifests.search.version,
     zod: cliManifest.dependencies.zod,
   },
 };

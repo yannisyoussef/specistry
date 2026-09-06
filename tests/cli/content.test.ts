@@ -188,6 +188,7 @@ describe("specra build with authored content", () => {
       "manifest.json",
       "content.json",
       "navigation.json",
+      "search.json",
       "assets/8a8489932558b153.png",
     ]);
     const artifacts = path.join(project, ".specra", "artifacts");
@@ -198,7 +199,15 @@ describe("specra build with authored content", () => {
       content: "content.json",
       documentation: "documentation.json",
       navigation: "navigation.json",
+      search: "search.json",
     });
+    // The search artifact is recorded with its version, size, and digest.
+    expect(manifest.search).toMatchObject({
+      documents: result.search.documents,
+      version: 1,
+    });
+    expect(manifest.search?.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(manifest.search?.bytes).toBeGreaterThan(1_000);
     expect(manifest.statistics.pages).toBe(6);
     expect(manifest.branding).toEqual({ accent: "#0f766e" });
     expect(manifest.assets).toEqual([
@@ -329,7 +338,7 @@ describe("specra build with authored content", () => {
     const project = await copyFixture("navigation");
     const artifacts = path.join(project, ".specra", "artifacts");
     expect((await buildProject({ cwd: project })).ok).toBe(true);
-    expect(await filesUnder(artifacts)).toHaveLength(5);
+    expect(await filesUnder(artifacts)).toHaveLength(6);
     await writeFile(
       path.join(project, "docs", "broken.md"),
       "---\ntitle: Broken\n---\n\n<Nope />\n",
@@ -344,7 +353,7 @@ describe("specra build with authored content", () => {
     // Repairing the page restores the full artifact set atomically.
     await rm(path.join(project, "docs", "broken.md"));
     expect((await buildProject({ cwd: project })).ok).toBe(true);
-    expect(await filesUnder(artifacts)).toHaveLength(5);
+    expect(await filesUnder(artifacts)).toHaveLength(6);
   });
 
   it("builds an API-only project without content artifacts", async () => {
@@ -361,9 +370,12 @@ describe("specra build with authored content", () => {
     expect(result.ok, JSON.stringify(result)).toBe(true);
     if (!result.ok) return;
     expect(result.content).toEqual({ assets: 0, pages: 0 });
+    // API-only projects still get search: groups and operations.
+    expect(result.search.documents).toBeGreaterThan(0);
     expect(result.artifacts.files).toEqual([
       "documentation.json",
       "manifest.json",
+      "search.json",
     ]);
     const manifest = parseArtifactManifest(
       await readFile(

@@ -1,0 +1,33 @@
+{
+  "name": "@specra/search",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "node ../../scripts/clean-package-dist.mjs",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@specra/content": "workspace:*",
+    "@specra/model": "workspace:*",
+    "minisearch": "7.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3"
+  }
+}

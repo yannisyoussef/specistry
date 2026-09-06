@@ -6,7 +6,7 @@
 // referenced by the route manifest. The budget is a regression ceiling above
 // the measured baseline recorded in docs/development/performance-accessibility.md.
 // Usage: node scripts/check-bundle-budget.mjs [--json]
-import { readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { gzipSync } from "node:zlib";
@@ -55,6 +55,37 @@ function routeClientChunks(route) {
     }
   }
   return [...chunks].sort();
+}
+
+/** Gzip bytes of the lazily loaded search chunk (engine + palette). */
+export const SEARCH_BUDGET_GZIP_BYTES = 40 * 1_024;
+
+/**
+ * The search palette is loaded on first open, never by a route, so it is
+ * found by content: the chunk that carries the engine's serialized-index
+ * marker. Reported and budgeted separately from every page's bootstrap.
+ */
+export function measureSearchChunk() {
+  const directory = path.join(buildRoot, "static", "chunks");
+  const chunks = readdirSync(directory)
+    .filter((name) => name.endsWith(".js"))
+    .map((name) => path.join(directory, name))
+    .filter((file) => readFileSync(file, "utf8").includes("searchVersion"));
+  const gzipBytes = chunks.reduce((total, file) => total + gzipBytes_(file), 0);
+  const rawBytes = chunks.reduce(
+    (total, file) => total + statSync(file).size,
+    0,
+  );
+  return {
+    budgetGzipBytes: SEARCH_BUDGET_GZIP_BYTES,
+    chunks: chunks.map((file) => path.relative(buildRoot, file)),
+    gzipBytes,
+    rawBytes,
+  };
+}
+
+function gzipBytes_(file) {
+  return gzipSync(readFileSync(file)).byteLength;
 }
 
 export function measure(route = OPERATION_ROUTE) {
@@ -110,13 +141,37 @@ function main() {
     docs: measure(DOCS_ROUTE),
     operation: measure(OPERATION_ROUTE),
   };
+  const search = measureSearchChunk();
   const failures = [
     ...check(reports.operation, "operation page"),
     ...check(reports.docs, "authored page"),
   ];
+  if (search.chunks.length === 0) {
+    failures.push("the lazy search chunk was not found in the build output");
+  } else if (search.gzipBytes > search.budgetGzipBytes) {
+    failures.push(
+      `search chunk ${search.gzipBytes} B gzip exceeds the ${search.budgetGzipBytes} B budget`,
+    );
+  }
+  for (const [, report] of Object.entries(reports)) {
+    if (
+      search.chunks.some((chunk) =>
+        report.route.chunks.includes(`/_next/${chunk}`),
+      )
+    ) {
+      failures.push(
+        "the search chunk is loaded by a page route instead of lazily",
+      );
+    }
+  }
   if (process.argv.includes("--json")) {
-    process.stdout.write(`${JSON.stringify(reports, null, 2)}\n`);
+    process.stdout.write(
+      `${JSON.stringify({ ...reports, search }, null, 2)}\n`,
+    );
   } else {
+    process.stdout.write(
+      `[bundle] search (lazy): ${search.gzipBytes} B gzip (${search.rawBytes} B raw) in ${search.chunks.length} chunk(s); budget ${search.budgetGzipBytes} B\n`,
+    );
     for (const [label, report] of Object.entries(reports)) {
       process.stdout.write(
         `[bundle] ${label} page: ${report.totalGzipBytes} B gzip (${report.totalRawBytes} B raw) client JavaScript; bootstrap ${report.bootstrap.gzipBytes} B in ${report.bootstrap.chunks.length} chunks, route ${report.route.gzipBytes} B in ${report.route.chunks.length} chunks; budget ${report.budgetGzipBytes} B\n`,

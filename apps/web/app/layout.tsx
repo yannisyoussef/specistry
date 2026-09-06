@@ -10,6 +10,7 @@ import "./styles/base.css";
 import "./styles/reader.css";
 import "./styles/schema.css";
 import "./styles/content.css";
+import "./styles/search.css";
 
 import { Shell } from "../components/reader/shell";
 import { loadReaderArtifact } from "../lib/reader/artifact";
@@ -43,11 +44,8 @@ function accentDeclaration(accent: string | undefined): string | undefined {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const [{ content, index }, cookieStore, requestHeaders] = await Promise.all([
-    loadReaderArtifact(),
-    cookies(),
-    headers(),
-  ]);
+  const [{ content, index, search }, cookieStore, requestHeaders] =
+    await Promise.all([loadReaderArtifact(), cookies(), headers()]);
   const mode = readThemeMode(cookieStore.get(THEME_COOKIE)?.value);
   const forwarded = requestHeaders.get("x-specra-pathname") ?? "/";
   const currentPath = safeReturnPath(forwarded);
@@ -65,6 +63,13 @@ export default async function RootLayout({
           // keeps it inside the strict style-src policy.
           <style nonce={nonce}>{accent}</style>
         )}
+        {nonce === undefined ? null : (
+          // Search needs script; without it the trigger disappears rather
+          // than sitting dead in the header (navigation still works).
+          <noscript>
+            <style nonce={nonce}>{".search-trigger{display:none}"}</style>
+          </noscript>
+        )}
       </head>
       <body>
         <Shell
@@ -72,6 +77,7 @@ export default async function RootLayout({
           currentPath={currentPath}
           index={index}
           mode={mode}
+          searchPath={search?.path}
         >
           {children}
         </Shell>

@@ -206,6 +206,20 @@ flowchart LR
 
 `@specra/content` is a build-time package that depends on `@specra/model` only; the CLI and the reader may depend on it (the reader uses its artifact parsers and types). Authored text never becomes code: expressions, ESM, raw HTML, unknown components, and non-string props are diagnostics with a source line and column. The reader composes one sidebar from the navigation artifact and the API projection, keeps the nonce CSP unchanged, and serves assets only by manifest name.
 
+## Search (SPEC-007)
+
+```mermaid
+flowchart LR
+  canonical["documentation.json"] --> project["@specra/search projection\n(pages, sections, groups, operations)"]
+  content["content.json + navigation.json"] --> project
+  project --> index["MiniSearch index (build time)"]
+  index --> artifact["search.json + manifest digest"]
+  artifact --> route["reader /search/index.<digest>.json\n(validated, immutable)"]
+  route --> palette["lazy ⌘K palette + browser engine\n(queries stay local)"]
+```
+
+`@specra/search` depends on `@specra/model` and `@specra/content` only; its `./client` entry is browser-safe and carries the engine alone. The CLI generates the index from the exact artifacts it is about to write, so search is part of the atomic build. The reader validates the artifact against the manifest digest before serving it and loads the engine on first open. ADR-013 records the engine evaluation and the privacy policy.
+
 ## Runtime responsibilities
 
 The default deployment serves pre-rendered or server-rendered reader routes, small route-specific payloads, a lazy search worker/index, and opt-in client islands for navigation, tabs, schema expansion, search, and playground forms. It holds no credential database and performs no generic upstream fetch. Static export is supported when selected features are static-compatible; Node deployment adds controlled runtime features.

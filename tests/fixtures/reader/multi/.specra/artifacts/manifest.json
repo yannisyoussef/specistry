@@ -5,13 +5,20 @@
     "warnings": 0
   },
   "files": {
-    "documentation": "documentation.json"
+    "documentation": "documentation.json",
+    "search": "search.json"
   },
   "generator": "specra",
   "modelVersion": 1,
   "project": {
     "id": "project_3b461578d597485a",
     "name": "Acme Platform"
+  },
+  "search": {
+    "bytes": 7796,
+    "documents": 18,
+    "sha256": "0a43e01e6ee3da4348ce1004f254cd04d24f92e71a80570c0cd0f89c6c7f2bd8",
+    "version": 1
   },
   "sources": [
     {

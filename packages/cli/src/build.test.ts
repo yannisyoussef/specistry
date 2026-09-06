@@ -67,7 +67,7 @@ describe("buildProject", () => {
     expect(first.artifacts).toEqual({
       bytes: expect.any(Number),
       directory: ".specra/artifacts",
-      files: ["documentation.json", "manifest.json"],
+      files: ["documentation.json", "manifest.json", "search.json"],
     });
     expect(first.ingestion.statistics).toEqual({
       documents: 1,
@@ -79,6 +79,7 @@ describe("buildProject", () => {
     expect((await readdir(artifactDirectory)).sort()).toEqual([
       "documentation.json",
       "manifest.json",
+      "search.json",
     ]);
     expect(await readdir(path.join(project, ".specra"))).toEqual(["artifacts"]);
     const documentation = await readFile(
@@ -92,10 +93,16 @@ describe("buildProject", () => {
     expect(JSON.parse(manifest)).toEqual({
       artifactFormat: 1,
       diagnostics: { errors: 0, warnings: 0 },
-      files: { documentation: "documentation.json" },
+      files: { documentation: "documentation.json", search: "search.json" },
       generator: "specra",
       modelVersion: 1,
       project: { id: "Example", name: "Example" },
+      search: {
+        bytes: expect.any(Number) as number,
+        documents: 2,
+        sha256: expect.stringMatching(/^[0-9a-f]{64}$/) as string,
+        version: 1,
+      },
       sources: [
         {
           bytes: Buffer.byteLength(VALID),

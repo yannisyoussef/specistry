@@ -143,6 +143,8 @@ describe("CLI clean-room package", () => {
           "micromark",
           "@shikijs/core",
           "@shikijs/engine-javascript",
+          "@specra/search",
+          "minisearch",
         ]),
       );
       const tarball = path.join(packages, packResult[0].filename);
@@ -191,6 +193,7 @@ describe("CLI clean-room package", () => {
           content: { assets: 1, pages: 2 },
           diagnostics: [],
           ok: true,
+          search: { documents: expect.any(Number) as number },
           statistics: {
             documents: 1,
             operations: 1,
@@ -211,6 +214,7 @@ describe("CLI clean-room package", () => {
               "manifest.json",
               "content.json",
               "navigation.json",
+              "search.json",
               expect.stringMatching(/^assets\/[a-f0-9]{16}\.png$/),
             ],
           }),

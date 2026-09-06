@@ -15,6 +15,10 @@ import {
   type DocumentationArtifact,
 } from "@specra/model";
 
+import { createHash } from "node:crypto";
+
+import { parseSearchArtifact } from "@specra/search";
+
 import { createReaderContent, type ReaderContent } from "./content";
 import { createReaderIndex, type ReaderIndex } from "./projection";
 
@@ -35,8 +39,17 @@ export interface ReaderArtifact {
   readonly index: ReaderIndex;
   /** Authored content and navigation; absent for API-only projects. */
   readonly content?: ReaderContent;
+  /** The validated search artifact, served content-addressed (SPEC-007). */
+  readonly search?: ReaderSearch;
   /** Project-relative artifact directory; never an absolute machine path. */
   readonly directory: string;
+}
+
+export interface ReaderSearch {
+  /** Public path: `/search/index.<sha256 prefix>.json`, immutable. */
+  readonly path: string;
+  readonly json: string;
+  readonly documents: number;
 }
 
 export class ReaderArtifactError extends Error {
@@ -139,13 +152,62 @@ export async function readReaderArtifact(
     );
   }
   const content = await readContent(directory, manifest, hint);
+  const search = await readSearch(directory, manifest, hint);
   return {
     artifact,
     ...(content === undefined ? {} : { content }),
     directory: ARTIFACT_DIRECTORY,
     index: createReaderIndex(artifact),
     manifest,
+    ...(search === undefined ? {} : { search }),
   };
+}
+
+/**
+ * Search is optional in the manifest (older artifacts), but when the manifest
+ * names it the file must parse, match the recorded digest and size, and
+ * carry the recorded document count; a stale or tampered index never pairs
+ * with fresh content. The reader serves the bytes it validated here.
+ */
+async function readSearch(
+  directory: string,
+  manifest: ArtifactManifest,
+  hint: string,
+): Promise<ReaderSearch | undefined> {
+  if (manifest.files.search === undefined || manifest.search === undefined) {
+    return undefined;
+  }
+  const text = await readArtifactFile(directory, manifest.files.search, hint);
+  const sha256 = createHash("sha256").update(text).digest("hex");
+  if (
+    sha256 !== manifest.search.sha256 ||
+    Buffer.byteLength(text, "utf8") !== manifest.search.bytes
+  ) {
+    throw new ReaderArtifactError(
+      `The search artifact ${ARTIFACT_DIRECTORY}/${manifest.files.search} does not match the digest recorded in the manifest.`,
+      hint,
+    );
+  }
+  try {
+    const artifact = parseSearchArtifact(text);
+    if (artifact.documents.length !== manifest.search.documents) {
+      throw new ReaderArtifactError(
+        `The artifact manifest reports ${manifest.search.documents} search documents but the search artifact contains ${artifact.documents.length}.`,
+        hint,
+      );
+    }
+    return {
+      documents: artifact.documents.length,
+      json: text,
+      path: `/search/index.${sha256.slice(0, 16)}.json`,
+    };
+  } catch (error) {
+    if (error instanceof ReaderArtifactError) throw error;
+    throw new ReaderArtifactError(
+      `The search artifact ${ARTIFACT_DIRECTORY}/${manifest.files.search} failed validation (${describe(error)}).`,
+      hint,
+    );
+  }
 }
 
 /**

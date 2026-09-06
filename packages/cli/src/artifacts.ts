@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { lstat, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -7,6 +7,10 @@ import {
   ARTIFACT_CONTENT_FILENAME,
   ARTIFACT_NAVIGATION_FILENAME,
 } from "@specra/content";
+import {
+  SEARCH_ARTIFACT_FILENAME,
+  SEARCH_FORMAT_VERSION,
+} from "@specra/search";
 import {
   ARTIFACT_DOCUMENTATION_FILENAME,
   ARTIFACT_MANIFEST_FILENAME,
@@ -38,6 +42,8 @@ export interface ArtifactWriteRequest {
   readonly pages?: number;
   /** Authored source records appended to the manifest sources. */
   readonly contentSources?: readonly SourceSummary[];
+  /** The search artifact (SPEC-007); every build carries one. */
+  readonly search: { readonly json: string; readonly documents: number };
   readonly project: { readonly id: string; readonly name: string };
   readonly ingestion: IngestionSummary;
   readonly warnings: number;
@@ -97,6 +103,11 @@ export async function writeArtifacts(
         "utf8",
       );
     }
+    await writeFile(
+      path.join(staging, SEARCH_ARTIFACT_FILENAME),
+      request.search.json,
+      "utf8",
+    );
     if (request.assets !== undefined && request.assets.length > 0) {
       const assetsDirectory = path.join(staging, ARTIFACT_ASSETS_DIRECTORY);
       await mkdir(assetsDirectory);
@@ -131,6 +142,8 @@ export async function writeArtifacts(
         Buffer.byteLength(request.contentJson, "utf8") +
         Buffer.byteLength(request.navigationJson, "utf8");
     }
+    files.push(SEARCH_ARTIFACT_FILENAME);
+    bytes += Buffer.byteLength(request.search.json, "utf8");
     for (const asset of request.assets ?? []) {
       files.push(`${ARTIFACT_ASSETS_DIRECTORY}/${asset.name}`);
       bytes += asset.bytes.byteLength;
@@ -237,6 +250,13 @@ function renderManifest(request: ArtifactWriteRequest): string {
             navigation: ARTIFACT_NAVIGATION_FILENAME,
           }
         : {}),
+      search: SEARCH_ARTIFACT_FILENAME,
+    },
+    search: {
+      bytes: Buffer.byteLength(request.search.json, "utf8"),
+      documents: request.search.documents,
+      sha256: createHash("sha256").update(request.search.json).digest("hex"),
+      version: SEARCH_FORMAT_VERSION,
     },
     generator: "specra",
     modelVersion: DOCUMENT_MODEL_VERSION,
