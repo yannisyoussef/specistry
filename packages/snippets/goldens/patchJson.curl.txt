@@ -1,0 +1,8 @@
+curl --request PATCH \
+  --url 'https://api.example.com/v1/inboxes/<INBOX_ID>' \
+  --header 'Content-Type: application/vnd.api+json' \
+  --user '<USERNAME>:<PASSWORD>' \
+  --data '{
+  "name": "renamed",
+  "password": "<YOUR_PASSWORD>"
+}'

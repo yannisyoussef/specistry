@@ -1,0 +1,2 @@
+curl --request OPTIONS \
+  --url 'https://api.example.com/v1/inboxes'

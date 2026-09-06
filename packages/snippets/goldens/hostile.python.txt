@@ -1,0 +1,22 @@
+import requests  # pip install requests
+
+response = requests.post(
+    "https://api.example.com/v1/hostile/%24%28touch%20%2Ftmp%2Fpwned%29%27%3B%20rm%20-rf%20%2F%20%23?q=%24%7Bprocess.env.SECRET%7D%60%2Balert%281%29%2B%60",
+    headers={
+        "X-Evil": "value Injected-Header: yes",
+        "Authorization": "Bearer <YOUR_ACCESS_TOKEN>",
+    },
+    cookies={
+        "c": "%60whoami%60",
+    },
+    json={
+        "bidi": "safeevil",
+        "html": "</script><script>alert(1)</script>",
+        "java": "say \"hi\" \\ path",
+        "python": "end\" ; import os",
+        "shell": "$(touch /tmp/pwned)'; rm -rf / #",
+        "unicode": "café 日本語 😀",
+    },
+)
+print(response.status_code)
+print(response.json())

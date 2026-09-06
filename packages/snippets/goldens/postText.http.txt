@@ -1,0 +1,7 @@
+POST /v1/notes HTTP/1.1
+Host: api.example.com
+Authorization: Digest <CREDENTIALS>
+Content-Type: text/plain
+
+line one
+line two

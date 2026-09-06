@@ -1,0 +1,17 @@
+const init: RequestInit = {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer <YOUR_ACCESS_TOKEN>",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    name: "string",
+    email: "user@example.com",
+    ttl: 3600,
+    secretToken: "<YOUR_SECRET_TOKEN>",
+    parent: {},
+    children: [],
+  }),
+};
+const response: Response = await fetch("https://api.example.com/v1/inboxes", init);
+console.log(response.status);

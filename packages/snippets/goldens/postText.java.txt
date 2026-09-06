@@ -1,0 +1,18 @@
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+HttpClient client = HttpClient.newHttpClient();
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.example.com/v1/notes"))
+    .header("Authorization", "Digest <CREDENTIALS>")
+    .header("Content-Type", "text/plain")
+    .POST(HttpRequest.BodyPublishers.ofString("""
+        line one
+        line two\
+        """))
+    .build();
+HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+System.out.println(response.statusCode());
+System.out.println(response.body());

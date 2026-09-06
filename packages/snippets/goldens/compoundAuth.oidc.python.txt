@@ -1,0 +1,10 @@
+import requests  # pip install requests
+
+# Requires an access token obtained through OpenID Connect.
+response = requests.delete(
+    "https://api.example.com/v1/team/<MEMBER_ID>",
+    headers={
+        "Authorization": "Bearer <YOUR_ACCESS_TOKEN>",
+    },
+)
+print(response.status_code)

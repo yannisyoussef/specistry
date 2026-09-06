@@ -1,0 +1,14 @@
+const init: RequestInit = {
+  method: "PATCH",
+  headers: {
+    "Content-Type": "application/vnd.api+json",
+    "Authorization": "Basic " + btoa("<USERNAME>:<PASSWORD>"),
+  },
+  body: JSON.stringify({
+    name: "renamed",
+    password: "<YOUR_PASSWORD>",
+  }),
+};
+const response: Response = await fetch("https://api.example.com/v1/inboxes/<INBOX_ID>", init);
+const data: unknown = await response.json();
+console.log(response.status, data);

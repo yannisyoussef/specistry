@@ -1,0 +1,12 @@
+curl --request POST \
+  --url 'http://localhost:8080/api/inboxes' \
+  --header 'X-Api-Key: <YOUR_API_KEY>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "name": "string",
+  "email": "user@example.com",
+  "ttl": 3600,
+  "secretToken": "<YOUR_SECRET_TOKEN>",
+  "parent": {},
+  "children": []
+}'

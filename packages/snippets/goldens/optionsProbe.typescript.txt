@@ -1,0 +1,5 @@
+const init: RequestInit = {
+  method: "OPTIONS",
+};
+const response: Response = await fetch("https://api.example.com/v1/inboxes", init);
+console.log(response.status);

@@ -1,0 +1,13 @@
+POST /api/inboxes HTTP/1.1
+Host: localhost:8080
+X-Api-Key: <YOUR_API_KEY>
+Content-Type: application/json
+
+{
+  "name": "string",
+  "email": "user@example.com",
+  "ttl": 3600,
+  "secretToken": "<YOUR_SECRET_TOKEN>",
+  "parent": {},
+  "children": []
+}

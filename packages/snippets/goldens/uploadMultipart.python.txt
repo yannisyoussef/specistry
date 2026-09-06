@@ -1,0 +1,16 @@
+import requests  # pip install requests
+
+# Requires an OAuth 2.0 access token with the scope team:read.
+response = requests.put(
+    "https://api.example.com/v1/domains/<DOMAIN_ID>/logo",
+    headers={
+        "Authorization": "Bearer <YOUR_ACCESS_TOKEN>",
+    },
+    data={
+        "altText": "string",
+    },
+    files={
+        "file": ("file", open("/path/to/file", "rb"), "image/png"),
+    },
+)
+print(response.status_code)

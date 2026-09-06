@@ -1,0 +1,6 @@
+import requests  # pip install requests
+
+response = requests.head(
+    "https://api.example.com/v1/inboxes/<INBOX_ID>",
+)
+print(response.status_code)

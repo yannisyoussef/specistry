@@ -1,0 +1,9 @@
+// Requires an access token obtained through OpenID Connect.
+const init: RequestInit = {
+  method: "DELETE",
+  headers: {
+    "Authorization": "Bearer <YOUR_ACCESS_TOKEN>",
+  },
+};
+const response: Response = await fetch("https://api.example.com/v1/team/<MEMBER_ID>", init);
+console.log(response.status);
