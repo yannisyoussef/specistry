@@ -12,7 +12,8 @@ specra build
   → reader projection (services → groups → operations, slugs, views)
   → reader content (pages by route, composed navigation, breadcrumbs, prev/next)
   → Next.js routes (React Server Components)
-  → four client islands (mobile drawer, copy control, sidebar scroll position, tabs)
+  → five client islands (mobile drawer, copy control, sidebar scroll position, tabs, search trigger)
+  → one lazy chunk (search palette + engine + index) on first ⌘K
 ```
 
 Every route renders on demand from the memoized artifact so the per-request nonce policy applies (ADR-010). A missing, malformed, incompatible, or inconsistent artifact fails `next build` and `next start` with a message that names the file, includes the first model diagnostics, and tells you to run `specra build`; the reader never serves an empty site in its place. The artifact is loaded once per process (at startup through `instrumentation.ts`) and kept in memory; a very large artifact costs its parsed size in server heap, which is the documented trade for validation-once rendering.
@@ -40,6 +41,7 @@ The repository's own CI and browser suites point these at the committed TestInbo
 | `/`                                         | The authored `docs/index.*` page when present; otherwise the generated project home |
 | `/docs/<slug…>`                             | Authored pages (`docs/<path>.md` or `.mdx`); `/docs` redirects to `/`               |
 | `/assets/<sha256:16>.<ext>`                 | Images and branding copied by the build; served only by manifest name               |
+| `/search/index.<sha256:16>.json`            | The validated search artifact, immutable; any other name is a 404                   |
 | `/api`                                      | API reference index: every group with its operations                                |
 | `/api/<group>`                              | One tag group (single-service projects)                                             |
 | `/api/<group>/<operation>`                  | Operation page                                                                      |
@@ -54,6 +56,10 @@ Group slugs are slugified tag names; operation slugs are the contract `operation
 An authored page renders breadcrumbs derived from its navigation trail (`Docs › section › title`), the frontmatter title as the only `<h1>`, the description as lede, an "On this page" outline of `##`/`###` headings (hidden on the homepage), the body, and previous/next links that follow the configured reading order with the API reference as one entry. The homepage uses the display type scale and no breadcrumbs. Every block of the content model has one explicit renderer: paragraphs, headings with anchor links, lists (task items announce "Done"/"To do"), blockquotes, tables inside a focusable horizontal scroller, images from the assets route, code blocks with a header, a copy control, build-time token classes and a focusable scroller, callouts (kind spelled out as text), steps as an ordered list whose titles continue the heading outline (or the homepage workflow strip), cards, tabs, and the homepage blocks: the hero (title and lede from frontmatter, ink and outline actions, an optional media placeholder whose play chrome is decorative), the Install chips with a command line and sample, and the Start-here rows.
 
 The sidebar is one composed navigation: authored sections and pages in configured order with the generated API groups inserted at the `api` node (or after every page when nothing is configured), the current item marked with `aria-current`, external links marked with a cue and `rel="noopener noreferrer"`. The header shows `Guides` and `API reference` primary tabs when the project has docs; the mobile drawer clones the composed navigation. Branding replaces the wordmark mark with the configured logo, sets the favicon, and applies the accent through one nonce-bearing `<style>` that defines `--brand`. Tabs and code groups are progressive: the server renders every panel under a heading, and the client turns the headings into a WAI-ARIA tab list. The [content authoring reference](content-authoring.md) documents the source vocabulary; ADR-012 records the pipeline and route decisions.
+
+## Search
+
+The header shows a Search control (⌘K on macOS, Ctrl K elsewhere) whenever the artifact carries a search index, which every `specra build` produces. The control is the only search code a page ships; the palette, the engine, and the index load on first open and stay cached for the session. The palette is a modal dialog with a combobox: results are grouped by source (API reference, Guides) in rank order, the active option is announced through `aria-activedescendant`, Enter opens the selected destination, Escape closes and returns focus, and a polite status announces the count once typing pauses. Every destination is a route the build validated; the query never becomes part of a URL. Queries run in the browser only; see the [search reference](search.md) for what is indexed, how ranking works, and the artifact contract.
 
 ## Operation page
 
@@ -135,6 +141,7 @@ Contracts above 150 operations switch to a compact navigation: every group is li
 
 - `proxy.ts` sets a per-request `Content-Security-Policy` with a nonce: `script-src 'self' 'nonce-…' 'strict-dynamic'`, `script-src-attr 'none'`, `style-src 'self' 'nonce-…'`, `object-src 'none'`, `frame-src 'none'`, `frame-ancestors 'none'`, `worker-src 'none'`, `manifest-src 'none'`, `media-src 'none'`, `form-action 'self'`, `base-uri 'self'`, `img-src 'self'`, `font-src 'self'`, `connect-src 'self'`, `upgrade-insecure-requests`. Development adds `'unsafe-eval'` for React's debugging tooling only. The proxy runs for every request (prefetch-shaped requests included), strips any inbound policy header, and overwrites the internal `x-specra-pathname` header so a client cannot spoof it. Fixed headers (`X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `X-Content-Type-Options`) come from `next.config.ts` and also cover static assets.
 - Canonical strings are rendered as text. Paired backticks become inline `<code>`; no Markdown, HTML, or link is interpreted, so `<script>`, event handlers, and `javascript:` URLs display literally.
+- Search results are plain text from the validated artifact: matches are highlighted by splitting the title into text segments, never by building HTML or regular expressions from the query; the query is bounded to 200 characters and 12 terms; destinations come from the artifact, never from the query. The reader serves the artifact only after checking its digest, size, and document count against the manifest, and only under its content-addressed name.
 - Authored content arrives as a validated JSON content model, never as HTML or code: the renderer maps each node kind to a React element, spreads no authored attribute, and link targets and asset names were validated at build time. Assets are served only when the manifest lists them, from the fixed artifact directory, with `Cache-Control: immutable`, `nosniff`, and `default-src 'none'; sandbox`, so an SVG logo opened directly cannot run scripts. The consumer accent is a validated six-digit colour emitted in a nonce `<style>`; the proxy leaves the asset route's own policy in place and applies the page policy everywhere else.
 - Route segments must match the slug grammar before lookup; anything else is a 404.
 - The theme handler accepts `POST` only, rejects cross-site submissions (`Sec-Fetch-Site`, then `Origin` against the host) with 403, follows only printable-ASCII absolute same-origin paths, and sets an `HttpOnly`, `SameSite=Lax` cookie that is `Secure` behind HTTPS (direct or via `X-Forwarded-Proto`).
@@ -163,5 +170,9 @@ Measured on the TestInbox fixture (25 operations) and enforced in CI:
 | Authored guide HTML (quickstart)             | ~60 KB          | 200 KiB (browser test)           |
 | 1,000-page site build / peak RSS             | ~6 s / ~690 MiB | 120 s / 2 GiB (performance test) |
 | 1,000-page site largest page HTML            | ~13 KB          | 200 KiB                          |
+| Search trigger on every page (gzip)          | ~0.6 KB         | inside the page budget           |
+| Search chunk, lazy (engine + palette, gzip)  | 9.8 KB          | 40 KiB (`pnpm check:bundle`)     |
+| Search artifact, TestInbox (gzip)            | 12 KB           | 64 KiB (performance test)        |
+| Search artifact, 1,000 pages + 10,000 ops    | ~1.0 MB gzip    | 8 MiB gzip (performance test)    |
 
 The framework bootstrap (React 19 and the Next runtime, about 130 KB gzip) dominates; the reader's own client code is the two islands.

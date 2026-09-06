@@ -16,3 +16,4 @@ ADRs record decisions that constrain multiple slices or security boundaries. Sta
 | [ADR-010](010-reader-projection-and-operation-urls.md)       | Reader projection boundary and operation URL policy           | ACCEPTED |
 | [ADR-011](011-schema-display-names.md)                       | Schema display names in canonical model v1 (additive)         | ACCEPTED |
 | [ADR-012](012-authored-content-pipeline.md)                  | Authored content pipeline, routes, and navigation composition | ACCEPTED |
+| [ADR-013](013-build-time-self-hosted-search.md)              | Build-time, self-hosted search                                | ACCEPTED |
