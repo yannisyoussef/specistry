@@ -36,8 +36,10 @@
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.63.0",
+    "@specra/config": "workspace:*",
     "@specra/content": "workspace:*",
     "@specra/model": "workspace:*",
+    "@specra/playground": "workspace:*",
     "@specra/search": "workspace:*",
     "@specra/snippets": "workspace:*",
     "@testing-library/dom": "10.4.1",
