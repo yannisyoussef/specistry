@@ -209,6 +209,37 @@ paths:
                     type: object
                     additionalProperties:
                       type: integer
+                  "<img src=x onerror=alert(1)>":
+                    type: string
+                    description: "<script>alert('property')</script> stays text."
+                  "__proto__":
+                    type: string
+                    description: Prototype-named property rendered as data.
+                  constructor:
+                    type: integer
+                  prototype:
+                    type: boolean
+                  "a/b#c?d=e":
+                    type: string
+                  "user\u202Eeman":
+                    type: string
+                    description: Contains a right-to-left override.
+                  "zero\u200Bwidth\u200Cname":
+                    type: string
+                  ? "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  : type: string
+                    description: A 2,000-character property name.
+                  pattern:
+                    type: string
+                    pattern: '^(?:[a-z0-9!#$%&*+/=?^_{|}~-]+(?:\.[a-z0-9!#$%&*+/=?^_{|}~-]+)*)@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\])$'
+                  largeEnum:
+                    $ref: "#/components/schemas/LargeEnum"
+                  bigObject:
+                    $ref: "#/components/schemas/BigObject"
+                  deepTree:
+                    $ref: "#/components/schemas/DeepTree"
+                  manyVariants:
+                    $ref: "#/components/schemas/ManyVariants"
                   deep:
                     type: object
                     properties:
@@ -219,6 +250,24 @@ paths:
                             type: object
                             properties:
                               leaf: { type: string }
+  /profiles:
+    put:
+      operationId: replaceProfile
+      summary: Replace profile
+      description: The same schema is sent and returned; read-only and write-only fields differ by context.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Profile"
+      responses:
+        "200":
+          description: The stored profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
   /callbacks:
     post:
       operationId: withCallback
@@ -280,6 +329,1004 @@ components:
     mtls:
       type: mutualTLS
   schemas:
+    LargeEnum:
+      type: string
+      enum:
+        - value-0
+        - value-1
+        - value-2
+        - value-3
+        - value-4
+        - value-5
+        - value-6
+        - value-7
+        - value-8
+        - value-9
+        - value-10
+        - value-11
+        - value-12
+        - value-13
+        - value-14
+        - value-15
+        - value-16
+        - value-17
+        - value-18
+        - value-19
+        - value-20
+        - value-21
+        - value-22
+        - value-23
+        - value-24
+        - value-25
+        - value-26
+        - value-27
+        - value-28
+        - value-29
+        - value-30
+        - value-31
+        - value-32
+        - value-33
+        - value-34
+        - value-35
+        - value-36
+        - value-37
+        - value-38
+        - value-39
+        - value-40
+        - value-41
+        - value-42
+        - value-43
+        - value-44
+        - value-45
+        - value-46
+        - value-47
+        - value-48
+        - value-49
+        - value-50
+        - value-51
+        - value-52
+        - value-53
+        - value-54
+        - value-55
+        - value-56
+        - value-57
+        - value-58
+        - value-59
+        - value-60
+        - value-61
+        - value-62
+        - value-63
+        - value-64
+        - value-65
+        - value-66
+        - value-67
+        - value-68
+        - value-69
+        - value-70
+        - value-71
+        - value-72
+        - value-73
+        - value-74
+        - value-75
+        - value-76
+        - value-77
+        - value-78
+        - value-79
+        - value-80
+        - value-81
+        - value-82
+        - value-83
+        - value-84
+        - value-85
+        - value-86
+        - value-87
+        - value-88
+        - value-89
+        - value-90
+        - value-91
+        - value-92
+        - value-93
+        - value-94
+        - value-95
+        - value-96
+        - value-97
+        - value-98
+        - value-99
+        - value-100
+        - value-101
+        - value-102
+        - value-103
+        - value-104
+        - value-105
+        - value-106
+        - value-107
+        - value-108
+        - value-109
+        - value-110
+        - value-111
+        - value-112
+        - value-113
+        - value-114
+        - value-115
+        - value-116
+        - value-117
+        - value-118
+        - value-119
+        - value-120
+        - value-121
+        - value-122
+        - value-123
+        - value-124
+        - value-125
+        - value-126
+        - value-127
+        - value-128
+        - value-129
+        - value-130
+        - value-131
+        - value-132
+        - value-133
+        - value-134
+        - value-135
+        - value-136
+        - value-137
+        - value-138
+        - value-139
+        - value-140
+        - value-141
+        - value-142
+        - value-143
+        - value-144
+        - value-145
+        - value-146
+        - value-147
+        - value-148
+        - value-149
+        - value-150
+        - value-151
+        - value-152
+        - value-153
+        - value-154
+        - value-155
+        - value-156
+        - value-157
+        - value-158
+        - value-159
+        - value-160
+        - value-161
+        - value-162
+        - value-163
+        - value-164
+        - value-165
+        - value-166
+        - value-167
+        - value-168
+        - value-169
+        - value-170
+        - value-171
+        - value-172
+        - value-173
+        - value-174
+        - value-175
+        - value-176
+        - value-177
+        - value-178
+        - value-179
+        - value-180
+        - value-181
+        - value-182
+        - value-183
+        - value-184
+        - value-185
+        - value-186
+        - value-187
+        - value-188
+        - value-189
+        - value-190
+        - value-191
+        - value-192
+        - value-193
+        - value-194
+        - value-195
+        - value-196
+        - value-197
+        - value-198
+        - value-199
+        - value-200
+        - value-201
+        - value-202
+        - value-203
+        - value-204
+        - value-205
+        - value-206
+        - value-207
+        - value-208
+        - value-209
+        - value-210
+        - value-211
+        - value-212
+        - value-213
+        - value-214
+        - value-215
+        - value-216
+        - value-217
+        - value-218
+        - value-219
+        - value-220
+        - value-221
+        - value-222
+        - value-223
+        - value-224
+        - value-225
+        - value-226
+        - value-227
+        - value-228
+        - value-229
+        - value-230
+        - value-231
+        - value-232
+        - value-233
+        - value-234
+        - value-235
+        - value-236
+        - value-237
+        - value-238
+        - value-239
+        - value-240
+        - value-241
+        - value-242
+        - value-243
+        - value-244
+        - value-245
+        - value-246
+        - value-247
+        - value-248
+        - value-249
+        - value-250
+        - value-251
+        - value-252
+        - value-253
+        - value-254
+        - value-255
+        - value-256
+        - value-257
+        - value-258
+        - value-259
+        - value-260
+        - value-261
+        - value-262
+        - value-263
+        - value-264
+        - value-265
+        - value-266
+        - value-267
+        - value-268
+        - value-269
+        - value-270
+        - value-271
+        - value-272
+        - value-273
+        - value-274
+        - value-275
+        - value-276
+        - value-277
+        - value-278
+        - value-279
+        - value-280
+        - value-281
+        - value-282
+        - value-283
+        - value-284
+        - value-285
+        - value-286
+        - value-287
+        - value-288
+        - value-289
+        - value-290
+        - value-291
+        - value-292
+        - value-293
+        - value-294
+        - value-295
+        - value-296
+        - value-297
+        - value-298
+        - value-299
+    BigObject:
+      type: object
+      description: 250 properties stress the bounded property rendering.
+      properties:
+        field0:
+          type: string
+        field1:
+          type: integer
+        field2:
+          type: string
+        field3:
+          type: integer
+        field4:
+          type: string
+        field5:
+          type: integer
+        field6:
+          type: string
+        field7:
+          type: integer
+        field8:
+          type: string
+        field9:
+          type: integer
+        field10:
+          type: string
+        field11:
+          type: integer
+        field12:
+          type: string
+        field13:
+          type: integer
+        field14:
+          type: string
+        field15:
+          type: integer
+        field16:
+          type: string
+        field17:
+          type: integer
+        field18:
+          type: string
+        field19:
+          type: integer
+        field20:
+          type: string
+        field21:
+          type: integer
+        field22:
+          type: string
+        field23:
+          type: integer
+        field24:
+          type: string
+        field25:
+          type: integer
+        field26:
+          type: string
+        field27:
+          type: integer
+        field28:
+          type: string
+        field29:
+          type: integer
+        field30:
+          type: string
+        field31:
+          type: integer
+        field32:
+          type: string
+        field33:
+          type: integer
+        field34:
+          type: string
+        field35:
+          type: integer
+        field36:
+          type: string
+        field37:
+          type: integer
+        field38:
+          type: string
+        field39:
+          type: integer
+        field40:
+          type: string
+        field41:
+          type: integer
+        field42:
+          type: string
+        field43:
+          type: integer
+        field44:
+          type: string
+        field45:
+          type: integer
+        field46:
+          type: string
+        field47:
+          type: integer
+        field48:
+          type: string
+        field49:
+          type: integer
+        field50:
+          type: string
+        field51:
+          type: integer
+        field52:
+          type: string
+        field53:
+          type: integer
+        field54:
+          type: string
+        field55:
+          type: integer
+        field56:
+          type: string
+        field57:
+          type: integer
+        field58:
+          type: string
+        field59:
+          type: integer
+        field60:
+          type: string
+        field61:
+          type: integer
+        field62:
+          type: string
+        field63:
+          type: integer
+        field64:
+          type: string
+        field65:
+          type: integer
+        field66:
+          type: string
+        field67:
+          type: integer
+        field68:
+          type: string
+        field69:
+          type: integer
+        field70:
+          type: string
+        field71:
+          type: integer
+        field72:
+          type: string
+        field73:
+          type: integer
+        field74:
+          type: string
+        field75:
+          type: integer
+        field76:
+          type: string
+        field77:
+          type: integer
+        field78:
+          type: string
+        field79:
+          type: integer
+        field80:
+          type: string
+        field81:
+          type: integer
+        field82:
+          type: string
+        field83:
+          type: integer
+        field84:
+          type: string
+        field85:
+          type: integer
+        field86:
+          type: string
+        field87:
+          type: integer
+        field88:
+          type: string
+        field89:
+          type: integer
+        field90:
+          type: string
+        field91:
+          type: integer
+        field92:
+          type: string
+        field93:
+          type: integer
+        field94:
+          type: string
+        field95:
+          type: integer
+        field96:
+          type: string
+        field97:
+          type: integer
+        field98:
+          type: string
+        field99:
+          type: integer
+        field100:
+          type: string
+        field101:
+          type: integer
+        field102:
+          type: string
+        field103:
+          type: integer
+        field104:
+          type: string
+        field105:
+          type: integer
+        field106:
+          type: string
+        field107:
+          type: integer
+        field108:
+          type: string
+        field109:
+          type: integer
+        field110:
+          type: string
+        field111:
+          type: integer
+        field112:
+          type: string
+        field113:
+          type: integer
+        field114:
+          type: string
+        field115:
+          type: integer
+        field116:
+          type: string
+        field117:
+          type: integer
+        field118:
+          type: string
+        field119:
+          type: integer
+        field120:
+          type: string
+        field121:
+          type: integer
+        field122:
+          type: string
+        field123:
+          type: integer
+        field124:
+          type: string
+        field125:
+          type: integer
+        field126:
+          type: string
+        field127:
+          type: integer
+        field128:
+          type: string
+        field129:
+          type: integer
+        field130:
+          type: string
+        field131:
+          type: integer
+        field132:
+          type: string
+        field133:
+          type: integer
+        field134:
+          type: string
+        field135:
+          type: integer
+        field136:
+          type: string
+        field137:
+          type: integer
+        field138:
+          type: string
+        field139:
+          type: integer
+        field140:
+          type: string
+        field141:
+          type: integer
+        field142:
+          type: string
+        field143:
+          type: integer
+        field144:
+          type: string
+        field145:
+          type: integer
+        field146:
+          type: string
+        field147:
+          type: integer
+        field148:
+          type: string
+        field149:
+          type: integer
+        field150:
+          type: string
+        field151:
+          type: integer
+        field152:
+          type: string
+        field153:
+          type: integer
+        field154:
+          type: string
+        field155:
+          type: integer
+        field156:
+          type: string
+        field157:
+          type: integer
+        field158:
+          type: string
+        field159:
+          type: integer
+        field160:
+          type: string
+        field161:
+          type: integer
+        field162:
+          type: string
+        field163:
+          type: integer
+        field164:
+          type: string
+        field165:
+          type: integer
+        field166:
+          type: string
+        field167:
+          type: integer
+        field168:
+          type: string
+        field169:
+          type: integer
+        field170:
+          type: string
+        field171:
+          type: integer
+        field172:
+          type: string
+        field173:
+          type: integer
+        field174:
+          type: string
+        field175:
+          type: integer
+        field176:
+          type: string
+        field177:
+          type: integer
+        field178:
+          type: string
+        field179:
+          type: integer
+        field180:
+          type: string
+        field181:
+          type: integer
+        field182:
+          type: string
+        field183:
+          type: integer
+        field184:
+          type: string
+        field185:
+          type: integer
+        field186:
+          type: string
+        field187:
+          type: integer
+        field188:
+          type: string
+        field189:
+          type: integer
+        field190:
+          type: string
+        field191:
+          type: integer
+        field192:
+          type: string
+        field193:
+          type: integer
+        field194:
+          type: string
+        field195:
+          type: integer
+        field196:
+          type: string
+        field197:
+          type: integer
+        field198:
+          type: string
+        field199:
+          type: integer
+        field200:
+          type: string
+        field201:
+          type: integer
+        field202:
+          type: string
+        field203:
+          type: integer
+        field204:
+          type: string
+        field205:
+          type: integer
+        field206:
+          type: string
+        field207:
+          type: integer
+        field208:
+          type: string
+        field209:
+          type: integer
+        field210:
+          type: string
+        field211:
+          type: integer
+        field212:
+          type: string
+        field213:
+          type: integer
+        field214:
+          type: string
+        field215:
+          type: integer
+        field216:
+          type: string
+        field217:
+          type: integer
+        field218:
+          type: string
+        field219:
+          type: integer
+        field220:
+          type: string
+        field221:
+          type: integer
+        field222:
+          type: string
+        field223:
+          type: integer
+        field224:
+          type: string
+        field225:
+          type: integer
+        field226:
+          type: string
+        field227:
+          type: integer
+        field228:
+          type: string
+        field229:
+          type: integer
+        field230:
+          type: string
+        field231:
+          type: integer
+        field232:
+          type: string
+        field233:
+          type: integer
+        field234:
+          type: string
+        field235:
+          type: integer
+        field236:
+          type: string
+        field237:
+          type: integer
+        field238:
+          type: string
+        field239:
+          type: integer
+        field240:
+          type: string
+        field241:
+          type: integer
+        field242:
+          type: string
+        field243:
+          type: integer
+        field244:
+          type: string
+        field245:
+          type: integer
+        field246:
+          type: string
+        field247:
+          type: integer
+        field248:
+          type: string
+        field249:
+          type: integer
+    DeepTree:
+      type: object
+      properties:
+        leaf: { type: string }
+        child:
+          $ref: "#/components/schemas/DeepTree2"
+    DeepTree2:
+      type: object
+      properties:
+        leaf: { type: integer }
+        child:
+          $ref: "#/components/schemas/DeepTree3"
+    DeepTree3:
+      type: object
+      properties:
+        leaf: { type: integer }
+        child:
+          $ref: "#/components/schemas/DeepTree4"
+    DeepTree4:
+      type: object
+      properties:
+        leaf: { type: integer }
+        child:
+          $ref: "#/components/schemas/DeepTree5"
+    DeepTree5:
+      type: object
+      properties:
+        leaf: { type: integer }
+        child:
+          $ref: "#/components/schemas/DeepTree6"
+    DeepTree6:
+      type: object
+      properties:
+        leaf: { type: integer }
+        child:
+          $ref: "#/components/schemas/DeepTree7"
+    DeepTree7:
+      type: object
+      properties:
+        leaf: { type: integer }
+        child:
+          $ref: "#/components/schemas/DeepTree8"
+    DeepTree8:
+      type: object
+      properties:
+        leaf: { type: integer }
+        child:
+          $ref: "#/components/schemas/DeepTree9"
+    DeepTree9:
+      type: object
+      properties:
+        leaf: { type: integer }
+    ManyVariants:
+      oneOf:
+        - type: object
+          title: Variant0
+          properties:
+            v0: { type: string }
+        - type: object
+          title: Variant1
+          properties:
+            v1: { type: string }
+        - type: object
+          title: Variant2
+          properties:
+            v2: { type: string }
+        - type: object
+          title: Variant3
+          properties:
+            v3: { type: string }
+        - type: object
+          title: Variant4
+          properties:
+            v4: { type: string }
+        - type: object
+          title: Variant5
+          properties:
+            v5: { type: string }
+        - type: object
+          title: Variant6
+          properties:
+            v6: { type: string }
+        - type: object
+          title: Variant7
+          properties:
+            v7: { type: string }
+        - type: object
+          title: Variant8
+          properties:
+            v8: { type: string }
+        - type: object
+          title: Variant9
+          properties:
+            v9: { type: string }
+        - type: object
+          title: Variant10
+          properties:
+            v10: { type: string }
+        - type: object
+          title: Variant11
+          properties:
+            v11: { type: string }
+        - type: object
+          title: Variant12
+          properties:
+            v12: { type: string }
+        - type: object
+          title: Variant13
+          properties:
+            v13: { type: string }
+        - type: object
+          title: Variant14
+          properties:
+            v14: { type: string }
+        - type: object
+          title: Variant15
+          properties:
+            v15: { type: string }
+        - type: object
+          title: Variant16
+          properties:
+            v16: { type: string }
+        - type: object
+          title: Variant17
+          properties:
+            v17: { type: string }
+        - type: object
+          title: Variant18
+          properties:
+            v18: { type: string }
+        - type: object
+          title: Variant19
+          properties:
+            v19: { type: string }
+        - type: object
+          title: Variant20
+          properties:
+            v20: { type: string }
+        - type: object
+          title: Variant21
+          properties:
+            v21: { type: string }
+        - type: object
+          title: Variant22
+          properties:
+            v22: { type: string }
+        - type: object
+          title: Variant23
+          properties:
+            v23: { type: string }
+        - type: object
+          title: Variant24
+          properties:
+            v24: { type: string }
+    Profile:
+      type: object
+      required: [id, handle, password]
+      properties:
+        id:
+          type: string
+          readOnly: true
+        handle:
+          type: string
+          minLength: 3
+          maxLength: 30
+        password:
+          type: string
+          writeOnly: true
+          minLength: 12
+        recoveryEmail:
+          type: string
+          format: email
+          writeOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        preferences:
+          type: object
+          properties:
+            theme:
+              type: string
+              enum: [light, dark, system]
+              default: system
+            apiToken:
+              type: string
+              writeOnly: true
+            lastLoginAt:
+              type: string
+              format: date-time
+              readOnly: true
     Node:
       type: object
       description: Recursive node.

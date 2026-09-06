@@ -85,6 +85,12 @@ const resolveSegments = cache(
   },
 );
 
+// Metadata and the page project the operation (and its schema blocks) once.
+const operationViewFor = cache(
+  (target: RouteTarget & { readonly kind: "operation" }): OperationView =>
+    createOperationView(target),
+);
+
 async function resolve(params: Params["params"]): Promise<RouteTarget> {
   const { segments } = await params;
   const target = await resolveSegments(segments.join("/"));
@@ -104,7 +110,7 @@ export async function generateMetadata({
   if (target.kind === "operation") {
     const query = await searchParams;
     if (query.schema !== undefined) {
-      const operation = createOperationView(target);
+      const operation = operationViewFor(target);
       const focus = resolveFocus(operation, target.model.schemas, query);
       if (focus !== undefined && focus !== "invalid") {
         const base = operationMetadata(
@@ -159,7 +165,7 @@ export default async function ApiRoute({ params, searchParams }: Params) {
   if (target.kind === "operation") {
     const query = await searchParams;
     if (query.schema !== undefined) {
-      const operation = createOperationView(target);
+      const operation = operationViewFor(target);
       const focus = resolveFocus(operation, target.model.schemas, query);
       if (focus === "invalid") redirect(target.summary.href);
       if (focus !== undefined) {
@@ -192,6 +198,6 @@ export default async function ApiRoute({ params, searchParams }: Params) {
         />
       );
     case "operation":
-      return <OperationPage view={createOperationView(target)} />;
+      return <OperationPage view={operationViewFor(target)} />;
   }
 }

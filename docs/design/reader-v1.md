@@ -162,18 +162,48 @@ text so every reading-size string holds 4.5:1. The inactive primary tab uses
 - **Theme**: a form in the footer posts to `/theme`; the server stores a cookie and
   redirects back. No client script is needed and the choice survives without JS.
 
+## Schema rendering
+
+Schemas extend the endpoint anatomy rather than introducing a second visual system
+(handoff screen D, `06c`):
+
+- Property rows keep the 160/1fr grid; nested rows use 130 px keys, then 110 px.
+- Nested structure sits under the row behind a native disclosure. The summary is a
+  short label with a chevron (`▸ 3 properties`, `▸ items`, `▸ 3 variants`); open
+  disclosures tint the summary with `--surface-subtle`, and children hang under a
+  1 px `--border-strong` guide with 16 px indentation. After three levels the
+  indentation stops growing and the guide alone marks depth; on mobile the
+  indentation is 12 px and rows stack.
+- Type phrases are mono 11.5 px muted in rows and 12.5 px strong at a block root;
+  definition names replace shapes (`array of User`). Flags (`required`, `optional`,
+  `read-only`, `write-only`, `deprecated`) are mono 11 px words.
+- Variants are a numbered disclosure list in 1 px `--border` cards rather than the
+  reference's segmented control, so every variant stays visible and comparable,
+  works without script, and scales past four options. Discriminator values sit as
+  small outlined chips on the variant summary and in a "Selected by `type`" line.
+- Recursion is `↻ Name · recursive` in `--brand-ink` with an "Open" link; budget
+  cut-offs use the same link treatment. Links are 12.5 px sans in `--brand-ink`.
+- Enumerations are outlined chips (`--border`, radius `--radius-xs`, mono 11.5 px)
+  with a preview of eight and a disclosure for the rest.
+- The focused view reuses the page header (breadcrumb, eyebrow "Response schema ·
+  Response 200 · application/json", 34 px title, method and path) and adds the
+  design's drill-in trail (`Message › content › HtmlContent`) with the current
+  segment on `--surface-subtle`.
+- Forced colours: guides and chips take `CanvasText`, links take `LinkText`; reduced
+  motion removes the chevron transition.
+
 ## Design deviations
 
-| Element                                     | Status   | Reason                                                                                                                                                          |
-| ------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Context rail (Code / Try it)                | deferred | Generated snippets are SPEC-008 and execution is SPEC-009; the rail is omitted rather than faked                                                                |
-| One-line SDK example under the title        | deferred | SDK mapping is SPEC-008                                                                                                                                         |
-| Search field and ⌘K palette                 | deferred | Search is SPEC-007; a dead search trigger would mislead                                                                                                         |
-| Version selector                            | deferred | Versioning is SPEC-010                                                                                                                                          |
-| Guides / SDKs / Examples / Changelog tabs   | deferred | Owned by SPEC-006/008/010; only existing tabs render                                                                                                            |
-| Mobile bottom action bar (Code / Try it)    | deferred | Both actions belong to SPEC-008/009                                                                                                                             |
-| Consumer logo and brand colour              | adapted  | Config exposes only logo/favicon paths today; the reader renders the project name as the wordmark and a neutral default `--brand` until SPEC-006 wires branding |
-| "Expand schema" links and schema drill-in   | adapted  | SPEC-005 owns the schema renderer; v1 shows type summaries and one level of properties                                                                          |
-| Section collapse on mobile                  | adapted  | Sections stay open so deep links always land on visible content and no client script is required                                                                |
-| Errors / Next sections on endpoint pages    | deferred | Error catalogue and page sequencing arrive with SPEC-006/010                                                                                                    |
-| Homepage hero with install block and guides | adapted  | Authored content is SPEC-006; the home page is a minimal API-reference entry using the same type scale and surfaces                                             |
+| Element                                     | Status   | Reason                                                                                                                                                                       |
+| ------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Context rail (Code / Try it)                | deferred | Generated snippets are SPEC-008 and execution is SPEC-009; the rail is omitted rather than faked                                                                             |
+| One-line SDK example under the title        | deferred | SDK mapping is SPEC-008                                                                                                                                                      |
+| Search field and ⌘K palette                 | deferred | Search is SPEC-007; a dead search trigger would mislead                                                                                                                      |
+| Version selector                            | deferred | Versioning is SPEC-010                                                                                                                                                       |
+| Guides / SDKs / Examples / Changelog tabs   | deferred | Owned by SPEC-006/008/010; only existing tabs render                                                                                                                         |
+| Mobile bottom action bar (Code / Try it)    | deferred | Both actions belong to SPEC-008/009                                                                                                                                          |
+| Consumer logo and brand colour              | adapted  | Config exposes only logo/favicon paths today; the reader renders the project name as the wordmark and a neutral default `--brand` until SPEC-006 wires branding              |
+| "Expand schema" links and schema drill-in   | adapted  | SPEC-005: inline disclosures plus a focused view with the reference's breadcrumb trail; variants are a disclosure list instead of a segmented control (see Schema rendering) |
+| Section collapse on mobile                  | adapted  | Sections stay open so deep links always land on visible content and no client script is required                                                                             |
+| Errors / Next sections on endpoint pages    | deferred | Error catalogue and page sequencing arrive with SPEC-006/010                                                                                                                 |
+| Homepage hero with install block and guides | adapted  | Authored content is SPEC-006; the home page is a minimal API-reference entry using the same type scale and surfaces                                                          |

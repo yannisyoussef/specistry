@@ -315,6 +315,11 @@ function valueNote(
         </>
       );
     case "type-less":
+      // A bare `const` or `enum` already says everything; only keyword-only
+      // constraint sets need the applicability note.
+      if (view.enumeration !== undefined || view.label === "constant") {
+        return undefined;
+      }
       return view.applicableTypes === undefined ||
         view.applicableTypes.length === 0
         ? "No type is declared."
@@ -386,11 +391,9 @@ function ObjectChildren({
   view,
 }: Readonly<{ frame: Frame; view: SchemaView & { readonly kind: "object" } }>) {
   const total = view.properties.length + view.hidden.length + view.more;
-  if (total === 0 && typeof view.additional !== "object") {
-    return view.omitted === undefined ? (
-      <p className="schema-note">This object declares no properties.</p>
-    ) : null;
-  }
+  // An empty object is explained by its notes ("Any properties are allowed;
+  // none are declared." or the omission sentence), not by an extra line.
+  if (total === 0 && typeof view.additional !== "object") return null;
   return (
     <>
       {view.properties.length === 0 ? null : (
@@ -407,7 +410,7 @@ function ObjectChildren({
       {view.hidden.length === 0 ? null : (
         <details className="schema-more">
           <summary className="schema-more__summary">
-            Show {countLabel(view.hidden.length, "more property")}
+            Show {plural(view.hidden.length, "more property")}
           </summary>
           <ul className="schema-rows">
             {view.hidden.map((property) => (
@@ -422,9 +425,9 @@ function ObjectChildren({
       )}
       {view.more === 0 ? null : (
         <p className="schema-note">
-          {countLabel(view.more, "further property")} not shown here.{" "}
+          {plural(view.more, "further property")} not shown here.{" "}
           <a className="schema-open" href={frame.focusHref(view.locator)}>
-            Open all {countLabel(total, "property")}
+            Open all {plural(total, "property")}
             <span aria-hidden="true"> ↗</span>
           </a>
         </p>
@@ -660,14 +663,17 @@ function isOpenable(view: SchemaView): boolean {
   );
 }
 
+/** `countLabel` with the irregular plural the schema vocabulary needs. */
+function plural(count: number, noun: string): string {
+  return countLabel(count, noun).replace(/propertys$/, "properties");
+}
+
 /** Concise disclosure text; the property name is appended visually hidden. */
 function disclosureLabel(view: SchemaView): string {
   switch (view.kind) {
     case "object": {
       const total = view.properties.length + view.hidden.length + view.more;
-      return total === 0
-        ? "additional properties"
-        : countLabel(total, "property");
+      return total === 0 ? "additional properties" : plural(total, "property");
     }
     case "array":
       return "items";

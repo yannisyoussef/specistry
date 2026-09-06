@@ -42,15 +42,16 @@ export interface SchemaBudget {
 /**
  * Defaults measured against the schema corpus (`tests/reader/schema-view.test.ts`
  * and `tests/performance/schema-render.test.ts`): a 200-property object renders
- * as ~1,900 DOM nodes, six levels keep the deepest fixture readable at 320 px,
- * and 600 nodes keep a complex operation page under the HTML budget.
+ * as ~1,950 elements (69 KB), a worst-case block at the node budget renders as
+ * ~4,300 elements (~155 KB), six levels keep the deepest fixture readable at
+ * 320 px, and the edge fixture's largest response stays near 300 nodes.
  */
 export const DEFAULT_SCHEMA_BUDGET: SchemaBudget = {
   enumPreview: 8,
   initialProperties: 30,
   maxDepth: 6,
   maxEnumValues: 200,
-  maxNodes: 600,
+  maxNodes: 400,
   maxProperties: 200,
   maxVariants: 20,
 };
@@ -838,6 +839,8 @@ function labelFor(
       return "object";
     }
     case "type-less":
+      if (node.constValue !== undefined) return "constant";
+      if (node.enumValues !== undefined) return "enum";
       return "unspecified type";
     case "composition": {
       if (node.name !== undefined) return node.name;

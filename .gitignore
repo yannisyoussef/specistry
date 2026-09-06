@@ -14,3 +14,4 @@ test-results/
 *.pem
 *.key
 tests/performance/measurements.json
+tests/performance/schema-measurements.json

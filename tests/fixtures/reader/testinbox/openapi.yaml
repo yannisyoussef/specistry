@@ -455,7 +455,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateWebhookRequest"
+              $ref: "#/components/schemas/WebhookSettings"
       responses:
         "201":
           description: The registered webhook.
@@ -765,11 +765,16 @@ components:
         id:
           type: string
           description: Stable identifier.
+          readOnly: true
         address:
           type: string
           format: email
         name:
           type: string
+        legacyName:
+          type: string
+          deprecated: true
+          description: Superseded by `name`; still returned for older inboxes.
         status:
           type: string
           enum: [active, expired]
@@ -780,12 +785,14 @@ components:
         messageCount:
           type: integer
           minimum: 0
+          readOnly: true
         expiresAt:
           type: string
           format: date-time
         createdAt:
           type: string
           format: date-time
+          readOnly: true
     InboxPage:
       type: object
       required: [items]
@@ -843,6 +850,8 @@ components:
           description: Plain-text body, or null when the message had none.
         html:
           type: [string, "null"]
+        content:
+          $ref: "#/components/schemas/MessageContent"
         headers:
           type: object
           additionalProperties:
@@ -856,6 +865,66 @@ components:
           format: date-time
         read:
           type: boolean
+    MessageContent:
+      description: Parsed body. The variant is indicated by `type`.
+      oneOf:
+        - $ref: "#/components/schemas/TextContent"
+        - $ref: "#/components/schemas/HtmlContent"
+        - $ref: "#/components/schemas/MultipartContent"
+      discriminator:
+        propertyName: type
+        mapping:
+          text: "#/components/schemas/TextContent"
+          html: "#/components/schemas/HtmlContent"
+          multipart: "#/components/schemas/MultipartContent"
+    TextContent:
+      type: object
+      required: [type, text]
+      properties:
+        type:
+          const: text
+          description: Discriminator.
+        text:
+          type: string
+          description: The plain-text body.
+        charset:
+          type: string
+          default: utf-8
+    HtmlContent:
+      type: object
+      required: [type, html]
+      properties:
+        type:
+          const: html
+          description: Discriminator.
+        html:
+          type: string
+          description: Sanitised HTML body.
+        text:
+          type: string
+          description: Plain-text rendering of the HTML.
+        links:
+          type: array
+          description: Absolute URLs extracted from anchors, in document order.
+          items:
+            type: string
+            format: uri
+          maxItems: 500
+    MultipartContent:
+      type: object
+      required: [type, parts]
+      properties:
+        type:
+          const: multipart
+          description: Discriminator.
+        boundary:
+          type: string
+        parts:
+          type: array
+          description: Nested parts; a part may itself be multipart.
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/MessageContent"
     MessagePage:
       type: object
       required: [items]
@@ -880,6 +949,10 @@ components:
         bodyMatches:
           type: string
           description: Regular expression tested against the text body.
+        language:
+          type: string
+          description: Detected language of the body, as a BCP 47 tag.
+          enum: [en, fr, de, es, it, pt, nl, sv, da, fi, pl, ja]
     Address:
       type: object
       required: [email]
@@ -905,26 +978,28 @@ components:
         inline:
           type: boolean
     Webhook:
-      type: object
-      required: [id, url, events, status]
-      properties:
-        id:
-          type: string
-        url:
-          type: string
-          format: uri
-        events:
-          type: array
-          items:
-            type: string
-            enum: [message.received, inbox.expired]
-        status:
-          type: string
-          enum: [active, paused, failing]
-        secretPreview:
-          type: string
-          description: Last four characters of the signing secret.
-    CreateWebhookRequest:
+      description: A configured webhook, combining its settings with server-managed state.
+      allOf:
+        - $ref: "#/components/schemas/WebhookSettings"
+        - type: object
+          required: [id, status]
+          properties:
+            id:
+              type: string
+              readOnly: true
+            status:
+              type: string
+              enum: [active, paused, failing]
+              readOnly: true
+            createdAt:
+              type: string
+              format: date-time
+              readOnly: true
+            secretPreview:
+              type: string
+              description: Last four characters of the signing secret.
+              readOnly: true
+    WebhookSettings:
       type: object
       required: [url]
       properties:
@@ -939,11 +1014,36 @@ components:
             type: string
             enum: [message.received, inbox.expired]
           default: [message.received]
+        secret:
+          type: string
+          writeOnly: true
+          minLength: 32
+          description: Signing secret; never returned after creation.
         filter:
           oneOf:
             - $ref: "#/components/schemas/InboxFilter"
             - $ref: "#/components/schemas/TagFilter"
           description: Limit deliveries to some inboxes.
+        delivery:
+          $ref: "#/components/schemas/DeliveryPolicy"
+    DeliveryPolicy:
+      type: object
+      description: Retry behaviour for failed deliveries.
+      properties:
+        retries:
+          type: integer
+          minimum: 0
+          maximum: 10
+          default: 3
+        backoff:
+          type: string
+          enum: [none, linear, exponential]
+          default: exponential
+        timeoutSeconds:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 30
+          default: 10
     InboxFilter:
       type: object
       required: [kind, inboxIds]

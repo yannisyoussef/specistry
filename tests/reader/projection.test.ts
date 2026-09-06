@@ -356,11 +356,11 @@ describe("edge artifact", () => {
         `${property.schema.kind}: ${property.schema.label}`,
       ]),
     );
-    expect(types).toEqual({
+    expect(types).toMatchObject({
       anyValue: "value: any value",
       choice: "composition: one of 2",
       choices: "value: string · enum",
-      constant: "value: unspecified type",
+      constant: "value: constant",
       deep: "object: object",
       map: "object: map of integer",
       merged: "composition: all of 2",
@@ -370,7 +370,15 @@ describe("edge artifact", () => {
       typeless: "value: unspecified type",
       union: "composition: any of 3",
       unsupported: "object: object",
+      "<img src=x onerror=alert(1)>": "value: string",
+      __proto__: "value: string",
+      constructor: "value: integer",
+      largeEnum: "value: string · enum",
+      bigObject: "object: BigObject",
+      deepTree: "object: DeepTree",
+      manyVariants: "composition: ManyVariants",
     });
+    expect(Object.keys(types)).toHaveLength(26);
     expect(
       schema.properties.find((property) => property.name === "choices")?.schema
         .enumeration?.values,
