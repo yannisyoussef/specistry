@@ -15,6 +15,7 @@
     "@fontsource-variable/space-grotesk": "5.3.0",
     "@specra/content": "workspace:*",
     "@specra/model": "workspace:*",
+    "@specra/playground": "workspace:*",
     "@specra/search": "workspace:*",
     "@specra/snippets": "workspace:*",
     "next": "16.3.4",

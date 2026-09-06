@@ -18,6 +18,10 @@ import {
 import { createHash } from "node:crypto";
 
 import { parseSearchArtifact } from "@specra/search";
+import {
+  parsePlaygroundArtifact,
+  type PlaygroundArtifact,
+} from "@specra/playground";
 import { parseSnippetsArtifact, type SnippetsArtifact } from "@specra/snippets";
 
 import { createReaderContent, type ReaderContent } from "./content";
@@ -44,6 +48,8 @@ export interface ReaderArtifact {
   readonly search?: ReaderSearch;
   /** Request projections and authored SDK examples (SPEC-008). */
   readonly snippets?: ReaderSnippets;
+  /** Browser-direct playground policy (SPEC-009); absent for older artifacts. */
+  readonly playground?: ReaderPlayground;
   /** Project-relative artifact directory; never an absolute machine path. */
   readonly directory: string;
 }
@@ -59,6 +65,13 @@ export interface ReaderSnippets {
   readonly artifact: SnippetsArtifact;
   /** Digest of the artifact bytes; keys the per-process snippet cache. */
   readonly sha256: string;
+}
+
+export interface ReaderPlayground {
+  readonly artifact: PlaygroundArtifact;
+  readonly sha256: string;
+  /** Exact origins approved for execution, sorted, for the CSP. */
+  readonly origins: readonly string[];
 }
 
 export class ReaderArtifactError extends Error {
@@ -163,15 +176,78 @@ export async function readReaderArtifact(
   const content = await readContent(directory, manifest, hint);
   const search = await readSearch(directory, manifest, hint);
   const snippets = await readSnippets(directory, manifest, hint);
+  const playground = await readPlayground(directory, manifest, hint);
   return {
     artifact,
     ...(content === undefined ? {} : { content }),
     directory: ARTIFACT_DIRECTORY,
     index: createReaderIndex(artifact),
     manifest,
+    ...(playground === undefined ? {} : { playground }),
     ...(search === undefined ? {} : { search }),
     ...(snippets === undefined ? {} : { snippets }),
   };
+}
+
+/**
+ * The playground policy is the only source of execution destinations: it
+ * must match the manifest digest, size, and counts and pass the strict
+ * parser (which rejects any origin outside the policy) before the reader
+ * offers a single environment or widens the CSP by one origin.
+ */
+async function readPlayground(
+  directory: string,
+  manifest: ArtifactManifest,
+  hint: string,
+): Promise<ReaderPlayground | undefined> {
+  if (
+    manifest.files.playground === undefined ||
+    manifest.playground === undefined
+  ) {
+    return undefined;
+  }
+  const text = await readArtifactFile(
+    directory,
+    manifest.files.playground,
+    hint,
+  );
+  const sha256 = createHash("sha256").update(text).digest("hex");
+  if (
+    sha256 !== manifest.playground.sha256 ||
+    Buffer.byteLength(text, "utf8") !== manifest.playground.bytes
+  ) {
+    throw new ReaderArtifactError(
+      `The playground artifact ${ARTIFACT_DIRECTORY}/${manifest.files.playground} does not match the digest recorded in the manifest.`,
+      hint,
+    );
+  }
+  try {
+    const artifact = parsePlaygroundArtifact(text);
+    if (
+      artifact.enabled !== manifest.playground.enabled ||
+      artifact.environments.length !== manifest.playground.environments ||
+      Object.keys(artifact.operations).length !== manifest.playground.operations
+    ) {
+      throw new ReaderArtifactError(
+        `The artifact manifest and the playground artifact ${ARTIFACT_DIRECTORY}/${manifest.files.playground} disagree about environments or operations.`,
+        hint,
+      );
+    }
+    const origins = artifact.enabled
+      ? [
+          ...new Set(
+            artifact.environments.map((environment) => environment.origin),
+          ),
+        ].sort()
+      : [];
+    return { artifact, origins, sha256 };
+  } catch (error) {
+    if (error instanceof ReaderArtifactError) throw error;
+    throw new ReaderArtifactError(
+      `The playground artifact ${ARTIFACT_DIRECTORY}/${manifest.files.playground} failed validation (${describe(error)}).`,
+      hint,
+    );
+  }
 }
 
 /**

@@ -19,16 +19,24 @@ import { API_ROOT, resolveRoute } from "./lib/reader/projection";
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const nonce = randomBytes(16).toString("base64");
+  const pathname = request.nextUrl.pathname;
+  // Least-privilege networking (SPEC-009): only API operation routes may
+  // connect to the approved playground origins; every other route keeps
+  // `connect-src 'self'`. The origins come from the digest-checked artifact,
+  // never from the request.
+  const connectOrigins = isApiRoute(pathname)
+    ? ((await loadReaderArtifact()).playground?.origins ?? [])
+    : [];
   const policy = contentSecurityPolicy(
     nonce,
     process.env.NODE_ENV === "development",
+    connectOrigins,
   );
   const requestHeaders = new Headers(request.headers);
   requestHeaders.delete("content-security-policy-report-only");
   requestHeaders.set("content-security-policy", policy);
   // Layouts cannot read the URL; the pathname drives active navigation state
   // and the theme form's return path.
-  const pathname = request.nextUrl.pathname;
   requestHeaders.set("x-specra-pathname", pathname);
   const target = await notFoundRewrite(request, pathname);
   const response =
@@ -76,14 +84,30 @@ async function notFoundRewrite(
     : undefined;
 }
 
+function isApiRoute(pathname: string): boolean {
+  return pathname === API_ROOT || pathname.startsWith(`${API_ROOT}/`);
+}
+
+/** Exact origins only: `scheme://host[:port]` with no path, wildcard, or scheme-only source. */
+// An exact origin: HTTPS anywhere, plain HTTP only on loopback (SPEC-009).
+const EXACT_ORIGIN =
+  /^(?:https:\/\/[A-Za-z0-9.-]+(?::\d{1,5})?|https:\/\/\[[0-9A-Fa-f:.]+\](?::\d{1,5})?|http:\/\/(?:127\.0\.0\.1|localhost|\[::1\])(?::\d{1,5})?)$/;
+
 export function contentSecurityPolicy(
   nonce: string,
   development: boolean,
+  connectOrigins: readonly string[] = [],
 ): string {
+  const connect = [
+    "'self'",
+    ...[...new Set(connectOrigins)]
+      .filter((origin) => EXACT_ORIGIN.test(origin) && !origin.includes("*"))
+      .sort(),
+  ];
   return [
     "default-src 'self'",
     "base-uri 'self'",
-    "connect-src 'self'",
+    `connect-src ${connect.join(" ")}`,
     "font-src 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
