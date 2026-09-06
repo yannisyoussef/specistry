@@ -1,0 +1,20 @@
+{
+  "examples": [
+    {
+      "operation": "createInbox",
+      "title": "Create an inbox",
+      "description": "The SDK applies the project API key from the client and returns the typed inbox.",
+      "file": "./sdk/typescript/create-inbox.ts"
+    },
+    {
+      "operation": "listInboxes",
+      "title": "List inboxes",
+      "code": "import { TestInbox } from \"@testinbox/sdk\";\n\nconst client = new TestInbox({ apiKey: process.env.TESTINBOX_API_KEY });\n\nfor await (const inbox of client.inboxes.list({ status: \"active\" })) {\n  console.log(inbox.address);\n}"
+    },
+    {
+      "operation": "waitForMessage",
+      "title": "Wait for a message",
+      "file": "./sdk/typescript/wait-for-message.ts"
+    }
+  ]
+}

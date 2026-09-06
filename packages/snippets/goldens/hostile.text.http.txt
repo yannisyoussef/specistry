@@ -1,0 +1,8 @@
+POST /v1/hostile/%24%28touch%20%2Ftmp%2Fpwned%29%27%3B%20rm%20-rf%20%2F%20%23?q=%24%7Bprocess.env.SECRET%7D%60%2Balert%281%29%2B%60 HTTP/1.1
+Host: api.example.com
+X-Evil: value Injected-Header: yes
+Authorization: Bearer <YOUR_ACCESS_TOKEN>
+Content-Type: text/plain
+Cookie: c=%60whoami%60
+
+$(touch /tmp/pwned)'; rm -rf / # say "hi" \ path end" ; import os

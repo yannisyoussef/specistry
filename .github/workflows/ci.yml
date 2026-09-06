@@ -149,5 +149,6 @@ jobs:
             tests/performance/schema-measurements.json
             tests/performance/content-measurements.json
             tests/performance/search-measurements.json
+            tests/performance/snippets-measurements.json
           if-no-files-found: ignore
           retention-days: 30

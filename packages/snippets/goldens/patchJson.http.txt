@@ -1,0 +1,9 @@
+PATCH /v1/inboxes/<INBOX_ID> HTTP/1.1
+Host: api.example.com
+Authorization: Basic <BASE64_CREDENTIALS>
+Content-Type: application/vnd.api+json
+
+{
+  "name": "renamed",
+  "password": "<YOUR_PASSWORD>"
+}

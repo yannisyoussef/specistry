@@ -1,0 +1,8 @@
+POST /v1/forms?api_key=<YOUR_API_KEY> HTTP/1.1
+Host: api.example.com
+Content-Type: application/json
+
+{
+  "ttl": 0,
+  "note": "string"
+}

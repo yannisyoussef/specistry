@@ -8,6 +8,7 @@ import { toDocumentId } from "./acquisition.js";
 import { removeStaleArtifacts, writeArtifacts } from "./artifacts.js";
 import { buildContent } from "./content.js";
 import { buildSearchArtifact, countSearchDocuments } from "./search.js";
+import { buildSnippets } from "./snippets.js";
 import { loadConfigIsolated } from "./config-loader.js";
 import {
   ARTIFACT_DIRECTORY,
@@ -74,11 +75,27 @@ export async function validateProject(
     contextResult.context,
     ingested.artifactJson,
   );
+  if (!content.ok) {
+    return {
+      diagnostics: sortDiagnostics([
+        ...ingested.diagnostics,
+        ...content.diagnostics,
+      ]),
+      ok: false,
+      outcome: "validation-failure",
+    };
+  }
+  if (contextResult.context.signal.aborted) return cancelled();
+  const snippets = await buildSnippets(
+    contextResult.context,
+    content.documentationJson,
+  );
   const diagnostics = sortDiagnostics([
     ...ingested.diagnostics,
     ...content.diagnostics,
+    ...snippets.diagnostics,
   ]);
-  if (!content.ok) {
+  if (!snippets.ok) {
     return { diagnostics, ok: false, outcome: "validation-failure" };
   }
   return {
@@ -88,7 +105,13 @@ export async function validateProject(
     ingestion: ingested.ingestion,
     ok: true,
     outcome: "success",
-    search: { documents: countSearchDocuments(content) },
+    search: {
+      documents: countSearchDocuments(content, snippets.operationTerms),
+    },
+    snippets: {
+      operations: snippets.operations,
+      sdkExamples: snippets.sdkExamples,
+    },
   };
 }
 
@@ -115,11 +138,35 @@ export async function buildProject(
   }
   if (context.signal.aborted) return cancelled();
   const content = await buildContent(context, ingested.artifactJson);
+  if (!content.ok) {
+    await removeStaleArtifacts(context.projectRoot, context.paths.artifactRoot);
+    return {
+      diagnostics: sortDiagnostics([
+        ...ingested.diagnostics,
+        ...content.diagnostics,
+      ]),
+      ok: false,
+      outcome: "validation-failure",
+    };
+  }
+  if (context.signal.aborted) return cancelled();
+  // Code samples and SDK mappings are validated before anything is written;
+  // a mapping error fails the build and removes stale artifacts.
+  let snippets;
+  try {
+    snippets = await buildSnippets(context, content.documentationJson);
+  } catch {
+    await removeStaleArtifacts(context.projectRoot, context.paths.artifactRoot);
+    return failure("internal-failure", [
+      createDiagnostic("SNIPPETS_BUILD_FAILED", artifactPath("")),
+    ]);
+  }
   const diagnostics = sortDiagnostics([
     ...ingested.diagnostics,
     ...content.diagnostics,
+    ...snippets.diagnostics,
   ]);
-  if (!content.ok) {
+  if (!snippets.ok) {
     await removeStaleArtifacts(context.projectRoot, context.paths.artifactRoot);
     return { diagnostics, ok: false, outcome: "validation-failure" };
   }
@@ -128,7 +175,7 @@ export async function buildProject(
   // artifacts about to be written and fails the build if it cannot be.
   let search;
   try {
-    search = buildSearchArtifact(content);
+    search = buildSearchArtifact(content, snippets.operationTerms);
   } catch {
     await removeStaleArtifacts(context.projectRoot, context.paths.artifactRoot);
     return failure("internal-failure", [
@@ -155,6 +202,11 @@ export async function buildProject(
     },
     projectRoot: context.projectRoot,
     search: { documents: search.documents, json: search.json },
+    snippets: {
+      json: snippets.json,
+      operations: snippets.operations,
+      sdkExamples: snippets.sdkExamples,
+    },
     warnings: diagnostics.length,
   });
   if (!written.ok) {
@@ -171,6 +223,10 @@ export async function buildProject(
     ok: true,
     outcome: "success",
     search: { documents: search.documents },
+    snippets: {
+      operations: snippets.operations,
+      sdkExamples: snippets.sdkExamples,
+    },
   };
 }
 

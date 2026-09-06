@@ -1,0 +1,5 @@
+const init: RequestInit = {
+  method: "DELETE",
+};
+const response: Response = await fetch("https://api.example.com/v1/team/<MEMBER_ID>", init);
+console.log(response.status);

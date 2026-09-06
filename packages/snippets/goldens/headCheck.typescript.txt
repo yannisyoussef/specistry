@@ -1,0 +1,5 @@
+const init: RequestInit = {
+  method: "HEAD",
+};
+const response: Response = await fetch("https://api.example.com/v1/inboxes/<INBOX_ID>", init);
+console.log(response.status);

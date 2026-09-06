@@ -1,3 +1,4 @@
+import type { CodeView } from "../../lib/reader/code-view";
 import {
   schemaFocusHref,
   type ExampleView,
@@ -8,6 +9,7 @@ import {
   type SecurityAlternativeView,
 } from "../../lib/reader/operation-view";
 import { API_ROOT } from "../../lib/reader/projection";
+import { CodeRail } from "./code/code-rail";
 import { CopyButton } from "./copy-button";
 import {
   Badge,
@@ -26,12 +28,22 @@ import {
   SchemaDisclosure,
 } from "./schema/schema-block";
 
-/** The operation page: the highest-priority SPEC-004 surface. */
-export function OperationPage({ view }: Readonly<{ view: OperationView }>) {
+/**
+ * The operation page: the highest-priority SPEC-004 surface. With code
+ * samples (SPEC-008) it renders as three siblings, header, Code rail, and
+ * sections, so the rail can sit beside the document on wide viewports and
+ * inline after the header everywhere else without duplicating markup.
+ */
+export function OperationPage({
+  code,
+  view,
+}: Readonly<{ code?: CodeView | undefined; view: OperationView }>) {
   const singleService = view.service.href === API_ROOT;
   return (
-    <article className="document__column">
-      <div className="page-header">
+    <article
+      className={`document__column operation${code === undefined ? "" : " operation--with-code"}`}
+    >
+      <div className="page-header operation__header">
         <Breadcrumb
           items={[
             { href: API_ROOT, label: "API reference" },
@@ -62,110 +74,127 @@ export function OperationPage({ view }: Readonly<{ view: OperationView }>) {
         {view.deprecated ? <DeprecationCallout /> : null}
       </div>
 
-      <section
-        aria-labelledby="authentication-heading"
-        className="section"
-        id="authentication"
-      >
-        <SectionHeader id="authentication" title="Authentication" />
-        <Authentication alternatives={view.security} />
-      </section>
+      {code === undefined ? null : (
+        <CodeRail action={view.summary.href} view={code} />
+      )}
 
-      {view.parameterGroups.length === 0 ? null : (
+      <div className="operation__body">
         <section
-          aria-labelledby="parameters-heading"
+          aria-labelledby="authentication-heading"
           className="section"
-          id="parameters"
+          id="authentication"
+        >
+          <SectionHeader id="authentication" title="Authentication" />
+          <Authentication alternatives={view.security} />
+        </section>
+
+        {view.parameterGroups.length === 0 ? null : (
+          <section
+            aria-labelledby="parameters-heading"
+            className="section"
+            id="parameters"
+          >
+            <SectionHeader
+              id="parameters"
+              meta={countLabel(
+                view.parameterGroups.reduce(
+                  (total, group) => total + group.rows.length,
+                  0,
+                ),
+                "parameter",
+              )}
+              title="Parameters"
+            />
+            {view.parameterGroups.map((group) => (
+              <ParameterGroup
+                group={group}
+                key={group.location}
+                operationHref={view.summary.href}
+              />
+            ))}
+          </section>
+        )}
+
+        {view.requestBody === undefined ? null : (
+          <section
+            aria-labelledby="request-body-heading"
+            className="section"
+            id="request-body"
+          >
+            <SectionHeader
+              id="request-body"
+              meta={view.requestBody.required ? "required" : "optional"}
+              title="Request body"
+            />
+            {view.requestBody.description === undefined ? null : (
+              <SafeText
+                className="section__note"
+                text={view.requestBody.description}
+              />
+            )}
+            <MediaBlocks
+              media={view.requestBody.media}
+              operationHref={view.summary.href}
+            />
+          </section>
+        )}
+
+        <section
+          aria-labelledby="responses-heading"
+          className="section"
+          id="responses"
         >
           <SectionHeader
-            id="parameters"
-            meta={countLabel(
-              view.parameterGroups.reduce(
-                (total, group) => total + group.rows.length,
-                0,
-              ),
-              "parameter",
-            )}
-            title="Parameters"
+            id="responses"
+            meta={countLabel(view.responses.length, "response")}
+            title="Responses"
           />
-          {view.parameterGroups.map((group) => (
-            <ParameterGroup
-              group={group}
-              key={group.location}
+          {view.responses.map((response) => (
+            <Response
+              key={response.anchor}
               operationHref={view.summary.href}
+              response={response}
             />
           ))}
         </section>
-      )}
 
-      {view.requestBody === undefined ? null : (
-        <section
-          aria-labelledby="request-body-heading"
-          className="section"
-          id="request-body"
-        >
-          <SectionHeader
-            id="request-body"
-            meta={view.requestBody.required ? "required" : "optional"}
-            title="Request body"
-          />
-          {view.requestBody.description === undefined ? null : (
-            <SafeText
-              className="section__note"
-              text={view.requestBody.description}
-            />
-          )}
-          <MediaBlocks
-            media={view.requestBody.media}
-            operationHref={view.summary.href}
-          />
-        </section>
-      )}
-
-      <section
-        aria-labelledby="responses-heading"
-        className="section"
-        id="responses"
-      >
-        <SectionHeader
-          id="responses"
-          meta={countLabel(view.responses.length, "response")}
-          title="Responses"
-        />
-        {view.responses.map((response) => (
-          <Response
-            key={response.anchor}
-            operationHref={view.summary.href}
-            response={response}
-          />
-        ))}
-      </section>
-
-      {view.servers.length === 0 ? null : (
-        <section
-          aria-labelledby="servers-heading"
-          className="section"
-          id="servers"
-        >
-          <SectionHeader id="servers" title="Servers" />
-          <ul className="rows">
-            {view.servers.map((server) => (
-              <li className="row row--stacked" key={server.url}>
-                <div className="row__key">
-                  <PathText className="row__name" text={server.url} />
-                </div>
-                <div className="row__value">
-                  {server.label === server.url ? null : (
-                    <SafeText
-                      className="row__description"
-                      text={server.label}
-                    />
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+        {view.servers.length === 0 ? null : (
+          <section
+            aria-labelledby="servers-heading"
+            className="section"
+            id="servers"
+          >
+            <SectionHeader id="servers" title="Servers" />
+            <ul className="rows">
+              {view.servers.map((server) => (
+                <li className="row row--stacked" key={server.url}>
+                  <div className="row__key">
+                    <PathText className="row__name" text={server.url} />
+                  </div>
+                  <div className="row__value">
+                    {server.label === server.url ? null : (
+                      <SafeText
+                        className="row__description"
+                        text={server.label}
+                      />
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+      {/* Mobile only (design 6n): a sticky bar at the end of the article
+          that follows the viewport bottom and jumps to the inline Code
+          section. Sticky, not fixed, so the panel's blur and containment
+          cannot anchor it to the panel. */}
+      {code === undefined ? null : (
+        <nav aria-label="Code" className="code-bar">
+          <a className="button button--primary code-bar__action" href="#code">
+            Code
+          </a>
+        </nav>
       )}
     </article>
   );

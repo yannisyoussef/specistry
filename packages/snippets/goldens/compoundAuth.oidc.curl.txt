@@ -1,0 +1,4 @@
+# Requires an access token obtained through OpenID Connect.
+curl --request DELETE \
+  --url 'https://api.example.com/v1/team/<MEMBER_ID>' \
+  --header 'Authorization: Bearer <YOUR_ACCESS_TOKEN>'

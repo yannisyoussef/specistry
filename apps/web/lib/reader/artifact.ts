@@ -18,6 +18,7 @@ import {
 import { createHash } from "node:crypto";
 
 import { parseSearchArtifact } from "@specra/search";
+import { parseSnippetsArtifact, type SnippetsArtifact } from "@specra/snippets";
 
 import { createReaderContent, type ReaderContent } from "./content";
 import { createReaderIndex, type ReaderIndex } from "./projection";
@@ -41,6 +42,8 @@ export interface ReaderArtifact {
   readonly content?: ReaderContent;
   /** The validated search artifact, served content-addressed (SPEC-007). */
   readonly search?: ReaderSearch;
+  /** Request projections and authored SDK examples (SPEC-008). */
+  readonly snippets?: ReaderSnippets;
   /** Project-relative artifact directory; never an absolute machine path. */
   readonly directory: string;
 }
@@ -50,6 +53,12 @@ export interface ReaderSearch {
   readonly path: string;
   readonly json: string;
   readonly documents: number;
+}
+
+export interface ReaderSnippets {
+  readonly artifact: SnippetsArtifact;
+  /** Digest of the artifact bytes; keys the per-process snippet cache. */
+  readonly sha256: string;
 }
 
 export class ReaderArtifactError extends Error {
@@ -153,6 +162,7 @@ export async function readReaderArtifact(
   }
   const content = await readContent(directory, manifest, hint);
   const search = await readSearch(directory, manifest, hint);
+  const snippets = await readSnippets(directory, manifest, hint);
   return {
     artifact,
     ...(content === undefined ? {} : { content }),
@@ -160,7 +170,61 @@ export async function readReaderArtifact(
     index: createReaderIndex(artifact),
     manifest,
     ...(search === undefined ? {} : { search }),
+    ...(snippets === undefined ? {} : { snippets }),
   };
+}
+
+/**
+ * Snippets are optional in the manifest (older artifacts render no Code
+ * rail), but when named the file must match the recorded digest, size, and
+ * counts and pass the strict parser before any example is generated from it.
+ */
+async function readSnippets(
+  directory: string,
+  manifest: ArtifactManifest,
+  hint: string,
+): Promise<ReaderSnippets | undefined> {
+  if (
+    manifest.files.snippets === undefined ||
+    manifest.snippets === undefined
+  ) {
+    return undefined;
+  }
+  const text = await readArtifactFile(directory, manifest.files.snippets, hint);
+  const sha256 = createHash("sha256").update(text).digest("hex");
+  if (
+    sha256 !== manifest.snippets.sha256 ||
+    Buffer.byteLength(text, "utf8") !== manifest.snippets.bytes
+  ) {
+    throw new ReaderArtifactError(
+      `The snippets artifact ${ARTIFACT_DIRECTORY}/${manifest.files.snippets} does not match the digest recorded in the manifest.`,
+      hint,
+    );
+  }
+  try {
+    const artifact = parseSnippetsArtifact(text);
+    const operations = Object.keys(artifact.operations).length;
+    const sdkExamples = Object.values(artifact.sdkExamples).reduce(
+      (total, list) => total + list.length,
+      0,
+    );
+    if (
+      operations !== manifest.snippets.operations ||
+      sdkExamples !== manifest.snippets.sdkExamples
+    ) {
+      throw new ReaderArtifactError(
+        `The artifact manifest reports ${manifest.snippets.operations} operations and ${manifest.snippets.sdkExamples} SDK examples but the snippets artifact contains ${operations} and ${sdkExamples}.`,
+        hint,
+      );
+    }
+    return { artifact, sha256 };
+  } catch (error) {
+    if (error instanceof ReaderArtifactError) throw error;
+    throw new ReaderArtifactError(
+      `The snippets artifact ${ARTIFACT_DIRECTORY}/${manifest.files.snippets} failed validation (${describe(error)}).`,
+      hint,
+    );
+  }
 }
 
 /**

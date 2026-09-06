@@ -1,0 +1,7 @@
+curl --request POST \
+  --url 'https://api.example.com/v1/forms?api_key=<YOUR_API_KEY>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "ttl": 0,
+  "note": "string"
+}'

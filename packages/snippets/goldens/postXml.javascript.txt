@@ -1,0 +1,9 @@
+const response = await fetch("https://api.example.com/v1/xml", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/xml",
+  },
+  body: "{\n  \"x\": 0,\n  \"y\": 0\n}",
+});
+const data = await response.json();
+console.log(response.status, data);

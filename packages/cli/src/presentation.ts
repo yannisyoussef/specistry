@@ -47,8 +47,9 @@ Usage:
   specra build [options]
 
 ${COMMON_OPTIONS}
-Build performs the same validation and then writes documentation.json and
-manifest.json atomically to ${ARTIFACT_DIRECTORY}. A failed build removes any
+Build performs the same validation and then writes documentation.json,
+manifest.json, search.json, snippets.json, and any content artifacts
+atomically to ${ARTIFACT_DIRECTORY}. A failed build removes any
 previous artifact directory so stale output never represents the current input.
 
 Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelled.
@@ -76,6 +77,7 @@ export function formatHumanResult(
     `Sources: ${statistics.documents} document(s), ${statistics.operations} operation(s), ${statistics.schemas} schema(s)`,
     `Docs: ${result.content.pages} page(s), ${result.content.assets} asset(s)`,
     `Search: ${result.search.documents} document(s)`,
+    `Code samples: ${result.snippets.operations} operation(s), ${result.snippets.sdkExamples} SDK example(s)`,
   ];
   if ("artifacts" in result) {
     lines.push(
@@ -120,6 +122,7 @@ export function formatJsonResult(
         diagnostics,
         ok: true,
         search: result.search,
+        snippets: result.snippets,
         sources: result.ingestion.sources,
         statistics: result.ingestion.statistics,
       }

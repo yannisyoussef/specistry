@@ -14,6 +14,7 @@ export default defineConfig({
         "apps/web/components/reader/copy-button.tsx",
         "apps/web/components/reader/mobile-nav.tsx",
         "apps/web/components/reader/content/tabs.tsx",
+        "apps/web/components/reader/code/navigation.ts",
       ],
       include: [
         "packages/*/src/**/*.ts",

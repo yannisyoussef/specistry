@@ -26,6 +26,27 @@ const messages: Readonly<Record<DiagnosticCode, string>> = {
     "The artifact directory could not be written or replaced atomically.",
   SEARCH_BUILD_FAILED:
     "The search index could not be generated from the build artifacts.",
+  SNIPPETS_BUILD_FAILED:
+    "The code samples could not be generated from the build artifacts.",
+  SNIPPET_BODY_TRUNCATED:
+    "The generated request body example was bounded; the schema is larger than the example budget.",
+  SNIPPET_HEADER_SKIPPED:
+    "A header parameter name is not a valid HTTP header token and is omitted from code samples.",
+  SNIPPET_SERVER_UNUSABLE:
+    "A contract server URL is relative, uses plain HTTP off loopback, or carries credentials, query, or fragment; it is not offered as an environment.",
+  SDK_ID_DUPLICATE: "Two SDK declarations share the same id.",
+  SDK_EXAMPLE_CODE_EMPTY: "The SDK example code is empty.",
+  SDK_EXAMPLE_CODE_TOO_LARGE:
+    "The SDK example code exceeds the maximum size (16 KiB).",
+  SDK_EXAMPLE_DUPLICATE: "The operation already has an example for this SDK.",
+  SDK_EXAMPLE_FILE_INVALID:
+    "The SDK example file is missing, outside the project root, not a file, or not the expected shape.",
+  SDK_EXAMPLE_MISSING:
+    "The SDK is declared complete but this operation has no example for it.",
+  SDK_EXAMPLE_TARGET_AMBIGUOUS:
+    "The SDK example target matches more than one operation; add the service to the target.",
+  SDK_EXAMPLE_TARGET_NOT_FOUND:
+    "The SDK example target matches no operation in the canonical model.",
   CANCELLED: "The command was cancelled.",
   CONFIG_INVALID: "The configuration does not match schema version 1.",
   CONFIG_LOAD_FAILED: "The trusted configuration could not be evaluated.",
@@ -53,8 +74,16 @@ const SEVERITY_RANK: Readonly<Record<DiagnosticSeverity, number>> = {
   warning: 1,
 };
 
+const CLI_WARNINGS: ReadonlySet<DiagnosticCode> = new Set([
+  "SDK_EXAMPLE_MISSING",
+  "SNIPPET_BODY_TRUNCATED",
+  "SNIPPET_HEADER_SKIPPED",
+  "SNIPPET_SERVER_UNUSABLE",
+]);
+
 /** Severity is a property of the code; source codes defer to the adapter table. */
 export function severityOf(code: DiagnosticCode): DiagnosticSeverity {
+  if (CLI_WARNINGS.has(code)) return "warning";
   if (Object.hasOwn(SOURCE_DIAGNOSTIC_SEVERITY, code)) {
     return SOURCE_DIAGNOSTIC_SEVERITY[
       code as keyof typeof SOURCE_DIAGNOSTIC_SEVERITY

@@ -183,6 +183,21 @@
         "n": 3,
         "routes": ["/docs/concepts/inbox-lifecycle#expired"]
       }
+    },
+    {
+      "query": "typescript sdk create inbox",
+      "top": "/api/inboxes/create-inbox"
+    },
+    {
+      "query": "java sdk wait for message",
+      "top": "/api/inboxes/wait-for-message"
+    },
+    {
+      "query": "sdk",
+      "within": {
+        "n": 4,
+        "routes": ["/api/inboxes/create-inbox", "/api/inboxes/wait-for-message"]
+      }
     }
   ]
 }

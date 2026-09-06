@@ -1,0 +1,3 @@
+DELETE /v1/team/<MEMBER_ID> HTTP/1.1
+Host: api.example.com
+Authorization: Bearer <YOUR_ACCESS_TOKEN>

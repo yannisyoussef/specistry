@@ -6,6 +6,7 @@ import { GroupPage, ServicePage } from "../../../components/reader/list-pages";
 import { OperationPage } from "../../../components/reader/operation-page";
 import { SchemaFocusPage } from "../../../components/reader/schema/schema-focus-page";
 import { loadReaderArtifact } from "../../../lib/reader/artifact";
+import { createCodeView, type CodeView } from "../../../lib/reader/code-view";
 import {
   groupMetadata,
   operationMetadata,
@@ -91,6 +92,20 @@ const operationViewFor = cache(
     createOperationView(target),
 );
 
+/** The Code rail for the operation and the validated `env`/`body`/`auth` query. */
+async function codeViewFor(
+  operation: OperationView,
+  query: Record<string, string | string[] | undefined>,
+): Promise<CodeView | undefined> {
+  const { snippets } = await loadReaderArtifact();
+  if (snippets === undefined) return undefined;
+  return createCodeView(snippets, operation, {
+    auth: query.auth,
+    body: query.body,
+    env: query.env,
+  });
+}
+
 async function resolve(params: Params["params"]): Promise<RouteTarget> {
   const { segments } = await params;
   const target = await resolveSegments(segments.join("/"));
@@ -134,6 +149,7 @@ export async function generateMetadata({
       }
     }
   }
+  let customized = false;
   switch (target.kind) {
     case "service":
       metadata = serviceMetadata(index, target.service);
@@ -141,20 +157,29 @@ export async function generateMetadata({
     case "group":
       metadata = groupMetadata(index, target.service, target.group);
       break;
-    case "operation":
+    case "operation": {
       metadata = operationMetadata(
         index,
         target.service,
         target.summary,
         target.operation.description,
       );
+      const code = await codeViewFor(
+        operationViewFor(target),
+        await searchParams,
+      );
+      customized = code?.customized ?? false;
       break;
+    }
   }
   return {
     ...(siteUrl(index) === undefined
       ? {}
       : { alternates: { canonical: metadata.path } }),
     description: metadata.description,
+    // A non-default code selection is the same page with other examples:
+    // the canonical URL is the operation, and it is not indexed twice.
+    ...(customized ? { robots: { follow: true, index: false } } : {}),
     title: metadata.title,
   };
 }
@@ -197,7 +222,14 @@ export default async function ApiRoute({ params, searchParams }: Params) {
           singleService={index.singleService}
         />
       );
-    case "operation":
-      return <OperationPage view={operationViewFor(target)} />;
+    case "operation": {
+      const view = operationViewFor(target);
+      return (
+        <OperationPage
+          code={await codeViewFor(view, await searchParams)}
+          view={view}
+        />
+      );
+    }
   }
 }

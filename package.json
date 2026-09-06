@@ -39,6 +39,7 @@
     "@specra/content": "workspace:*",
     "@specra/model": "workspace:*",
     "@specra/search": "workspace:*",
+    "@specra/snippets": "workspace:*",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",

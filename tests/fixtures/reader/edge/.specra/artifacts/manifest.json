@@ -2,11 +2,12 @@
   "artifactFormat": 1,
   "diagnostics": {
     "errors": 0,
-    "warnings": 2
+    "warnings": 16
   },
   "files": {
     "documentation": "documentation.json",
-    "search": "search.json"
+    "search": "search.json",
+    "snippets": "snippets.json"
   },
   "generator": "specra",
   "modelVersion": 1,
@@ -18,6 +19,13 @@
     "bytes": 11745,
     "documents": 18,
     "sha256": "856efb9bf33c45e1c4e27c751a0c34f254d34f489ee273f02cab54e1e7bb3cc0",
+    "version": 1
+  },
+  "snippets": {
+    "bytes": 6047,
+    "operations": 14,
+    "sdkExamples": 0,
+    "sha256": "6f695a8090d37d87b895fea703f26054b5880ec05b4ccf11acdfb11dd38d3e40",
     "version": 1
   },
   "sources": [

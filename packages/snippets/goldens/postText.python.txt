@@ -1,0 +1,12 @@
+import requests  # pip install requests
+
+response = requests.post(
+    "https://api.example.com/v1/notes",
+    headers={
+        "Authorization": "Digest <CREDENTIALS>",
+        "Content-Type": "text/plain",
+    },
+    data="line one\nline two",
+)
+print(response.status_code)
+print(response.json())

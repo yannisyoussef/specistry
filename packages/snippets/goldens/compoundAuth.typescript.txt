@@ -1,0 +1,9 @@
+// Mutual TLS: configure the client certificate in your HTTP agent; browsers cannot present one from fetch.
+const init: RequestInit = {
+  method: "DELETE",
+  headers: {
+    "X-Api-Key": "<YOUR_API_KEY>",
+  },
+};
+const response: Response = await fetch("https://api.example.com/v1/team/<MEMBER_ID>", init);
+console.log(response.status);

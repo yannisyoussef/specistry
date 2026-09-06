@@ -88,6 +88,27 @@ function gzipBytes_(file) {
   return gzipSync(readFileSync(file)).byteLength;
 }
 
+/**
+ * The code samples are generated on the server (SPEC-008): no language
+ * generator may reach a client chunk. These markers exist only in the
+ * generators, so any client chunk containing one is a leak.
+ */
+const GENERATOR_MARKERS = [
+  "BodyPublishers.ofString",
+  "--data-binary",
+  "pip install requests",
+];
+
+export function findGeneratorLeaks() {
+  const directory = path.join(buildRoot, "static", "chunks");
+  return readdirSync(directory)
+    .filter((name) => name.endsWith(".js"))
+    .filter((name) => {
+      const source = readFileSync(path.join(directory, name), "utf8");
+      return GENERATOR_MARKERS.some((marker) => source.includes(marker));
+    });
+}
+
 export function measure(route = OPERATION_ROUTE) {
   const build = readJson(path.join(buildRoot, "build-manifest.json"));
   const bootstrap = [
@@ -164,9 +185,15 @@ function main() {
       );
     }
   }
+  const leaks = findGeneratorLeaks();
+  if (leaks.length > 0) {
+    failures.push(
+      `client chunk(s) ${leaks.join(", ")} contain code-sample generator code; generation must stay on the server`,
+    );
+  }
   if (process.argv.includes("--json")) {
     process.stdout.write(
-      `${JSON.stringify({ ...reports, search }, null, 2)}\n`,
+      `${JSON.stringify({ ...reports, generatorLeaks: leaks, search }, null, 2)}\n`,
     );
   } else {
     process.stdout.write(

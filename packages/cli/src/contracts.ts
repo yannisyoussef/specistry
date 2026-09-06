@@ -44,6 +44,18 @@ export type DiagnosticCode =
   | "ARTIFACT_INVALID"
   | "ARTIFACT_WRITE_FAILED"
   | "SEARCH_BUILD_FAILED"
+  | "SNIPPETS_BUILD_FAILED"
+  | "SNIPPET_BODY_TRUNCATED"
+  | "SNIPPET_HEADER_SKIPPED"
+  | "SNIPPET_SERVER_UNUSABLE"
+  | "SDK_ID_DUPLICATE"
+  | "SDK_EXAMPLE_CODE_EMPTY"
+  | "SDK_EXAMPLE_CODE_TOO_LARGE"
+  | "SDK_EXAMPLE_DUPLICATE"
+  | "SDK_EXAMPLE_FILE_INVALID"
+  | "SDK_EXAMPLE_MISSING"
+  | "SDK_EXAMPLE_TARGET_AMBIGUOUS"
+  | "SDK_EXAMPLE_TARGET_NOT_FOUND"
   | "CANCELLED"
   | "CONFIG_INVALID"
   | "CONFIG_LOAD_FAILED"
@@ -162,6 +174,11 @@ export interface ValidationSuccess {
   readonly content: { readonly pages: number; readonly assets: number };
   /** Search documents the project produces (SPEC-007). */
   readonly search: { readonly documents: number };
+  /** Code sample projections and authored SDK examples (SPEC-008). */
+  readonly snippets: {
+    readonly operations: number;
+    readonly sdkExamples: number;
+  };
   readonly ok: true;
   readonly outcome: "success";
 }

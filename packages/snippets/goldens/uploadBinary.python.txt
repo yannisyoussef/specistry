@@ -1,0 +1,14 @@
+import requests  # pip install requests
+
+response = requests.put(
+    "https://api.example.com/v1/files/<FILE_ID>",
+    headers={
+        "Content-Type": "application/octet-stream",
+    },
+    cookies={
+        "sid": "<YOUR_API_KEY>",
+    },
+    data=open("/path/to/file", "rb"),
+)
+print(response.status_code)
+print(response.text)

@@ -10,6 +10,8 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { parseSearchArtifact } from "@specra/search";
+import { createSearchClient } from "@specra/search/client";
 import { describe, expect, it } from "vitest";
 
 const repositoryRoot = process.cwd();
@@ -51,10 +53,24 @@ describe("CLI clean-room package", () => {
         path.join(project, "openapi.yaml"),
         "openapi: 3.1.0\ninfo:\n  title: Clean room\n  version: 1.0.0\npaths:\n  /ping:\n    get:\n      operationId: ping\n      responses:\n        '200':\n          description: ok\n",
       );
+      // An explicit SDK mapping (SPEC-008): authored code in a project file,
+      // declared through the config, never inferred.
+      await mkdir(path.join(project, "sdk"));
+      await writeFile(
+        path.join(project, "sdk", "ping.ts"),
+        'import { CleanRoom } from "@clean-room/sdk";\n\nconst client = new CleanRoom();\nawait client.ping();\n',
+      );
       await writeFile(
         path.join(project, "specra.config.ts"),
         `import { defineConfig } from "@specra/config";
-         export default defineConfig({ schemaVersion: 1, name: "Clean room", openapi: "./openapi.yaml", navigation: ["quickstart", { api: true }] });`,
+         export default defineConfig({
+           schemaVersion: 1,
+           name: "Clean room",
+           openapi: "./openapi.yaml",
+           navigation: ["quickstart", { api: true }],
+           environments: { production: { baseUrl: "https://example.test" } },
+           sdks: [{ id: "typescript", label: "TypeScript SDK", language: "typescript", package: "@clean-room/sdk", coverage: "complete", examples: [{ operation: "ping", file: "./sdk/ping.ts" }] }],
+         });`,
       );
       await writeFile(
         path.join(project, "package.json"),
@@ -144,6 +160,7 @@ describe("CLI clean-room package", () => {
           "@shikijs/core",
           "@shikijs/engine-javascript",
           "@specra/search",
+          "@specra/snippets",
           "minisearch",
         ]),
       );
@@ -194,6 +211,7 @@ describe("CLI clean-room package", () => {
           diagnostics: [],
           ok: true,
           search: { documents: expect.any(Number) as number },
+          snippets: { operations: 1, sdkExamples: 1 },
           statistics: {
             documents: 1,
             operations: 1,
@@ -215,12 +233,58 @@ describe("CLI clean-room package", () => {
               "content.json",
               "navigation.json",
               "search.json",
+              "snippets.json",
               expect.stringMatching(/^assets\/[a-f0-9]{16}\.png$/),
             ],
           }),
           ok: true,
         }),
       );
+      // The snippets artifact carries the projection, the configured
+      // environment, and the authored SDK example; the search index knows
+      // the SDK label. All of it was produced offline by the packed CLI.
+      const snippets = JSON.parse(
+        await readFile(
+          path.join(project, ".specra", "artifacts", "snippets.json"),
+          "utf8",
+        ),
+      ) as {
+        readonly environments: readonly { readonly baseUrl: string }[];
+        readonly operations: Readonly<
+          Record<string, { readonly method: string }>
+        >;
+        readonly sdkExamples: Readonly<
+          Record<
+            string,
+            readonly { readonly code: string; readonly sdk: string }[]
+          >
+        >;
+      };
+      expect(snippets.environments).toEqual([
+        {
+          baseUrl: "https://example.test",
+          id: "production",
+          label: "production",
+        },
+      ]);
+      expect(Object.values(snippets.operations)[0]?.method).toBe("GET");
+      expect(Object.values(snippets.sdkExamples)[0]?.[0]).toMatchObject({
+        code: 'import { CleanRoom } from "@clean-room/sdk";\n\nconst client = new CleanRoom();\nawait client.ping();',
+        sdk: "typescript",
+      });
+      // The SDK label is indexed with the operation (terms, not display text).
+      const searchClient = createSearchClient(
+        parseSearchArtifact(
+          await readFile(
+            path.join(project, ".specra", "artifacts", "search.json"),
+            "utf8",
+          ),
+        ),
+        () => 0,
+      );
+      expect(
+        searchClient.search("typescript sdk ping").hits[0]?.document.route,
+      ).toBe("/api/operations/ping");
       const content = JSON.parse(
         await readFile(
           path.join(project, ".specra", "artifacts", "content.json"),

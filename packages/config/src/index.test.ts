@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   isRedactedIssuePath,
   parseConfig,
+  parseSdkExamplesFile,
   redactIssuePath,
   specraConfigSchema,
 } from "./index.js";
@@ -154,6 +155,110 @@ describe("parseConfig", () => {
   });
 });
 
+describe("sdks", () => {
+  const base = {
+    name: "Example",
+    openapi: "./openapi.yaml",
+    schemaVersion: 1,
+  } as const;
+
+  it("accepts inline and file-backed SDK example mappings with defaults", () => {
+    const parsed = parseConfig({
+      ...base,
+      sdks: [
+        {
+          examples: [
+            { code: "client.inboxes.create()", operation: "createInbox" },
+            {
+              file: "./sdk/get.ts",
+              operation: {
+                method: "GET",
+                path: "/inboxes/{id}",
+                service: "Mail",
+              },
+              title: "Get an inbox",
+            },
+          ],
+          id: "typescript",
+          label: "TypeScript SDK",
+          language: "typescript",
+          package: "@example/sdk",
+        },
+        {
+          examples: "./sdk/java.json",
+          id: "java",
+          label: "Java SDK",
+          language: "java",
+        },
+        { id: "go", label: "Go SDK", language: "go" },
+      ],
+    });
+    expect(parsed.sdks.map((sdk) => sdk.coverage)).toEqual([
+      "partial",
+      "partial",
+      "partial",
+    ]);
+    expect(parsed.sdks[2]?.examples).toEqual([]);
+    expect(parsed.environments).toEqual({});
+  });
+
+  it("rejects callbacks, unknown languages, bad ids, and examples without exactly one source", () => {
+    const sdk = { id: "ts", label: "TS", language: "typescript" };
+    for (const sdks of [
+      [{ ...sdk, generate: () => "x" }],
+      [{ ...sdk, language: "brainfuck" }],
+      [{ ...sdk, id: "Not Kebab" }],
+      [{ ...sdk, examples: [{ operation: "x" }] }],
+      [{ ...sdk, examples: [{ code: "a", file: "./b.ts", operation: "x" }] }],
+      [{ ...sdk, examples: [{ code: "", operation: "x" }] }],
+      [
+        {
+          ...sdk,
+          examples: [{ code: "a", operation: { method: "FETCH", path: "/x" } }],
+        },
+      ],
+      [
+        {
+          ...sdk,
+          examples: [{ code: "a", operation: { method: "GET", path: "x" } }],
+        },
+      ],
+      [
+        {
+          ...sdk,
+          examples: [{ code: "a", file: "../outside.ts", operation: "x" }],
+        },
+      ],
+      [{ ...sdk, examples: "/etc/passwd" }],
+      [{ ...sdk, coverage: "total" }],
+    ]) {
+      expect(
+        () => parseConfig({ ...base, sdks }),
+        JSON.stringify(sdks),
+      ).toThrow();
+    }
+    expect(() =>
+      parseSdkExamplesFile({ examples: [{ operation: 1 }] }),
+    ).toThrow();
+    expect(parseSdkExamplesFile({ examples: [] })).toEqual({ examples: [] });
+  });
+
+  it("requires environment names to be identifiers", () => {
+    expect(() =>
+      parseConfig({
+        ...base,
+        environments: { "prod env": { baseUrl: "https://api.example.com" } },
+      }),
+    ).toThrow();
+    expect(
+      parseConfig({
+        ...base,
+        environments: { "prod-1": { baseUrl: "https://api.example.com" } },
+      }).environments["prod-1"]?.baseUrl,
+    ).toBe("https://api.example.com");
+  });
+});
+
 describe("issue path redaction", () => {
   const schemaLabels = [
     "branding",
@@ -179,6 +284,16 @@ describe("issue path redaction", () => {
     "playground",
     "playground.mode",
     "schemaVersion",
+    "sdks",
+    "sdks.0",
+    "sdks.0.id",
+    "sdks.0.coverage",
+    "sdks.0.examples",
+    "sdks.0.examples.0",
+    "sdks.0.examples.0.operation",
+    "sdks.0.examples.0.operation.method",
+    "sdks.0.examples.0.file",
+    "sdks.0.examples.0.code",
   ];
 
   it("keeps schema keys, redacts user keys, and marks array positions", () => {

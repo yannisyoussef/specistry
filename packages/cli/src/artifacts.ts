@@ -12,6 +12,10 @@ import {
   SEARCH_FORMAT_VERSION,
 } from "@specra/search";
 import {
+  SNIPPETS_ARTIFACT_FILENAME,
+  SNIPPETS_FORMAT_VERSION,
+} from "@specra/snippets";
+import {
   ARTIFACT_DOCUMENTATION_FILENAME,
   ARTIFACT_MANIFEST_FILENAME,
   ARTIFACT_MANIFEST_FORMAT,
@@ -44,6 +48,12 @@ export interface ArtifactWriteRequest {
   readonly contentSources?: readonly SourceSummary[];
   /** The search artifact (SPEC-007); every build carries one. */
   readonly search: { readonly json: string; readonly documents: number };
+  /** The snippets artifact (SPEC-008); every build carries one. */
+  readonly snippets: {
+    readonly json: string;
+    readonly operations: number;
+    readonly sdkExamples: number;
+  };
   readonly project: { readonly id: string; readonly name: string };
   readonly ingestion: IngestionSummary;
   readonly warnings: number;
@@ -108,6 +118,11 @@ export async function writeArtifacts(
       request.search.json,
       "utf8",
     );
+    await writeFile(
+      path.join(staging, SNIPPETS_ARTIFACT_FILENAME),
+      request.snippets.json,
+      "utf8",
+    );
     if (request.assets !== undefined && request.assets.length > 0) {
       const assetsDirectory = path.join(staging, ARTIFACT_ASSETS_DIRECTORY);
       await mkdir(assetsDirectory);
@@ -142,8 +157,10 @@ export async function writeArtifacts(
         Buffer.byteLength(request.contentJson, "utf8") +
         Buffer.byteLength(request.navigationJson, "utf8");
     }
-    files.push(SEARCH_ARTIFACT_FILENAME);
-    bytes += Buffer.byteLength(request.search.json, "utf8");
+    files.push(SEARCH_ARTIFACT_FILENAME, SNIPPETS_ARTIFACT_FILENAME);
+    bytes +=
+      Buffer.byteLength(request.search.json, "utf8") +
+      Buffer.byteLength(request.snippets.json, "utf8");
     for (const asset of request.assets ?? []) {
       files.push(`${ARTIFACT_ASSETS_DIRECTORY}/${asset.name}`);
       bytes += asset.bytes.byteLength;
@@ -251,12 +268,20 @@ function renderManifest(request: ArtifactWriteRequest): string {
           }
         : {}),
       search: SEARCH_ARTIFACT_FILENAME,
+      snippets: SNIPPETS_ARTIFACT_FILENAME,
     },
     search: {
       bytes: Buffer.byteLength(request.search.json, "utf8"),
       documents: request.search.documents,
       sha256: createHash("sha256").update(request.search.json).digest("hex"),
       version: SEARCH_FORMAT_VERSION,
+    },
+    snippets: {
+      bytes: Buffer.byteLength(request.snippets.json, "utf8"),
+      operations: request.snippets.operations,
+      sdkExamples: request.snippets.sdkExamples,
+      sha256: createHash("sha256").update(request.snippets.json).digest("hex"),
+      version: SNIPPETS_FORMAT_VERSION,
     },
     generator: "specra",
     modelVersion: DOCUMENT_MODEL_VERSION,

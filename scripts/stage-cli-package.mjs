@@ -41,6 +41,7 @@ const stagedDependencies = [
   "@specra/model",
   "@specra/openapi",
   "@specra/search",
+  "@specra/snippets",
   "zod",
 ];
 const declaredDependencies = Object.keys(cliManifest.dependencies ?? {}).sort();
@@ -60,7 +61,14 @@ const zodDirectory = await realpath(
 const yamlDirectory = await realpath(
   path.join(repositoryRoot, "packages", "openapi", "node_modules", "yaml"),
 );
-const workspacePackages = ["config", "content", "model", "openapi", "search"];
+const workspacePackages = [
+  "config",
+  "content",
+  "model",
+  "openapi",
+  "search",
+  "snippets",
+];
 const manifests = Object.fromEntries(
   await Promise.all(
     workspacePackages.map(async (name) => [
@@ -179,6 +187,7 @@ const stagedCliManifest = {
     "@specra/model": manifests.model.version,
     "@specra/openapi": manifests.openapi.version,
     "@specra/search": manifests.search.version,
+    "@specra/snippets": manifests.snippets.version,
     zod: cliManifest.dependencies.zod,
   },
 };

@@ -37,6 +37,12 @@ const boundaries = new Map([
       constrained: true,
     },
   ],
+  // Snippets project canonical operations into protocol examples (SPEC-008);
+  // the generators see the model only, never a parser, React, or the network.
+  [
+    "@specra/snippets",
+    { allowed: new Set(["@specra/model"]), constrained: true },
+  ],
   [
     "@specra/cli",
     {
@@ -46,6 +52,7 @@ const boundaries = new Map([
         "@specra/model",
         "@specra/openapi",
         "@specra/search",
+        "@specra/snippets",
       ]),
       constrained: true,
     },
@@ -58,6 +65,7 @@ const boundaries = new Map([
         "@specra/content",
         "@specra/model",
         "@specra/search",
+        "@specra/snippets",
       ]),
       constrained: false,
     },
@@ -107,6 +115,33 @@ const productionSections = new Set([
   "peerDependencies",
 ]);
 
+// Client islands (`"use client"` modules) ship to the browser. Build-only
+// packages must never cross that boundary: the language generators, the
+// Markdown parser and highlighter, and the search indexer stay on the
+// server; only the search engine's browser entry is allowed.
+const clientForbiddenPackages = new Set([
+  "@specra/config",
+  "@specra/content",
+  "@specra/openapi",
+  "@specra/search",
+  "@specra/snippets",
+]);
+const clientAllowedSpecifiers = new Set(["@specra/search/client"]);
+
+function isClientModule(source) {
+  return /^(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*["']use client["']/.test(
+    source,
+  );
+}
+
+function isClientImportForbidden(specifier) {
+  if (clientAllowedSpecifiers.has(specifier)) return false;
+  for (const name of clientForbiddenPackages) {
+    if (specifier === name || specifier.startsWith(`${name}/`)) return true;
+  }
+  return false;
+}
+
 const violations = [];
 const components = await discoverComponents();
 for (const [packageName, boundary] of boundaries) {
@@ -134,7 +169,13 @@ for (const component of components) {
     const analysis = analyzeSource(source, file);
     const production = isProductionSource(file);
     const relativeFile = path.relative(root, file);
+    const clientModule = isClientModule(source);
     for (const specifier of analysis.specifiers) {
+      if (clientModule && isClientImportForbidden(specifier)) {
+        violations.push(
+          `${relativeFile} is a client island but imports build-only '${specifier}'; generators, parsers, and indexers never ship to the browser.`,
+        );
+      }
       const dependency = dependencyPackage(file, specifier);
       if (dependency !== undefined && dependency !== component.name) {
         if (!boundary.allowed.has(dependency)) {
@@ -241,6 +282,20 @@ if (
 ) {
   violations.push(
     "Architecture checker self-test failed for the I/O boundary module set.",
+  );
+}
+if (
+  !isClientModule('"use client";\nimport x from "y";') ||
+  !isClientModule("// island\n'use client';") ||
+  isClientModule('import a from "b";\n"use client";') ||
+  !isClientImportForbidden("@specra/snippets") ||
+  !isClientImportForbidden("@specra/content/highlight") ||
+  !isClientImportForbidden("@specra/search") ||
+  isClientImportForbidden("@specra/search/client") ||
+  isClientImportForbidden("react")
+) {
+  violations.push(
+    "Architecture checker self-test failed for the client island boundary.",
   );
 }
 const fetchCases = [

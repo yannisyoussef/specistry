@@ -97,6 +97,7 @@ export {
   type ArtifactAssetRecord,
   type ArtifactBranding,
   type ArtifactSearchRecord,
+  type ArtifactSnippetsRecord,
   type ArtifactManifest,
   type ArtifactSourceRecord,
   type ArtifactStatistics,

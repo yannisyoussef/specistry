@@ -35,7 +35,8 @@
     "content": "content.json",
     "documentation": "documentation.json",
     "navigation": "navigation.json",
-    "search": "search.json"
+    "search": "search.json",
+    "snippets": "snippets.json"
   },
   "generator": "specra",
   "modelVersion": 1,
@@ -44,9 +45,16 @@
     "name": "TestInbox"
   },
   "search": {
-    "bytes": 53520,
+    "bytes": 53651,
     "documents": 63,
-    "sha256": "e968c0a6776b00053323638d137295a87c3742bed0e1edf9d7c5b9bd3fbe068c",
+    "sha256": "82e6342134f12b60fca0adb96105f82a04115cec63deaf1ea65dead9ffe95970",
+    "version": 1
+  },
+  "snippets": {
+    "bytes": 26719,
+    "operations": 25,
+    "sdkExamples": 5,
+    "sha256": "f46fd71740def59099120f7ae05010b0505baefde5d04111c5507b1703f6f8c3",
     "version": 1
   },
   "sources": [

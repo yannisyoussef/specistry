@@ -35,6 +35,14 @@ export interface ProjectionInput {
   readonly artifact: DocumentationArtifact;
   readonly pages: readonly ContentPage[];
   readonly navigation: NavigationArtifact | undefined;
+  /**
+   * Extra searchable terms per `<service id>~<operation id>` (SPEC-008): the labels
+   * of the SDKs that carry an authored example for the operation, indexed in
+   * the body field so "typescript sdk create inbox" finds the operation
+   * without letting SDK words outrank titles and paths. There is no
+   * standalone SDK result kind: the destination is the operation's Code rail.
+   */
+  readonly operationTerms?: ReadonlyMap<string, readonly string[]> | undefined;
 }
 
 const GUIDES_LABEL = "Guides";
@@ -59,7 +67,7 @@ export function projectSearchDocuments(
   const placeApi = () => {
     if (apiPlaced) return;
     apiPlaced = true;
-    drafts.push(...projectApi(input.artifact));
+    drafts.push(...projectApi(input.artifact, input.operationTerms));
   };
   const home = pagesByRoute.get("/");
   if (home !== undefined && !entries.some((entry) => entry.route === "/")) {
@@ -277,7 +285,10 @@ function blocksText(blocks: readonly BlockNode[]): string {
     .join(" ");
 }
 
-function projectApi(artifact: DocumentationArtifact): Draft[] {
+function projectApi(
+  artifact: DocumentationArtifact,
+  operationTerms: ReadonlyMap<string, readonly string[]> | undefined,
+): Draft[] {
   const tree = buildApiRouteTree(artifact);
   const drafts: Draft[] = [];
   for (const route of tree.services) {
@@ -347,6 +358,9 @@ function projectApi(artifact: DocumentationArtifact): Draft[] {
         if (operation === undefined) continue;
         const method: SearchMethod = operation.method;
         const identifiers = operationIdentifiers(operation, service);
+        const extraTerms = (
+          operationTerms?.get(`${service.id}~${operation.id}`) ?? []
+        ).slice(0, PROJECTION_LIMITS.identifiers);
         drafts.push({
           document: {
             context: [API_LABEL, ...serviceContext, group.name],
@@ -368,7 +382,11 @@ function projectApi(artifact: DocumentationArtifact): Draft[] {
           },
           record: {
             body: boundedText(
-              [operation.description ?? "", ...operation.tags].join(" "),
+              [
+                operation.description ?? "",
+                ...operation.tags,
+                ...extraTerms,
+              ].join(" "),
               PROJECTION_LIMITS.bodyCharacters,
             ),
             context: [API_LABEL, ...serviceContext, group.name].join(" "),
