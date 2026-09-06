@@ -16,6 +16,9 @@ const fixtureProject = path.resolve("tests/fixtures/reader/testinbox");
 /** The adversarial fixture is served by a second reader on port 3101. */
 const edgeProject = path.resolve("tests/fixtures/reader/edge");
 export const EDGE_URL = "http://127.0.0.1:3101";
+/** The fake target APIs the TestInbox playground is approved to reach. */
+export const TARGET_URL = "http://127.0.0.1:47391";
+export const STRICT_TARGET_URL = "http://127.0.0.1:47392";
 
 export default defineConfig({
   expect: {
@@ -78,6 +81,20 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
       url: EDGE_URL,
+    },
+    // The playground's fake target APIs (SPEC-009): one answers CORS, one
+    // refuses it. Neither is ever reached by the reader server.
+    {
+      command: "node tests/support/playground-api.mjs 47391 allow",
+      reuseExistingServer: !process.env.CI,
+      timeout: 10_000,
+      url: `${TARGET_URL}/__health`,
+    },
+    {
+      command: "node tests/support/playground-api.mjs 47392 deny",
+      reuseExistingServer: !process.env.CI,
+      timeout: 10_000,
+      url: `${STRICT_TARGET_URL}/__health`,
     },
   ],
 });

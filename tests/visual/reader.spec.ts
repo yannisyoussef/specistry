@@ -435,3 +435,83 @@ test.describe("code rail", () => {
     await expect(rail(page)).toHaveScreenshot("code-long-java-dark.png");
   });
 });
+
+/**
+ * Playground states (SPEC-009 §145): the Try it form on the rail in both
+ * modes, a completed response, a failure, the partial-capability
+ * explanation, the mobile bar with its Try it action, and the folded tablet
+ * section. The fake target API answers from the fixture's local environment.
+ */
+test.describe("playground", () => {
+  const rail = (page: Page) =>
+    page.getByRole("complementary", { name: "Code" });
+
+  async function openTryIt(page: Page, path: string, mode: "dark" | "light") {
+    await settle(page, path, mode);
+    await rail(page).getByRole("tab", { name: "Try it" }).click();
+    const panel = rail(page).getByRole("tabpanel", { name: "Try it" });
+    await expect(panel.getByRole("button", { name: /^Send / })).toBeVisible();
+    return panel;
+  }
+
+  test("form on the rail · desktop light and dark", async ({ page }) => {
+    await page.setViewportSize(viewports.desktop);
+    await openTryIt(page, "/api/inboxes/get-inbox", "light");
+    await expect(page).toHaveScreenshot("playground-form-desktop-light.png");
+    await openTryIt(page, "/api/inboxes/get-inbox", "dark");
+    await expect(page).toHaveScreenshot("playground-form-desktop-dark.png");
+  });
+
+  test("response, failure, and validation states", async ({ page }) => {
+    await page.setViewportSize(viewports.desktop);
+    const panel = await openTryIt(page, "/api/inboxes/get-inbox", "light");
+    await panel.getByLabel("Environment").selectOption({ label: "Local" });
+    await panel.getByLabel("X-Api-Key header").fill("visual-key");
+    await panel.getByLabel(/inboxId/).fill("inb_42");
+    await panel.getByRole("button", { name: "Send GET request" }).click();
+    await expect(panel.locator(".try-it__response")).toContainText("200 OK");
+    await expect(rail(page)).toHaveScreenshot("playground-response-light.png");
+    await panel.getByLabel(/inboxId/).fill("__redirect");
+    await panel.getByRole("button", { name: "Send GET request" }).click();
+    await expect(panel.locator(".try-it__response")).toContainText(
+      "Redirect blocked",
+    );
+    await expect(rail(page)).toHaveScreenshot("playground-blocked-light.png");
+    const invalid = await openTryIt(page, "/api/inboxes/get-inbox", "dark");
+    await invalid.getByRole("button", { name: "Send GET request" }).click();
+    await expect(invalid.getByText("inboxId is required.")).toBeVisible();
+    await expect(rail(page)).toHaveScreenshot("playground-invalid-dark.png");
+  });
+
+  test("JSON body editor and a partially supported operation", async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewports.desktop);
+    await openTryIt(page, "/api/inboxes/create-inbox", "light");
+    await expect(rail(page)).toHaveScreenshot("playground-json-body-light.png");
+    await openTryIt(page, "/api/webhooks/create-webhook", "dark");
+    await expect(rail(page)).toHaveScreenshot(
+      "playground-partial-auth-dark.png",
+    );
+  });
+
+  test("tablet inline section and mobile bar with Try it", async ({ page }) => {
+    await page.setViewportSize({ height: 768, width: 1024 });
+    await openTryIt(page, "/api/inboxes/get-inbox", "light");
+    await expect(page).toHaveScreenshot("playground-tablet-light.png");
+    await page.setViewportSize(viewports.mobile);
+    await settle(page, "/api/inboxes/get-inbox", "dark");
+    await page
+      .getByRole("navigation", { name: "Code" })
+      .getByRole("link", { name: "Try it" })
+      .click();
+    await expect(
+      rail(page)
+        .getByRole("tabpanel", { name: "Try it" })
+        .getByRole("button", {
+          name: /^Send /,
+        }),
+    ).toBeVisible();
+    await expect(page).toHaveScreenshot("playground-mobile-375-dark.png");
+  });
+});

@@ -88,6 +88,37 @@ function gzipBytes_(file) {
   return gzipSync(readFileSync(file)).byteLength;
 }
 
+/** Gzip bytes of the lazily loaded playground island (form + executor). */
+export const PLAYGROUND_BUDGET_GZIP_BYTES = 24 * 1_024;
+
+/**
+ * The Try it island (SPEC-009) loads on first activation, never by a
+ * route; it is found by the executor's redirect-blocked message, which
+ * exists only in the playground client entry.
+ */
+export function measurePlaygroundChunk() {
+  const directory = path.join(buildRoot, "static", "chunks");
+  const chunks = readdirSync(directory)
+    .filter((name) => name.endsWith(".js"))
+    .map((name) => path.join(directory, name))
+    .filter((file) =>
+      readFileSync(file, "utf8").includes(
+        "does not automatically follow redirects",
+      ),
+    );
+  const gzipBytes = chunks.reduce((total, file) => total + gzipBytes_(file), 0);
+  const rawBytes = chunks.reduce(
+    (total, file) => total + statSync(file).size,
+    0,
+  );
+  return {
+    budgetGzipBytes: PLAYGROUND_BUDGET_GZIP_BYTES,
+    chunks: chunks.map((file) => path.relative(buildRoot, file)),
+    gzipBytes,
+    rawBytes,
+  };
+}
+
 /**
  * The code samples are generated on the server (SPEC-008): no language
  * generator may reach a client chunk. These markers exist only in the
@@ -97,6 +128,10 @@ const GENERATOR_MARKERS = [
   "BodyPublishers.ofString",
   "--data-binary",
   "pip install requests",
+  // SPEC-009: the playground policy projection and the strict artifact
+  // parser stay on the server; only the client entry ships.
+  "Playground artifact shape is not recognized",
+  "PLAYGROUND_ENVIRONMENT_NOT_FOUND",
 ];
 
 export function findGeneratorLeaks() {
@@ -163,10 +198,31 @@ function main() {
     operation: measure(OPERATION_ROUTE),
   };
   const search = measureSearchChunk();
+  const playground = measurePlaygroundChunk();
   const failures = [
     ...check(reports.operation, "operation page"),
     ...check(reports.docs, "authored page"),
   ];
+  if (playground.chunks.length === 0) {
+    failures.push(
+      "the lazy playground chunk was not found in the build output",
+    );
+  } else if (playground.gzipBytes > playground.budgetGzipBytes) {
+    failures.push(
+      `playground chunk ${playground.gzipBytes} B gzip exceeds the ${playground.budgetGzipBytes} B budget`,
+    );
+  }
+  for (const [, report] of Object.entries(reports)) {
+    if (
+      playground.chunks.some((chunk) =>
+        report.route.chunks.includes(`/_next/${chunk}`),
+      )
+    ) {
+      failures.push(
+        "the playground chunk is loaded by a page route instead of lazily",
+      );
+    }
+  }
   if (search.chunks.length === 0) {
     failures.push("the lazy search chunk was not found in the build output");
   } else if (search.gzipBytes > search.budgetGzipBytes) {
@@ -193,11 +249,14 @@ function main() {
   }
   if (process.argv.includes("--json")) {
     process.stdout.write(
-      `${JSON.stringify({ ...reports, generatorLeaks: leaks, search }, null, 2)}\n`,
+      `${JSON.stringify({ ...reports, generatorLeaks: leaks, playground, search }, null, 2)}\n`,
     );
   } else {
     process.stdout.write(
       `[bundle] search (lazy): ${search.gzipBytes} B gzip (${search.rawBytes} B raw) in ${search.chunks.length} chunk(s); budget ${search.budgetGzipBytes} B\n`,
+    );
+    process.stdout.write(
+      `[bundle] playground (lazy): ${playground.gzipBytes} B gzip (${playground.rawBytes} B raw) in ${playground.chunks.length} chunk(s); budget ${playground.budgetGzipBytes} B\n`,
     );
     for (const [label, report] of Object.entries(reports)) {
       process.stdout.write(
