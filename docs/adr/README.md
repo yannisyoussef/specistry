@@ -19,3 +19,4 @@ ADRs record decisions that constrain multiple slices or security boundaries. Sta
 | [ADR-013](013-build-time-self-hosted-search.md)                         | Build-time, self-hosted search                                | ACCEPTED |
 | [ADR-014](014-protocol-snippet-projection-and-explicit-sdk-mappings.md) | Protocol snippet projection and explicit SDK mappings         | ACCEPTED |
 | [ADR-015](015-browser-direct-playground.md)                             | Browser-direct playground policy and execution boundary       | ACCEPTED |
+| [ADR-016](016-immutable-documentation-releases.md)                      | Immutable documentation releases, current alias, changelogs   | ACCEPTED |

@@ -113,6 +113,25 @@ Measured by `tests/performance/search.test.ts` (recorded in `search-measurements
 | Mobile                   | Pixel 5 and 320 px: full-screen sheet, 44 px trigger, rows, and Cancel; no horizontal overflow                                                                                  | TalkBack: sheet announced as dialog                                                                       |
 | Forced colours / motion  | Panel and controls keep borders, active row gets a `solid` outline, matches keep an underline; the only animation is a 200 ms rise disabled under `prefers-reduced-motion`      | Windows High Contrast spot check                                                                          |
 
+### SPEC-010 versioning evidence
+
+Measured by `tests/performance/versioning.test.ts` (recorded in `versioning-measurements.json`) and `pnpm check:bundle`; versioning adds no client JavaScript (the version menu and banner are server-rendered `details`/`summary` markup), so the operation-page budget is unchanged:
+
+| Measure                            | Value                                                                                                                 |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 20 releases, 200 operations each   | promotion 271 ms average (279 ms max) after a 334 ms first build; store 5.3 MB (265 KB per release); catalog 3.5 KB   |
+| Reader start                       | catalog parsed in 0.6 ms (123 KB heap); first release 20 ms, second 12 ms, cached release 5 µs                        |
+| Memory after touching 20 releases  | 4 releases resident (cache bound), 35 MB heap, 133 MB RSS: memory is bounded by the cache, not by the catalog         |
+| Structured diff, 10,000 operations | 4,000 candidates (1,000 added, 1,000 removed, 2,000 changed) in 22 ms; 1.05 MB output; 13 MB RSS delta; not truncated |
+| Sitemap, 100,000 URLs              | index plus four partitions (45,000 URLs first) in 74 ms                                                               |
+
+| Check                  | Automated evidence                                                                                                                                                                                           | Manual expectation before release                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Version menu           | Native `details`/`summary` with an accessible name, arrow-free keyboard operation, current state marked, works with script disabled; axe passes with the menu open on desktop and mobile (Playwright, jsdom) | VoiceOver reads "Version 2.0, current, collapsed"; the listed releases announce their state |
+| Historical banner      | An `aside` landmark labelled "Documentation version notice" with a text link to the current documentation, placed before the article; contrast checked with axe in light and dark                            | Reachable from the landmark list; not a live region, so it never interrupts reading         |
+| Changelog page         | One `h1`, dated `h2` sections, kind labels as text (not colour only), operation links; axe passes                                                                                                            | Reading order follows date then item                                                        |
+| Historical Try it note | Text note with a link to the current counterpart in place of the form; the mobile bar has no dead `Try it` link                                                                                              | Screen reader users learn where execution is available without hunting                      |
+
 ### SPEC-009 playground evidence
 
 Measured by `tests/performance/playground.test.ts` (recorded in `playground-measurements.json`) and `pnpm check:bundle`: the TestInbox policy (25 operations, 2 environments) projects in under 200 ms and parses in under 100 ms; the 10,000-operation policy with three approved environments stays under 2 KiB per operation and 4 MiB gzip, and approving one environment instead of three changes the artifact by under 1 KiB. The Try it island loads on first activation as one lazy chunk (10.6 KiB gzip) that no page route references.

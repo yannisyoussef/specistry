@@ -271,6 +271,10 @@ branding: { accent: "#2a6fdb", logo: "./assets/logo.svg", favicon: "./assets/fav
 
 A breached budget is `CONTENT_BUDGET_EXCEEDED` at the offending location; the build fails rather than truncating content silently.
 
+## Changelog
+
+Release notes are authored, not generated. `changelog/<version>.json` holds dated entries of `added`, `changed`, `deprecated`, `removed`, and `fixed` items with plain text, an optional operation reference, and the structured diff candidates each item reviews; `specra release` publishes exactly that text at `/docs/{version}/changelog` once every candidate is dispositioned. The format and workflow are in the [versioning reference](versioning.md#writing-the-changelog).
+
 ## Diagnostics
 
 Content diagnostics use the CLI's path grammar with a source location: `source/docs/guides/attachments.md:42:7` names the line and column of the offending node; navigation diagnostics point at the configuration (`config#/navigation/1/items/0`). Messages are fixed text and never quote the authored value. `specra validate` reports every problem in one run so a large migration can be fixed in one pass, and `specra build` refuses to write artifacts while any error remains. See the [CLI reference](cli.md#output-and-exit-contract) for the full code list.

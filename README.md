@@ -70,6 +70,7 @@ specra/
 ├── packages/content/         Authored Markdown/MDX compiler: bounded AST, components, highlighting
 ├── packages/search/          Build-time search projection and index, browser-safe query engine
 ├── packages/snippets/        Pure request projection and cURL/HTTP/JS/TS/Java/Python generators
+├── packages/release/         Release manifests, catalog, route tables, redirects, structured diff, changelog
 ├── packages/model/           Framework-neutral canonical documentation model
 ├── packages/openapi/         OpenAPI 3.0/3.1 ingestion: bounded parse, confined refs, normalization
 ├── tests/                    Unit, security, accessibility, performance, and browser tests
@@ -77,7 +78,7 @@ specra/
 └── docs/                     Product, architecture, security, ADRs, and roadmap
 ```
 
-Start with the [architecture entry point](docs/architecture/README.md), [product definition](docs/product-definition.md), [CLI reference](docs/cli.md), [OpenAPI ingestion reference](docs/openapi.md), [configuration reference](docs/configuration.md), [content authoring reference](docs/content-authoring.md), [search reference](docs/search.md), [code samples reference](docs/code-samples.md), [playground reference](docs/playground.md), [threat model](docs/security/threat-model.md), [deployment requirements](docs/deployment.md), and [roadmap](docs/roadmap.md). Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Start with the [architecture entry point](docs/architecture/README.md), [product definition](docs/product-definition.md), [CLI reference](docs/cli.md), [OpenAPI ingestion reference](docs/openapi.md), [configuration reference](docs/configuration.md), [content authoring reference](docs/content-authoring.md), [search reference](docs/search.md), [code samples reference](docs/code-samples.md), [playground reference](docs/playground.md), [versioning reference](docs/versioning.md), [threat model](docs/security/threat-model.md), [deployment requirements](docs/deployment.md), and [roadmap](docs/roadmap.md). Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 Development integrates through `develop`; reviewed, green promotion pull requests move releases to the production branch, `master`. The complete branch and hotfix workflow is documented in [CONTRIBUTING.md](CONTRIBUTING.md#branch-workflow).
 
@@ -92,6 +93,7 @@ Development integrates through `develop`; reviewed, green promotion pull request
 - Authored Markdown/MDX never executes: pages compile to a validated content model with a fixed component vocabulary; expressions, imports, and raw HTML are build errors with a line and column, and assets are checked by content, size-limited, and served only by content-addressed name.
 - Search is generated at build time and answered in the browser from a digest-checked, content-addressed artifact; queries never leave the reader and no search service or telemetry exists.
 - Code examples in six protocol languages are projected from the canonical operation by a pure, deterministic generator with hardened escaping and placeholder credentials; SDK examples are rendered only when the project author mapped them explicitly. Nothing in the reader sends a request or accepts a destination the build did not validate.
+- Documentation versions (SPEC-010) are immutable release sets promoted explicitly from a verified candidate; `/docs/{version}` and `/api/{version}` are self-canonical and never fall back to newer content, `/docs` is a non-permanent alias to the explicit current release, redirects are validated internal data, and changelogs are human-reviewed from value-free structured diff candidates; see the [versioning reference](docs/versioning.md).
 - Critical dependency boundaries, accessibility smoke coverage, malicious-input controls, and production-license policy run in CI.
 
 A project license, release process, and independently published packages are deliberately deferred until repository ownership and distribution policy are decided.
