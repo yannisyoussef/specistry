@@ -130,6 +130,42 @@ test.describe("mobile reader", () => {
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });
 
+  test("searches from the header on a phone with a full-screen sheet and touch targets", async ({
+    page,
+  }) => {
+    await page.goto("/docs/quickstart");
+    const trigger = page.locator(".search-trigger");
+    const box = await trigger.boundingBox();
+    expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await trigger.tap();
+    const dialog = page.getByRole("dialog", { name: "Search documentation" });
+    await expect(dialog).toBeVisible();
+    const input = page.getByRole("combobox", { name: "Search documentation" });
+    await expect(input).toBeFocused();
+    const panel = await page.locator(".search__panel").boundingBox();
+    expect(Math.round(panel?.width ?? 0)).toBe(375);
+    await input.fill("attachments");
+    const first = page.getByRole("option").first();
+    const row = await first.boundingBox();
+    expect(row?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect(await horizontalOverflow(page)).toBe(0);
+    await page.getByRole("button", { name: /Close search/ }).tap();
+    await expect(dialog).toBeHidden();
+    await trigger.tap();
+    await input.fill("create inbox");
+    await page.getByRole("option").first().tap();
+    await expect(page).toHaveURL(/\/api\/inboxes\/create-inbox$/);
+    await page.setViewportSize({ height: 640, width: 320 });
+    await page.locator(".search-trigger").tap();
+    await page
+      .getByRole("combobox", { name: "Search documentation" })
+      .fill("download attachment");
+    await expect(page.getByRole("option").first()).toBeVisible();
+    expect(await horizontalOverflow(page)).toBe(0);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+
   test("reflows the longest paths and parameter lists at 320 CSS px", async ({
     page,
   }) => {

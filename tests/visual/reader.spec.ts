@@ -261,3 +261,84 @@ test.describe("authored content", () => {
     await expect(page).toHaveScreenshot("docs-not-found-desktop-light.png");
   });
 });
+
+/**
+ * Search states (SPEC-007 §113): the header trigger is part of every page
+ * baseline; these capture the palette itself.
+ */
+test.describe("search", () => {
+  const open = async (
+    page: Page,
+    query: string,
+    down = 0,
+    expectResults = true,
+  ) => {
+    await page.keyboard.press("Control+k");
+    await expect(
+      page.getByRole("dialog", { name: "Search documentation" }),
+    ).toBeVisible();
+    if (query.length > 0) {
+      await page
+        .getByRole("combobox", { name: "Search documentation" })
+        .fill(query);
+      if (expectResults) {
+        await expect(page.getByRole("option").first()).toBeVisible();
+      }
+    }
+    for (let index = 0; index < down; index += 1) {
+      await page.keyboard.press("ArrowDown");
+    }
+    await page.evaluate(() => document.fonts.ready);
+  };
+
+  test("desktop · empty, results, dark, exact endpoint, keyboard selection", async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/docs/quickstart", "light");
+    await open(page, "");
+    await expect(page).toHaveScreenshot("search-empty-desktop-light.png");
+    await page.keyboard.press("Escape");
+    await open(page, "create inbox");
+    await expect(page).toHaveScreenshot("search-results-desktop-light.png");
+    await page.keyboard.press("Escape");
+    await open(page, "POST /inboxes");
+    await expect(page).toHaveScreenshot("search-exact-desktop-light.png");
+    await page.keyboard.press("Escape");
+    await open(page, "authentication", 2);
+    await expect(page).toHaveScreenshot("search-selected-desktop-light.png");
+    await settle(page, "/docs/quickstart", "dark");
+    await open(page, "create inbox");
+    await expect(page).toHaveScreenshot("search-results-desktop-dark.png");
+  });
+
+  test("desktop · no results and long results", async ({ page }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/", "light");
+    await open(page, "zzzzqq", 0, false);
+    await expect(page.getByText(/No results for “zzzzqq”/)).toBeVisible();
+    await expect(page).toHaveScreenshot("search-no-results-desktop-light.png");
+    await settle(page, "/api", "light", EDGE_URL);
+    await open(page, "long");
+    await expect(page).toHaveScreenshot("search-long-desktop-light.png");
+  });
+
+  test("mobile · 375 and 320", async ({ page }) => {
+    await page.setViewportSize(viewports.mobile);
+    await settle(page, "/docs/quickstart", "light");
+    await page.locator(".search-trigger").click();
+    await page
+      .getByRole("combobox", { name: "Search documentation" })
+      .fill("create inbox");
+    await expect(page.getByRole("option").first()).toBeVisible();
+    await expect(page).toHaveScreenshot("search-mobile-375-light.png");
+    await page.setViewportSize({ height: 640, width: 320 });
+    await settle(page, "/docs/quickstart", "dark");
+    await page.locator(".search-trigger").click();
+    await page
+      .getByRole("combobox", { name: "Search documentation" })
+      .fill("attachments");
+    await expect(page.getByRole("option").first()).toBeVisible();
+    await expect(page).toHaveScreenshot("search-mobile-320-dark.png");
+  });
+});
