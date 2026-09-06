@@ -4,6 +4,7 @@ import {
   type ContentDiagnostic,
   type ContentDiagnosticCode,
 } from "@specra/content";
+import { QUALITY_MESSAGES } from "@specra/quality";
 import {
   SOURCE_DIAGNOSTIC_MESSAGES,
   SOURCE_DIAGNOSTIC_SEVERITY,
@@ -20,6 +21,7 @@ import type {
 const messages: Readonly<Record<DiagnosticCode, string>> = {
   ...SOURCE_DIAGNOSTIC_MESSAGES,
   ...CONTENT_DIAGNOSTIC_MESSAGES,
+  ...QUALITY_MESSAGES,
   ARTIFACT_INVALID:
     "The canonical artifact did not satisfy the model contract; report this reproducible failure without secrets.",
   ARTIFACT_WRITE_FAILED:

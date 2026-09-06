@@ -111,13 +111,13 @@ const LOCK_WAIT_MS = 10_000;
 const LOCK_RETRY_MS = 50;
 const CANDIDATE_VERSION = "candidate";
 
-interface CandidateFile {
+export interface CandidateFile {
   readonly name: string;
   readonly text: string;
   readonly format: number;
 }
 
-interface Candidate {
+export interface Candidate {
   readonly manifest: ArtifactManifest;
   readonly manifestText: string;
   readonly artifact: DocumentationArtifact;
@@ -131,7 +131,7 @@ interface Candidate {
   }[];
 }
 
-type CandidateResult =
+export type CandidateResult =
   | { readonly ok: true; readonly candidate: Candidate }
   | { readonly ok: false; readonly diagnostics: readonly Diagnostic[] };
 
@@ -575,7 +575,9 @@ export async function writeDiffCandidates(
 
 // --- candidate ------------------------------------------------------------
 
-async function readCandidate(context: BuildContext): Promise<CandidateResult> {
+export async function readCandidate(
+  context: BuildContext,
+): Promise<CandidateResult> {
   const directory = path.join(context.projectRoot, ARTIFACT_DIRECTORY);
   const missing = (pointer: string): CandidateResult => ({
     diagnostics: [createDiagnostic("CANDIDATE_MISSING", artifactPath(pointer))],
@@ -753,7 +755,7 @@ function componentNameOf(file: string): ReleaseComponentName {
 }
 
 /** Unversioned operation hrefs by `service~operation`, for diff route candidates. */
-function operationRoutes(
+export function operationRoutes(
   artifact: DocumentationArtifact,
 ): ReadonlyMap<string, string> {
   const routes = new Map<string, string>();
@@ -885,7 +887,7 @@ async function readChangelog(
 
 // --- store ----------------------------------------------------------------
 
-async function releaseStore(
+export async function releaseStore(
   context: BuildContext,
 ): Promise<string | undefined> {
   const resolved = await resolveFutureProjectPath(
@@ -895,7 +897,7 @@ async function releaseStore(
   return resolved.ok ? resolved.path : undefined;
 }
 
-async function readCatalog(
+export async function readCatalog(
   store: string,
 ): Promise<
   { readonly ok: true; readonly catalog?: ReleaseCatalog } | FailureResult

@@ -8,7 +8,7 @@ import {
 } from "./contracts.js";
 
 export type CommandName =
-  "build" | "current" | "deprecate" | "release" | "validate";
+  "build" | "check" | "current" | "deprecate" | "diff" | "release" | "validate";
 
 export type ParsedArguments =
   | { readonly kind: "root-help" }
@@ -25,8 +25,10 @@ export type ParsedArguments =
       readonly version?: string;
       /** `--current` on `release`. */
       readonly current: boolean;
-      /** `--from <version>` on `build` and `release`. */
+      /** `--from <source>` on `build`, `release`, `check`, and `diff`. */
       readonly from?: string;
+      /** `--to <source>` on `diff`; defaults to the candidate build. */
+      readonly to?: string;
       /** `--no-diff` on `release`. */
       readonly noDiff: boolean;
       readonly label?: string;
@@ -35,11 +37,15 @@ export type ParsedArguments =
 
 const COMMANDS = new Set<CommandName>([
   "build",
+  "check",
   "current",
   "deprecate",
+  "diff",
   "release",
   "validate",
 ]);
+/** Commands whose `--from` and `--to` accept `candidate`, `current`, or an id. */
+const SOURCE_COMMANDS = new Set<CommandName>(["check", "diff"]);
 const VERSION_COMMANDS = new Set<CommandName>([
   "current",
   "deprecate",
@@ -79,6 +85,7 @@ export function parseArguments(args: readonly string[]): ParsedArguments {
   let noDiff = false;
   let label: string | undefined;
   let date: string | undefined;
+  let to: string | undefined;
 
   for (let index = 1; index < args.length; index += 1) {
     const argument = args[index];
@@ -128,6 +135,32 @@ export function parseArguments(args: readonly string[]): ParsedArguments {
       index += 1;
       continue;
     }
+    if (argument === "--version") {
+      if (command !== "check") {
+        return usage("--version applies to check only.");
+      }
+      if (version !== undefined) {
+        return usage("--version may be specified only once.");
+      }
+      const value = args[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return usage("--version requires a version id.");
+      }
+      version = value;
+      index += 1;
+      continue;
+    }
+    if (argument === "--to") {
+      if (command !== "diff") return usage("--to applies to diff only.");
+      if (to !== undefined) return usage("--to may be specified only once.");
+      const value = args[index + 1];
+      if (value === undefined || value.startsWith("-")) {
+        return usage("--to requires a source.");
+      }
+      to = value;
+      index += 1;
+      continue;
+    }
     if (argument === "--current") {
       if (command !== "release")
         return usage("--current applies to release only.");
@@ -143,8 +176,12 @@ export function parseArguments(args: readonly string[]): ParsedArguments {
       continue;
     }
     if (argument === "--from") {
-      if (command !== "release" && command !== "build") {
-        return usage("--from applies to build and release only.");
+      if (
+        command !== "release" &&
+        command !== "build" &&
+        !SOURCE_COMMANDS.has(command)
+      ) {
+        return usage("--from applies to build, release, check, and diff only.");
       }
       if (from !== undefined)
         return usage("--from may be specified only once.");
@@ -195,6 +232,9 @@ export function parseArguments(args: readonly string[]): ParsedArguments {
   if (VERSION_COMMANDS.has(command) && version === undefined) {
     return usage(`${command} requires a version id.`);
   }
+  if (command === "diff" && from === undefined) {
+    return usage("diff requires --from <candidate|current|version>.");
+  }
   if (noDiff && from !== undefined) {
     return usage("--no-diff and --from cannot be combined.");
   }
@@ -211,6 +251,7 @@ export function parseArguments(args: readonly string[]): ParsedArguments {
     noDiff,
     root,
     sourceTimeoutMs,
+    ...(to === undefined ? {} : { to }),
     ...(version === undefined ? {} : { version }),
   };
 }

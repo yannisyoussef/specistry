@@ -15,6 +15,10 @@ export type {
   ArtifactSummary,
   CatalogResult,
   CatalogSummary,
+  CheckOptions,
+  CheckResult,
+  DiffCommandOptions,
+  DiffCommandResult,
   ReleaseOptions,
   ReleaseResult,
   ReleaseSummary,
@@ -41,6 +45,12 @@ export {
   createBuildContext,
   validateProject,
 } from "./orchestrator.js";
+export {
+  CANDIDATE_SOURCE,
+  CURRENT_SOURCE,
+  checkProject,
+  diffDocumentation,
+} from "./quality.js";
 export {
   deprecateRelease,
   releaseProject,
