@@ -1,0 +1,87 @@
+{
+  "candidates": [
+    {
+      "id": "v1..candidate:operation-removed:openapi.yaml~getRawMessage",
+      "identity": "openapi.yaml~getRawMessage",
+      "kind": "operation-removed",
+      "label": "GET /inboxes/{id}/raw",
+      "route": {
+        "from": "/api/inboxes/get-raw-message"
+      },
+      "service": "openapi.yaml"
+    },
+    {
+      "id": "v1..candidate:operation-added:openapi.yaml~waitForMessage",
+      "identity": "openapi.yaml~waitForMessage",
+      "kind": "operation-added",
+      "label": "POST /inboxes/{id}/messages/wait",
+      "route": {
+        "to": "/api/inboxes/wait-for-message"
+      },
+      "service": "openapi.yaml"
+    },
+    {
+      "changes": [
+        {
+          "aspect": "response-schema",
+          "detail": "201 application/json"
+        },
+        {
+          "aspect": "security"
+        }
+      ],
+      "id": "v1..candidate:operation-changed:openapi.yaml~createInbox",
+      "identity": "openapi.yaml~createInbox",
+      "kind": "operation-changed",
+      "label": "POST /inboxes",
+      "service": "openapi.yaml"
+    },
+    {
+      "changes": [
+        {
+          "aspect": "deprecated",
+          "detail": "deprecated"
+        },
+        {
+          "aspect": "parameter-added",
+          "detail": "query:cursor"
+        },
+        {
+          "aspect": "response-schema",
+          "detail": "200 application/json"
+        },
+        {
+          "aspect": "security"
+        }
+      ],
+      "id": "v1..candidate:operation-changed:openapi.yaml~listInboxes",
+      "identity": "openapi.yaml~listInboxes",
+      "kind": "operation-changed",
+      "label": "GET /inboxes",
+      "service": "openapi.yaml"
+    },
+    {
+      "id": "v1..candidate:schema-changed:openapi.yaml~schema_14ab563d3d387999",
+      "identity": "openapi.yaml~schema_14ab563d3d387999",
+      "kind": "schema-changed",
+      "label": "schema_14ab563d3d387999",
+      "service": "openapi.yaml"
+    }
+  ],
+  "counts": {
+    "group-added": 0,
+    "group-removed": 0,
+    "operation-added": 1,
+    "operation-changed": 2,
+    "operation-removed": 1,
+    "schema-added": 0,
+    "schema-changed": 1,
+    "schema-removed": 0,
+    "service-added": 0,
+    "service-removed": 0
+  },
+  "diffFormat": 1,
+  "from": "v1",
+  "to": "candidate",
+  "truncated": false
+}

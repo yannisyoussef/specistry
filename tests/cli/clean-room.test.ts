@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   realpath,
   rm,
@@ -13,6 +15,13 @@ import path from "node:path";
 import { parseSearchArtifact } from "@specra/search";
 import { createSearchClient } from "@specra/search/client";
 import { describe, expect, it } from "vitest";
+
+import {
+  loadReaderRelease,
+  resetReleaseCaches,
+  resolveVersionRoute,
+  versionSwitchTargets,
+} from "../../apps/web/lib/reader/release";
 
 const repositoryRoot = process.cwd();
 
@@ -330,13 +339,273 @@ describe("CLI clean-room package", () => {
         diagnostics: [],
         ok: true,
       });
+
+      // SPEC-010: the packed CLI promotes the candidate into an immutable
+      // release, diffs the next candidate against it, publishes the author's
+      // changelog, and selects current; the reader then serves both versions
+      // from the same project root without a rebuild.
+      const releasedV1 = command(
+        executable,
+        [
+          "release",
+          "v1",
+          "--json",
+          "--current",
+          "--date",
+          "2026-08-01",
+          "--label",
+          "1.0",
+        ],
+        project,
+      );
+      expect(releasedV1.status, releasedV1.stderr).toBe(0);
+      expect(JSON.parse(releasedV1.stdout)).toEqual(
+        expect.objectContaining({
+          ok: true,
+          release: expect.objectContaining({
+            changelog: false,
+            current: "v1",
+            directory: ".specra/releases/v1",
+            unchanged: false,
+            version: "v1",
+          }),
+        }),
+      );
+      const store = path.join(project, ".specra", "releases");
+      const digestsOf = async (version: string) => {
+        const directory = path.join(store, version);
+        const digests: Record<string, string> = {};
+        const walk = async (relative: string): Promise<void> => {
+          const entries = await readdir(path.join(directory, relative), {
+            withFileTypes: true,
+          });
+          for (const entry of entries.sort((a, b) =>
+            a.name < b.name ? -1 : 1,
+          )) {
+            const name = path.posix.join(relative, entry.name);
+            if (entry.isDirectory()) await walk(name);
+            else
+              digests[name] = createHash("sha256")
+                .update(await readFile(path.join(directory, name)))
+                .digest("hex");
+          }
+        };
+        await walk("");
+        return digests;
+      };
+      const v1Before = await digestsOf("v1");
+      expect(Object.keys(v1Before)).toEqual(
+        expect.arrayContaining([
+          "release.json",
+          "routes.json",
+          "redirects.json",
+          "documentation.json",
+          "search.json",
+        ]),
+      );
+
+      // Version 2 of the sources: a new operation, a new page, a redirect.
+      await writeFile(
+        path.join(project, "openapi.yaml"),
+        "openapi: 3.1.0\ninfo:\n  title: Clean room\n  version: 2.0.0\npaths:\n  /ping:\n    get:\n      operationId: ping\n      responses:\n        '200':\n          description: ok\n  /pong:\n    get:\n      operationId: pong\n      responses:\n        '200':\n          description: ok\n",
+      );
+      await writeFile(
+        path.join(project, "docs", "migration.mdx"),
+        "---\ntitle: Migration\n---\n\nCall [pong](/api/operations/pong) after [ping](/api/operations/ping).\n",
+      );
+      await writeFile(
+        path.join(project, "specra.config.ts"),
+        `import { defineConfig } from "@specra/config";
+         export default defineConfig({
+           schemaVersion: 1,
+           name: "Clean room",
+           openapi: "./openapi.yaml",
+           navigation: ["quickstart", "migration", { api: true }],
+           environments: { production: { baseUrl: "https://example.test" } },
+           redirects: [{ from: "/docs/upgrade", to: "/docs/migration" }],
+           sdks: [{ id: "typescript", label: "TypeScript SDK", language: "typescript", package: "@clean-room/sdk", coverage: "complete", examples: [{ operation: "ping", file: "./sdk/ping.ts" }] }],
+         });`,
+      );
+      const rebuilt = command(executable, ["build", "--json"], project);
+      expect(rebuilt.status, rebuilt.stderr).toBe(0);
+      expect(JSON.parse(rebuilt.stdout)).toEqual(
+        expect.objectContaining({
+          candidates: { count: 1, from: "v1", truncated: false },
+          ok: true,
+        }),
+      );
+      const candidates = JSON.parse(
+        await readFile(
+          path.join(project, ".specra", "candidates", "diff.json"),
+          "utf8",
+        ),
+      ) as { candidates: readonly { id: string; label: string }[] };
+      expect(candidates.candidates).toEqual([
+        expect.objectContaining({
+          id: "v1..candidate:operation-added:openapi.yaml~pong",
+          label: "GET /pong",
+        }),
+      ]);
+
+      // Releasing without a review of the candidate fails closed.
+      const unreviewed = command(
+        executable,
+        ["release", "v2", "--json", "--date", "2026-09-06"],
+        project,
+      );
+      expect(unreviewed.status).toBe(2);
+      expect(JSON.parse(unreviewed.stdout)).toEqual(
+        expect.objectContaining({
+          diagnostics: [
+            expect.objectContaining({ code: "CHANGELOG_CANDIDATE_UNREVIEWED" }),
+          ],
+          ok: false,
+        }),
+      );
+      await mkdir(path.join(project, "changelog"));
+      await writeFile(
+        path.join(project, "changelog", "v2.json"),
+        JSON.stringify({
+          title: "Changelog",
+          from: "v1",
+          entries: [
+            {
+              date: "2026-09-06",
+              items: [
+                {
+                  kind: "added",
+                  operation: "openapi.yaml~pong",
+                  candidates: ["v1..v2:operation-added:openapi.yaml~pong"],
+                  text: "Answer a ping.",
+                },
+              ],
+            },
+          ],
+          omitted: [],
+        }),
+      );
+      const releasedV2 = command(
+        executable,
+        ["release", "v2", "--json", "--date", "2026-09-06", "--label", "2.0"],
+        project,
+      );
+      expect(releasedV2.status, releasedV2.stdout + releasedV2.stderr).toBe(0);
+      expect(JSON.parse(releasedV2.stdout)).toEqual(
+        expect.objectContaining({
+          release: expect.objectContaining({
+            candidates: 1,
+            changelog: true,
+            current: "v1",
+            from: "v1",
+            unchanged: false,
+            version: "v2",
+          }),
+        }),
+      );
+      // Re-releasing identical bytes is a no-op; v1 is untouched throughout.
+      const again = command(
+        executable,
+        ["release", "v2", "--json", "--date", "2026-09-06", "--label", "2.0"],
+        project,
+      );
+      expect(again.status, again.stdout).toBe(0);
+      expect(JSON.parse(again.stdout).release.unchanged).toBe(true);
+      expect(await digestsOf("v1")).toEqual(v1Before);
+
+      const selected = command(
+        executable,
+        ["current", "v2", "--json"],
+        project,
+      );
+      expect(selected.status, selected.stderr).toBe(0);
+      expect(JSON.parse(selected.stdout)).toEqual(
+        expect.objectContaining({
+          catalog: expect.objectContaining({
+            current: "v2",
+            releases: [
+              expect.objectContaining({ changelog: false, version: "v1" }),
+              expect.objectContaining({ changelog: true, version: "v2" }),
+            ],
+          }),
+          ok: true,
+        }),
+      );
+      expect(await digestsOf("v1")).toEqual(v1Before);
+      const v2Redirects = JSON.parse(
+        await readFile(path.join(store, "v2", "redirects.json"), "utf8"),
+      );
+      expect(v2Redirects).toEqual({
+        entries: [
+          { from: "/docs/v2/upgrade", status: 308, to: "/docs/v2/migration" },
+        ],
+        redirectsFormat: 1,
+        version: "v2",
+      });
+      const published = JSON.parse(
+        await readFile(path.join(store, "v2", "changelog.json"), "utf8"),
+      ) as { entries: readonly { items: readonly { text: string }[] }[] };
+      expect(published.entries[0]?.items[0]?.text).toBe("Answer a ping.");
+
+      // The reader resolves aliases, frozen redirects, and both releases,
+      // each scoped to its own routes; nothing falls back to current.
+      resetReleaseCaches();
+      const resolve = (pathname: string) =>
+        resolveVersionRoute(pathname, project);
+      expect(await resolve("/")).toEqual({
+        kind: "redirect",
+        location: "/docs/v2",
+        status: 307,
+      });
+      expect(await resolve("/docs/quickstart")).toEqual({
+        kind: "redirect",
+        location: "/docs/v2/quickstart",
+        status: 307,
+      });
+      expect(await resolve("/docs/v2/upgrade")).toEqual({
+        kind: "redirect",
+        location: "/docs/v2/migration",
+        status: 308,
+      });
+      expect(await resolve("/docs/v1/upgrade")).toEqual({ kind: "not-found" });
+      expect(await resolve("/docs/v1/migration")).toEqual({
+        kind: "not-found",
+      });
+      expect(await resolve("/api/v1/operations/pong")).toEqual({
+        kind: "not-found",
+      });
+      expect(await resolve("/api/v2/operations/pong")).toEqual({
+        kind: "serve",
+        version: "v2",
+      });
+      expect(await resolve("/docs/v3")).toEqual({ kind: "not-found" });
+      const v1 = await loadReaderRelease("v1", project);
+      const v2 = await loadReaderRelease("v2", project);
+      expect(v1.index.operationCount).toBe(1);
+      expect(v2.index.operationCount).toBe(2);
+      expect([...(v1.content?.pages.keys() ?? [])]).toEqual([
+        "/docs/v1",
+        "/docs/v1/quickstart",
+      ]);
+      expect([...(v2.content?.pages.keys() ?? [])].sort()).toEqual([
+        "/docs/v2",
+        "/docs/v2/migration",
+        "/docs/v2/quickstart",
+      ]);
+      expect(v1.index.apiRoot).toBe("/api/v1");
+      expect(
+        await versionSwitchTargets("/docs/v2/migration", "v2", project),
+      ).toEqual([
+        { counterpart: true, href: "/docs/v2/migration", id: "v2" },
+        { counterpart: false, href: "/docs/v1", id: "v1" },
+      ]);
     } finally {
       await rm(cleanRoom, { force: true, recursive: true });
     }
-    // Pack, offline install, validate, and an authored build with the
-    // highlighter take ~8 s uninstrumented and ~20 s under coverage on a
-    // GitHub runner; the ceiling is generous so timing never fails the case.
-  }, 120_000);
+    // Pack, offline install, validate, two authored builds with the
+    // highlighter, two releases, and the reader take ~12 s uninstrumented
+    // and ~30 s under coverage on a GitHub runner; the ceiling is generous
+    // so timing never fails the case.
+  }, 180_000);
 });
 
 function command(

@@ -1,0 +1,66 @@
+{
+  "assets": [],
+  "components": {
+    "content": {
+      "bytes": 6441,
+      "file": "content.json",
+      "format": 1,
+      "sha256": "ce3fbd0b87ceadc6f17079e5be2bc199861b3a7c3f5fa01b98bfe820408c21d1"
+    },
+    "documentation": {
+      "bytes": 3848,
+      "file": "documentation.json",
+      "format": 1,
+      "sha256": "5a82120e4d14323810b9dbc779063cad55b83da55c21a3d0bc305b3aff5e4e8f"
+    },
+    "manifest": {
+      "bytes": 1715,
+      "file": "manifest.json",
+      "format": 1,
+      "sha256": "f9516f232157d7e14eaec8f784266b29afd6ef53dd4d68b7b20ae565be8ea131"
+    },
+    "navigation": {
+      "bytes": 451,
+      "file": "navigation.json",
+      "format": 1,
+      "sha256": "8f34fe2f92ffca2d2f4e695fff9a2261e76adeaa7629d64c0e2bf66326a4b22b"
+    },
+    "playground": {
+      "bytes": 2070,
+      "file": "playground.json",
+      "format": 1,
+      "sha256": "d0cbf522a6611ca1f61956cb1bfeac705b660b66241c9cb39ca90efd21bf3550"
+    },
+    "redirects": {
+      "bytes": 50,
+      "file": "redirects.json",
+      "format": 1,
+      "sha256": "b4ad27bc21ba562765e6626d39659a3d58c1d63e22c64d77e99565403e0fd0b2"
+    },
+    "routes": {
+      "bytes": 856,
+      "file": "routes.json",
+      "format": 1,
+      "sha256": "fb34b68e266730da1d00f693bae145e5a65afd0b234160202cd6182175dc83af"
+    },
+    "search": {
+      "bytes": 5224,
+      "file": "search.json",
+      "format": 1,
+      "sha256": "69a624086170e354c681076993e91377292a5b872a78ef36908777ae950494d6"
+    },
+    "snippets": {
+      "bytes": 2805,
+      "file": "snippets.json",
+      "format": 1,
+      "sha256": "338d06773f178499168ced425da69dfc653a1c23e5b53bed5b63a74411da87bd"
+    }
+  },
+  "digest": "569a3c7a97b2c4aa36a197c809fbab5dd73e635f628d23f1b2e91eea772cfaa7",
+  "project": {
+    "id": "Versioned",
+    "name": "Versioned"
+  },
+  "releaseFormat": 1,
+  "version": "v1"
+}

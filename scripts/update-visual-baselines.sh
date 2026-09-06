@@ -4,7 +4,7 @@
 # repository is copied into a Node 24 container (host node_modules and build
 # output are excluded), dependencies are installed with the frozen lockfile,
 # the reader is built, and the `visual` project runs with --update-snapshots
-# (Playwright starts both fixture servers from playwright.config.ts). Review every changed image against
+# (Playwright starts the fixture servers from playwright.config.ts). Review every changed image against
 # docs/design/reader-v1.md before committing.
 set -euo pipefail
 

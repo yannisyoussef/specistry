@@ -1,0 +1,258 @@
+{
+  "contentVersion": 1,
+  "pages": [
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Welcome to "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "version 1"
+                }
+              ],
+              "kind": "strong"
+            },
+            {
+              "kind": "text",
+              "value": ". Start with "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "getting started"
+                }
+              ],
+              "href": "/docs/getting-started",
+              "kind": "link",
+              "target": "page"
+            },
+            {
+              "kind": "text",
+              "value": " and\nread about "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "authentication"
+                }
+              ],
+              "href": "/docs/authentication",
+              "kind": "link",
+              "target": "page"
+            },
+            {
+              "kind": "text",
+              "value": ". Fetch raw messages with\n"
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Get raw message"
+                }
+              ],
+              "href": "/api/inboxes/get-raw-message",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "kind": "paragraph"
+        }
+      ],
+      "description": "Version 1 of the Versioned API.",
+      "headings": [],
+      "id": "",
+      "route": "/",
+      "slug": "",
+      "sourcePath": "docs/index.md",
+      "text": "Welcome to version 1. Start with getting started and\nread about authentication. Fetch raw messages with\nGet raw message.",
+      "title": "Versioned API docs"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Version 1 authenticates with an "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "API key"
+                }
+              ],
+              "kind": "strong"
+            },
+            {
+              "kind": "text",
+              "value": " header."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Keys"
+            }
+          ],
+          "depth": 2,
+          "id": "keys",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Send "
+            },
+            {
+              "kind": "code",
+              "value": "X-Api-Key: <key>"
+            },
+            {
+              "kind": "text",
+              "value": " on every request."
+            }
+          ],
+          "kind": "paragraph"
+        }
+      ],
+      "description": "API keys in version 1.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "keys",
+          "text": "Keys"
+        }
+      ],
+      "id": "authentication",
+      "route": "/docs/authentication",
+      "slug": "authentication",
+      "sourcePath": "docs/authentication.md",
+      "text": "Version 1 authenticates with an API key header.KeysKeys\nSend X-Api-Key: <key> on every request.",
+      "title": "Authentication"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Create an inbox"
+            }
+          ],
+          "depth": 2,
+          "id": "create-an-inbox",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Call "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Create inbox"
+                }
+              ],
+              "href": "/api/inboxes/create-inbox",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Poll for messages"
+            }
+          ],
+          "depth": 2,
+          "id": "poll-for-messages",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Version 1 polls "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "List inboxes"
+                }
+              ],
+              "href": "/api/inboxes/list-inboxes",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " until mail arrives. The token keyword for search is "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "glacier"
+                }
+              ],
+              "kind": "strong"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "kind": "paragraph"
+        }
+      ],
+      "description": "Create an inbox and poll for messages in version 1.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "create-an-inbox",
+          "text": "Create an inbox"
+        },
+        {
+          "depth": 2,
+          "id": "poll-for-messages",
+          "text": "Poll for messages"
+        }
+      ],
+      "id": "getting-started",
+      "route": "/docs/getting-started",
+      "slug": "getting-started",
+      "sourcePath": "docs/getting-started.md",
+      "text": "Create an inboxCreate an inbox\nCall Create inbox.Poll for messagesPoll for messages\nVersion 1 polls List inboxes until mail arrives. The token keyword for search is glacier.",
+      "title": "Getting started"
+    }
+  ]
+}

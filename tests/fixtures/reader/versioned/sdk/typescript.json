@@ -1,0 +1,9 @@
+{
+  "examples": [
+    {
+      "operation": "createInbox",
+      "title": "Create an inbox",
+      "code": "import { Versioned } from \"@versioned/sdk\";\n\nconst client = new Versioned({ token: process.env.VERSIONED_TOKEN });\nconst inbox = await client.inboxes.create({ label: \"signup\" });\n"
+    }
+  ]
+}

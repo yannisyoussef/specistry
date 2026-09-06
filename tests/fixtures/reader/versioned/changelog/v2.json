@@ -1,0 +1,46 @@
+{
+  "title": "Changelog",
+  "summary": "API and SDK changes for version 2. Breaking changes ship only in a new major version.",
+  "from": "v1",
+  "entries": [
+    {
+      "date": "2026-09-05",
+      "items": [
+        {
+          "kind": "added",
+          "operation": "openapi.yaml~waitForMessage",
+          "candidates": ["v1..v2:operation-added:openapi.yaml~waitForMessage"],
+          "text": "Wait synchronously for an incoming message. Replaces client-side polling; available in all SDKs as messages.wait()."
+        },
+        {
+          "kind": "removed",
+          "operation": "openapi.yaml~getRawMessage",
+          "candidates": ["v1..v2:operation-removed:openapi.yaml~getRawMessage"],
+          "text": "Use Message.headers and content instead. Removed in v2."
+        },
+        {
+          "kind": "deprecated",
+          "operation": "openapi.yaml~listInboxes",
+          "candidates": ["v1..v2:operation-changed:openapi.yaml~listInboxes"],
+          "text": "Listing inboxes is deprecated in favour of waiting for messages; a cursor parameter was added for the transition."
+        },
+        {
+          "kind": "changed",
+          "target": "Inbox.expiresAt",
+          "text": "Now uses RFC 3339 with a Z suffix. Previously returned a Unix timestamp in v1."
+        }
+      ]
+    },
+    {
+      "date": "2026-08-19",
+      "items": [
+        {
+          "kind": "changed",
+          "target": "Authentication",
+          "text": "Version 2 authenticates with bearer tokens; the X-Api-Key header of version 1 is retired."
+        }
+      ]
+    }
+  ],
+  "omitted": "all"
+}
