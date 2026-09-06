@@ -73,10 +73,40 @@ const KIND_WORDS: Readonly<Record<SearchDocument["kind"], string>> = {
   service: "API service",
 };
 
+/** Route roots of the release being read; result routes are scoped into them. */
+export interface SearchRoots {
+  readonly home: string;
+  readonly docs: string;
+  readonly api: string;
+}
+
+/** Search records store unversioned routes; the served release scopes them (SPEC-010 §37). */
+function scopeResultRoute(
+  route: string,
+  roots: SearchRoots | undefined,
+): string {
+  if (roots === undefined) return route;
+  const hashIndex = route.indexOf("#");
+  const pathPart = hashIndex === -1 ? route : route.slice(0, hashIndex);
+  const hash = hashIndex === -1 ? "" : route.slice(hashIndex);
+  if (pathPart === "/" || pathPart === "/docs") return `${roots.home}${hash}`;
+  if (pathPart.startsWith("/docs/"))
+    return `${roots.docs}${pathPart.slice(5)}${hash}`;
+  if (pathPart === "/api") return `${roots.api}${hash}`;
+  if (pathPart.startsWith("/api/"))
+    return `${roots.api}${pathPart.slice(4)}${hash}`;
+  return route;
+}
+
 export default function SearchPalette({
   onClose,
   path,
-}: Readonly<{ onClose: () => void; path: string }>) {
+  roots,
+}: Readonly<{
+  onClose: () => void;
+  path: string;
+  roots?: SearchRoots | undefined;
+}>) {
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -133,8 +163,9 @@ export default function SearchPalette({
 
   const navigate = (hit: SearchHit | undefined) => {
     if (hit === undefined) return;
-    // Routes come from the validated artifact, never from the query.
-    window.location.assign(hit.document.route);
+    // Routes come from the validated artifact, never from the query, and
+    // stay inside the release being read.
+    window.location.assign(scopeResultRoute(hit.document.route, roots));
   };
 
   const listboxId = `${id}-listbox`;

@@ -23,7 +23,16 @@ function subscribeNever(): () => void {
   return () => {};
 }
 
-export function SearchTrigger({ path }: Readonly<{ path: string }>) {
+export interface SearchRoots {
+  readonly home: string;
+  readonly docs: string;
+  readonly api: string;
+}
+
+export function SearchTrigger({
+  path,
+  roots,
+}: Readonly<{ path: string; roots?: SearchRoots | undefined }>) {
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   const hydrated = useSyncExternalStore(
@@ -96,7 +105,7 @@ export function SearchTrigger({ path }: Readonly<{ path: string }>) {
       </button>
       {open ? (
         <Suspense fallback={null}>
-          <SearchPalette onClose={close} path={path} />
+          <SearchPalette onClose={close} path={path} roots={roots} />
         </Suspense>
       ) : null}
     </>

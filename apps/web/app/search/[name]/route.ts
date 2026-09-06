@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { loadReaderArtifact } from "../../../lib/reader/artifact";
+import {
+  loadReaderRelease,
+  readerMode,
+  releaseForSearch,
+} from "../../../lib/reader/release";
 
 /**
  * Serves the validated search artifact under its content-addressed name so
@@ -16,7 +21,12 @@ export async function GET(
 ): Promise<NextResponse> {
   const { name } = await context.params;
   if (!NAME.test(name)) return new NextResponse(null, { status: 404 });
-  const { search } = await loadReaderArtifact();
+  // Release mode (SPEC-010 §36–§38): the name identifies exactly one
+  // release's index by digest; that release's bytes are served and no other.
+  const search =
+    (await readerMode()) === "candidate"
+      ? (await loadReaderArtifact()).search
+      : await releaseSearch(name);
   if (search === undefined || search.path !== `/search/${name}`) {
     return new NextResponse(null, { status: 404 });
   }
@@ -28,4 +38,10 @@ export async function GET(
     },
     status: 200,
   });
+}
+
+async function releaseSearch(name: string) {
+  const version = await releaseForSearch(name);
+  if (version === undefined) return undefined;
+  return (await loadReaderRelease(version)).search;
 }

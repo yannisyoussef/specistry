@@ -7,7 +7,8 @@ import {
 } from "@specra/content";
 import type { ArtifactBranding } from "@specra/model";
 
-import { API_ROOT, type ReaderIndex } from "./projection";
+import type { ReaderIndex } from "./projection";
+import { LEGACY_ROOTS, scopeContentValue, type ReaderRoots } from "./scope";
 
 /**
  * Authored-content projection for the reader: page lookup by route, the
@@ -20,7 +21,9 @@ import { API_ROOT, type ReaderIndex } from "./projection";
 export const DOCS_ROOT = "/docs";
 
 export interface ReaderContent {
+  /** Pages keyed by their served route (scoped to the release roots). */
   readonly pages: ReadonlyMap<string, ContentPage>;
+  readonly roots: ReaderRoots;
   readonly navigation: NavigationArtifact;
   /** Reading order: authored pages and the single API reference entry. */
   readonly entries: readonly NavigationEntry[];
@@ -33,22 +36,34 @@ export function createReaderContent(
   pages: readonly ContentPage[],
   navigation: NavigationArtifact,
   branding: ArtifactBranding | undefined,
+  roots: ReaderRoots = LEGACY_ROOTS,
 ): ReaderContent {
-  const byRoute = new Map(pages.map((page) => [page.route, page]));
-  const home = byRoute.get("/");
-  const listed = flattenNavigation(navigation.items);
+  // Every internal href and route inside the frozen content is mapped into
+  // the release's roots once, here; nothing downstream re-derives it.
+  const scopedPages = pages.map((page) => scopeContentValue(page, roots));
+  const scopedNavigation = scopeContentValue(navigation, roots);
+  const byRoute = new Map(scopedPages.map((page) => [page.route, page]));
+  const home = byRoute.get(roots.home);
+  // The generated API entry is not stored in the artifact; scope it too.
+  const listed = flattenNavigation(scopedNavigation.items).map((entry) =>
+    entry.kind === "api" ? { ...entry, route: roots.api } : entry,
+  );
   // The homepage opens the reading order even when the configured
   // navigation does not list it, so previous/next never skips it.
   const entries: readonly NavigationEntry[] =
-    home === undefined || listed.some((entry) => entry.route === "/")
+    home === undefined || listed.some((entry) => entry.route === roots.home)
       ? listed
-      : [{ kind: "page", label: home.title, route: "/", trail: [] }, ...listed];
+      : [
+          { kind: "page", label: home.title, route: roots.home, trail: [] },
+          ...listed,
+        ];
   return {
     ...(branding === undefined ? {} : { branding }),
     entries,
     ...(home === undefined ? {} : { home }),
-    navigation,
+    navigation: scopedNavigation,
     pages: byRoute,
+    roots,
   };
 }
 
@@ -73,9 +88,10 @@ export type SidebarNode =
 export function sidebarNodes(
   items: readonly NavigationNode[],
   currentPath: string,
+  roots: ReaderRoots = LEGACY_ROOTS,
 ): readonly SidebarNode[] {
   const inApi =
-    currentPath === API_ROOT || currentPath.startsWith(`${API_ROOT}/`);
+    currentPath === roots.api || currentPath.startsWith(`${roots.api}/`);
   const visit = (nodes: readonly NavigationNode[]): SidebarNode[] =>
     nodes.map((node): SidebarNode => {
       switch (node.kind) {
@@ -140,11 +156,11 @@ export function pageBreadcrumbs(
   content: ReaderContent,
   page: ContentPage,
 ): readonly BreadcrumbItem[] {
-  if (page.route === "/") return [];
+  if (page.route === content.roots.home) return [];
   const entry = content.entries.find(
     (candidate) => candidate.route === page.route,
   );
-  const root: BreadcrumbItem = { href: "/", label: "Guides" };
+  const root: BreadcrumbItem = { href: content.roots.home, label: "Guides" };
   const trail = (entry?.trail ?? []).map((label): BreadcrumbItem => ({
     label,
   }));
@@ -177,7 +193,11 @@ export function findPage(
   route: string,
 ): ContentPage | undefined {
   if (content === undefined) return undefined;
-  return content.pages.get(route === DOCS_ROOT ? "/" : route);
+  return content.pages.get(
+    route === DOCS_ROOT || route === content.roots.docs
+      ? content.roots.home
+      : route,
+  );
 }
 
 /** Every authored route in reading order, for the sitemap. */

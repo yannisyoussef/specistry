@@ -5,6 +5,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { loadReaderArtifact } from "./lib/reader/artifact";
 import { DOCS_ROOT, findPage } from "./lib/reader/content";
 import { API_ROOT, resolveRoute } from "./lib/reader/projection";
+import {
+  loadReaderCatalog,
+  loadReaderRelease,
+  readerMode,
+  resolveVersionRoute,
+  versionOfPath,
+} from "./lib/reader/release";
 
 /**
  * Per-request Content Security Policy with a fresh nonce. Next.js reads the
@@ -20,13 +27,12 @@ import { API_ROOT, resolveRoute } from "./lib/reader/projection";
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const nonce = randomBytes(16).toString("base64");
   const pathname = request.nextUrl.pathname;
-  // Least-privilege networking (SPEC-009): only API operation routes may
-  // connect to the approved playground origins; every other route keeps
-  // `connect-src 'self'`. The origins come from the digest-checked artifact,
-  // never from the request.
-  const connectOrigins = isApiRoute(pathname)
-    ? ((await loadReaderArtifact()).playground?.origins ?? [])
-    : [];
+  const releases = (await readerMode()) === "releases";
+  // Least-privilege networking (SPEC-009, SPEC-010 §44): only API routes of
+  // the current release may connect to that release's approved origins;
+  // historical pages and every other route keep `connect-src 'self'`. The
+  // origins come from the digest-checked artifact, never from the request.
+  const connectOrigins = await connectOriginsFor(pathname, releases);
   const policy = contentSecurityPolicy(
     nonce,
     process.env.NODE_ENV === "development",
@@ -38,7 +44,34 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   // Layouts cannot read the URL; the pathname drives active navigation state
   // and the theme form's return path.
   requestHeaders.set("x-specra-pathname", pathname);
-  const target = await notFoundRewrite(request, pathname);
+  if (releases && isDocumentationRoute(pathname)) {
+    // Version resolution happens before any component loads (SPEC-010 §5):
+    // aliases redirect, frozen redirects redirect, unknown versions 404.
+    const resolution = await resolveVersionRoute(pathname);
+    if (resolution.kind === "redirect") {
+      const location = new URL(resolution.location, request.url);
+      // Only non-secret selector state travels with an alias (SPEC-010 §113).
+      location.search = request.nextUrl.search;
+      const redirect = NextResponse.redirect(location, resolution.status);
+      redirect.headers.set("Content-Security-Policy", policy);
+      redirect.headers.set("Cache-Control", "no-store");
+      return redirect;
+    }
+    if (resolution.kind === "not-found") {
+      const response = NextResponse.rewrite(
+        new URL(NOT_FOUND_ROUTE, request.url),
+        {
+          request: { headers: requestHeaders },
+          status: 404,
+        },
+      );
+      response.headers.set("Content-Security-Policy", policy);
+      return response;
+    }
+  }
+  const target = releases
+    ? undefined
+    : await notFoundRewrite(request, pathname);
   const response =
     target === undefined
       ? NextResponse.next({ request: { headers: requestHeaders } })
@@ -86,6 +119,33 @@ async function notFoundRewrite(
 
 function isApiRoute(pathname: string): boolean {
   return pathname === API_ROOT || pathname.startsWith(`${API_ROOT}/`);
+}
+
+function isDocumentationRoute(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname === DOCS_ROOT ||
+    pathname.startsWith(`${DOCS_ROOT}/`) ||
+    isApiRoute(pathname)
+  );
+}
+
+async function connectOriginsFor(
+  pathname: string,
+  releases: boolean,
+): Promise<readonly string[]> {
+  if (!isApiRoute(pathname)) return [];
+  if (!releases) return (await loadReaderArtifact()).playground?.origins ?? [];
+  const version = await versionOfPath(pathname);
+  const catalog = await loadReaderCatalog();
+  if (
+    version === undefined ||
+    catalog === undefined ||
+    version !== catalog.catalog.current
+  ) {
+    return [];
+  }
+  return (await loadReaderRelease(version)).playground?.origins ?? [];
 }
 
 /** Exact origins only: `scheme://host[:port]` with no path, wildcard, or scheme-only source. */
