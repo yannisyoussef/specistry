@@ -12,6 +12,9 @@ import { expect, test, type Page } from "@playwright/test";
 const EDGE_URL = "http://127.0.0.1:3101";
 
 async function openSearch(page: Page): Promise<void> {
+  // The shortcut listener exists only after hydration; the key cap in the
+  // trigger renders at the same moment, so it is the readiness signal.
+  await expect(page.locator(".search-trigger kbd")).toBeVisible();
   await page.keyboard.press("Control+k");
   await expect(
     page.getByRole("dialog", { name: "Search documentation" }),

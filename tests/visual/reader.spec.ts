@@ -273,6 +273,7 @@ test.describe("search", () => {
     down = 0,
     expectResults = true,
   ) => {
+    await expect(page.locator(".search-trigger kbd")).toBeVisible();
     await page.keyboard.press("Control+k");
     await expect(
       page.getByRole("dialog", { name: "Search documentation" }),
