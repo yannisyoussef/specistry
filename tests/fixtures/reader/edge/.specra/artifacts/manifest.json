@@ -6,11 +6,20 @@
   },
   "files": {
     "documentation": "documentation.json",
+    "playground": "playground.json",
     "search": "search.json",
     "snippets": "snippets.json"
   },
   "generator": "specra",
   "modelVersion": 1,
+  "playground": {
+    "bytes": 7831,
+    "enabled": false,
+    "environments": 0,
+    "operations": 14,
+    "sha256": "20b822e2f505048c6946d1def272b117bb8b0c6b05ac256d20caad6df4f4f202",
+    "version": 1
+  },
   "project": {
     "id": "project_a3922714c2d7065a",
     "name": "Edge cases"

@@ -17,6 +17,17 @@ const config = {
       baseUrl: "https://sandbox.testinbox.email/v1",
     },
     local: { label: "Local", baseUrl: "http://127.0.0.1:47391/v1" },
+    // A second loopback environment whose fake API refuses CORS, so the
+    // browser suites can show what a policy refusal looks like.
+    strict: { label: "Strict local", baseUrl: "http://127.0.0.1:47392/v1" },
+  },
+  // Browser-direct playground (SPEC-009): only the loopback environments are
+  // approved for execution; Production and Sandbox stay example-only.
+  playground: {
+    mode: "browser",
+    environments: ["local", "strict"],
+    responseLimitBytes: 262144,
+    timeoutMs: 5000,
   },
   // Illustrative SDK mappings for the reader fixture: consumer-authored data
   // that Specra renders verbatim. They document the fixture's imaginary SDKs,
