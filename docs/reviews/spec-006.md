@@ -57,7 +57,7 @@ applied on the branch before the final gates.
 | Frontend                 | 0   | 1   | 2   | 2   | P1 fixed; P2 fixed; P3 one fixed, one tracked    |
 | Security                 | 0   | 1   | 3   | 2   | P1 fixed; P2 fixed; P3 one accepted, one tracked |
 | Accessibility            | 0   | 2   | 3   | 2   | P1 fixed; P2 fixed; P3 tracked                   |
-| Performance              | 0   | 0   | 2   | 2   | P2 fixed; P3 tracked                             |
+| Performance              | 0   | 0   | 3   | 2   | P2 fixed; P3 tracked                             |
 | QA                       | 0   | 2   | 2   | 1   | P1 fixed; P2 fixed; P3 fixed                     |
 | SEO                      | 0   | 1   | 1   | 1   | P1 fixed; P2 fixed; P3 tracked                   |
 
@@ -111,6 +111,7 @@ P0 open: 0. P1 unresolved: 0.
 
 ### Performance
 
+- **P2 — Unmatched emphasis delimiters parsed quadratically.** Ten thousand asterisks on one page took ~5 s (longer under coverage instrumentation, which made the unit test's wall-clock assertion flake in CI), so a hostile or accidental page could stall the author's build. Fixed: a linear pre-parse budget of 8,000 `*`/`_` characters per page rejects the page with `CONTENT_BUDGET_EXCEEDED`; the unit test asserts the rejection is fast and that a 3,000-delimiter page still compiles.
 - **P2 — Navigation HTML at scale was unmeasured.** Fixed: the 1,000-page performance case renders the composed shell (123 KB, ~32 ms) and asserts the 200 KiB ceiling and a single current sidebar item.
 - **P2 — The bundle gate only measured the operation route.** Fixed: `check:bundle` measures `/docs/[[...slug]]` too under the same budgets.
 - **P3 — `content.json` is loaded whole into server memory** (38.6 MiB for 1,000 dense pages). Tracked (owner: reader; condition: sites above ~500 pages or memory pressure reports): partition per route or lazy-load bodies. Recorded in ADR-012.

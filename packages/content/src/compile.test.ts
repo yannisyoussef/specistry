@@ -413,10 +413,15 @@ x
   });
 
   it("survives pathological Markdown within bounds", async () => {
-    const emphasis = `---\ntitle: E\n---\n\n${"*".repeat(5_000)}a${"*".repeat(5_000)}\n`;
+    // Unmatched emphasis delimiters make CommonMark attention quadratic; the
+    // delimiter budget rejects the pathological page before parsing.
+    const flood = `---\ntitle: E\n---\n\n${"*".repeat(5_000)}a${"*".repeat(5_000)}\n`;
     const started = performance.now();
+    const rejected = await compile(source("e.md", flood));
+    expect(performance.now() - started).toBeLessThan(2_000);
+    expect(codes(rejected)).toEqual(["CONTENT_BUDGET_EXCEEDED"]);
+    const emphasis = `---\ntitle: E\n---\n\n${"*".repeat(1_500)}a${"*".repeat(1_500)}\n`;
     const result = await compile(source("e.md", emphasis));
-    expect(performance.now() - started).toBeLessThan(5_000);
     expect(result.ok).toBe(true);
     const nested = `---\ntitle: N\n---\n\n${"> ".repeat(200)}deep\n`;
     const quotes = await compile(source("n.md", nested));

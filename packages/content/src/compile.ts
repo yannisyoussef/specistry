@@ -68,6 +68,16 @@ function tagDiagnostic(
     : "CONTENT_COMPONENT_UNKNOWN";
 }
 
+/** Counts `*` and `_` before parsing; the check is linear and cheap. */
+function countEmphasisMarkers(text: string): number {
+  let count = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    if (code === 42 || code === 95) count += 1;
+  }
+  return count;
+}
+
 export interface ContentSource {
   /** Project-relative POSIX path, e.g. `docs/getting-started/quickstart.mdx`. */
   readonly path: string;
@@ -89,6 +99,12 @@ export interface ContentBudgets {
   readonly maxTableCells: number;
   readonly maxComponentDepth: number;
   readonly maxTextCharacters: number;
+  /**
+   * Emphasis delimiters (`*`, `_`) per page. CommonMark's attention
+   * resolution is quadratic in unmatched delimiters, so a page of
+   * asterisks would otherwise cost seconds per 10,000 characters.
+   */
+  readonly maxEmphasisMarkers: number;
 }
 
 /**
@@ -100,6 +116,7 @@ export const DEFAULT_CONTENT_BUDGETS: ContentBudgets = {
   maxCodeBlockCharacters: 20_000,
   maxCodeBlockLines: 2_000,
   maxComponentDepth: 6,
+  maxEmphasisMarkers: 8_000,
   maxHeadingsPerPage: 200,
   maxHighlightedCharactersPerPage: 200_000,
   maxLinksPerPage: 1_000,
@@ -158,7 +175,8 @@ export async function compileContent(
     totalBytes += bytes;
     if (
       bytes > budgets.maxSourceBytes ||
-      totalBytes > budgets.maxTotalSourceBytes
+      totalBytes > budgets.maxTotalSourceBytes ||
+      countEmphasisMarkers(source.text) > budgets.maxEmphasisMarkers
     ) {
       diagnostics.push(
         createContentDiagnostic("CONTENT_BUDGET_EXCEEDED", source.path, {

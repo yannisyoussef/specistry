@@ -211,6 +211,7 @@ branding: { accent: "#2a6fdb", logo: "./assets/logo.svg", favicon: "./assets/fav
 | Code block                     | 2,000 lines, 20,000 characters   |
 | Highlighted output per page    | 200 KB                           |
 | Component nesting              | 6 levels                         |
+| Emphasis markers (`*`, `_`)    | 8,000 per page                   |
 | Images                         | 2 MiB each, 20 MiB per project   |
 | Navigation                     | 500 root nodes, 200 per section  |
 
