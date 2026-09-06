@@ -77,7 +77,7 @@ specra/
 └── docs/                     Product, architecture, security, ADRs, and roadmap
 ```
 
-Start with the [architecture entry point](docs/architecture/README.md), [product definition](docs/product-definition.md), [CLI reference](docs/cli.md), [OpenAPI ingestion reference](docs/openapi.md), [configuration reference](docs/configuration.md), [content authoring reference](docs/content-authoring.md), [search reference](docs/search.md), [code samples reference](docs/code-samples.md), [threat model](docs/security/threat-model.md), [deployment requirements](docs/deployment.md), and [roadmap](docs/roadmap.md). Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Start with the [architecture entry point](docs/architecture/README.md), [product definition](docs/product-definition.md), [CLI reference](docs/cli.md), [OpenAPI ingestion reference](docs/openapi.md), [configuration reference](docs/configuration.md), [content authoring reference](docs/content-authoring.md), [search reference](docs/search.md), [code samples reference](docs/code-samples.md), [playground reference](docs/playground.md), [threat model](docs/security/threat-model.md), [deployment requirements](docs/deployment.md), and [roadmap](docs/roadmap.md). Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 Development integrates through `develop`; reviewed, green promotion pull requests move releases to the production branch, `master`. The complete branch and hotfix workflow is documented in [CONTRIBUTING.md](CONTRIBUTING.md#branch-workflow).
 
@@ -88,7 +88,7 @@ Development integrates through `develop`; reviewed, green promotion pull request
 - OpenAPI parsing is bounded and YAML aliases are denied. Remote references remain inert strings during parsing; any future retrieval is denied without an exact HTTPS-origin policy and additional resolver controls.
 - `specra.config.ts` is trusted build code evaluated in a bounded, cancellable child process. The process is operational isolation, not a malicious-code sandbox.
 - `specra validate` checks config v1, canonical project-root confinement, symlinks, source-path existence/types, and the deterministic `.specra/artifacts` policy. It does not claim OpenAPI semantic validity.
-- The future playground contract requires memory-only credentials by default; Phase 0 ships no playground or server proxy.
+- The browser-direct playground (SPEC-009) executes requests from the reader's browser against explicitly approved environments only, with memory-only credentials, exact-origin enforcement, and no server proxy; see the [playground reference](docs/playground.md).
 - Authored Markdown/MDX never executes: pages compile to a validated content model with a fixed component vocabulary; expressions, imports, and raw HTML are build errors with a line and column, and assets are checked by content, size-limited, and served only by content-addressed name.
 - Search is generated at build time and answered in the browser from a digest-checked, content-addressed artifact; queries never leave the reader and no search service or telemetry exists.
 - Code examples in six protocol languages are projected from the canonical operation by a pure, deterministic generator with hardened escaping and placeholder credentials; SDK examples are rendered only when the project author mapped them explicitly. Nothing in the reader sends a request or accepts a destination the build did not validate.
