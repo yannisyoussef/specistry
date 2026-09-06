@@ -189,3 +189,75 @@ test.describe("schema renderer", () => {
     });
   });
 });
+
+/**
+ * Authored content states (SPEC-006): the homepage, a guide with every
+ * component, tables and hostile text, a folder page with an image, the
+ * composed drawer, and the authored 404, across modes and viewports.
+ */
+test.describe("authored content", () => {
+  test("homepage · desktop light and dark, mobile light", async ({ page }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/", "light");
+    await expect(page).toHaveScreenshot("docs-home-desktop-light.png");
+    await settle(page, "/", "dark");
+    await expect(page).toHaveScreenshot("docs-home-desktop-dark.png");
+    await page.setViewportSize(viewports.mobile);
+    await settle(page, "/", "light");
+    await expect(page).toHaveScreenshot("docs-home-mobile-light.png", {
+      fullPage: true,
+    });
+  });
+
+  test("quickstart guide · callout, steps, tabs, cards, pager", async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/docs/quickstart", "light");
+    await expect(page).toHaveScreenshot("docs-quickstart-desktop-light.png");
+    await settle(page, "/docs/quickstart#choose-your-client", "dark");
+    await expect(page).toHaveScreenshot(
+      "docs-quickstart-tabs-desktop-dark.png",
+    );
+    await page.setViewportSize(viewports.laptop);
+    await settle(page, "/docs/quickstart#where-next", "light");
+    await expect(page).toHaveScreenshot(
+      "docs-quickstart-cards-laptop-light.png",
+    );
+    await page.setViewportSize(viewports.mobile);
+    await settle(page, "/docs/quickstart", "dark");
+    await expect(page).toHaveScreenshot("docs-quickstart-mobile-dark.png", {
+      fullPage: true,
+    });
+  });
+
+  test("tables, hostile text, code with a title, and an image", async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/docs/troubleshooting", "light");
+    await expect(page).toHaveScreenshot("docs-table-desktop-light.png", {
+      fullPage: true,
+    });
+    await settle(page, "/docs/guides/ci-integration", "dark");
+    await expect(page).toHaveScreenshot("docs-code-desktop-dark.png");
+    await page.setViewportSize(viewports.mobile);
+    await settle(page, "/docs/concepts/inbox-lifecycle", "light");
+    await expect(page).toHaveScreenshot("docs-image-mobile-light.png", {
+      fullPage: true,
+    });
+  });
+
+  test("composed drawer and the authored 404", async ({ page }) => {
+    await page.setViewportSize(viewports.mobile);
+    await settle(page, "/docs/guides/attachments", "dark");
+    await page.getByRole("link", { name: "Navigation" }).click();
+    await expect(
+      page.getByRole("dialog", { name: "Navigation" }),
+    ).toBeVisible();
+    await expect(page).toHaveScreenshot("docs-drawer-mobile-dark.png");
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/docs/missing-page", "light");
+    await expect(page).toHaveScreenshot("docs-not-found-desktop-light.png");
+  });
+});

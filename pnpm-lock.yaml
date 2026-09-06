@@ -14,6 +14,9 @@ importers:
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
+      '@specra/content':
+        specifier: workspace:*
+        version: link:packages/content
       '@specra/model':
         specifier: workspace:*
         version: link:packages/model

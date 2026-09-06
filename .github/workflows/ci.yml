@@ -147,5 +147,6 @@ jobs:
           path: |
             tests/performance/measurements.json
             tests/performance/schema-measurements.json
+            tests/performance/content-measurements.json
           if-no-files-found: ignore
           retention-days: 30

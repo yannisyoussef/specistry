@@ -12,3 +12,7 @@ prompts
 tests/fixtures/reader/*/.specra/
 # Hostile fixture with a 2,000-character mapping key that YAML formatters reject.
 tests/fixtures/reader/edge/openapi.yaml
+# Authored fixture pages are parser input: their exact bytes, line and column
+# positions are what the tests assert, so they are never reformatted.
+tests/fixtures/reader/*/docs/
+tests/fixtures/content/*/docs/

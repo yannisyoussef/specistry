@@ -119,7 +119,7 @@ test.describe("desktop reader", () => {
     await page.goto("/api");
     await expect(page).toHaveTitle("API reference | TestInbox API");
     await page
-      .getByRole("complementary", { name: "API navigation" })
+      .getByRole("complementary", { name: "Documentation navigation" })
       .getByRole("link", { name: /Create inbox/ })
       .click();
     await expect(page).toHaveTitle("Create inbox | TestInbox API");
@@ -135,7 +135,7 @@ test.describe("desktop reader", () => {
       "Create inbox",
     );
     const current = page
-      .getByRole("complementary", { name: "API navigation" })
+      .getByRole("complementary", { name: "Documentation navigation" })
       .locator('[aria-current="page"]');
     await expect(current).toHaveCount(1);
     await expect(current).toContainText("Create inbox");
@@ -172,8 +172,12 @@ test.describe("desktop reader", () => {
     await page.keyboard.press("Enter");
     await expect(page.getByRole("main")).toBeFocused();
     await page.keyboard.press("Tab");
+    // The first focusable inside the document is the breadcrumb root.
     await expect(
-      page.getByRole("link", { name: "API reference" }).nth(1),
+      page
+        .getByRole("main")
+        .getByRole("link", { name: "API reference" })
+        .first(),
     ).toBeFocused();
     const copy = page.getByRole("button", { name: "Copy POST /inboxes" });
     await copy.focus();
@@ -201,7 +205,7 @@ test.describe("desktop reader", () => {
     await page.emulateMedia({ forcedColors: "active" });
     await page.goto(OPERATION);
     const link = page
-      .getByRole("complementary", { name: "API navigation" })
+      .getByRole("complementary", { name: "Documentation navigation" })
       .getByRole("link", { name: /Create inbox/ });
     await link.focus();
     const outline = await link.evaluate(
@@ -260,7 +264,7 @@ test.describe("desktop reader", () => {
     );
     await expect(
       page
-        .getByRole("complementary", { name: "API navigation" })
+        .getByRole("complementary", { name: "Documentation navigation" })
         .locator(".nav-item--deprecated"),
     ).toHaveCount(1);
   });
@@ -331,7 +335,7 @@ test.describe("desktop reader", () => {
         "Create inbox",
       );
       await expect(
-        page.getByRole("complementary", { name: "API navigation" }),
+        page.getByRole("complementary", { name: "Documentation navigation" }),
       ).toBeVisible();
       await page.getByRole("button", { name: "Dark" }).click();
       await expect(page.locator("html")).toHaveAttribute("data-mode", "dark");
@@ -349,7 +353,8 @@ test.describe("desktop reader", () => {
     );
     expect(xml).toContain("<loc>https://docs.example.test/api/inboxes</loc>");
     expect(xml).not.toContain(".specra");
-    expect((xml.match(/<loc>/g) ?? []).length).toBe(2 + 6 + 25);
+    // Home, API index, six groups, 25 operations, and eight authored pages.
+    expect((xml.match(/<loc>/g) ?? []).length).toBe(2 + 6 + 25 + 8);
     const robots = await request.get("/robots.txt");
     expect(await robots.text()).toContain(
       "Sitemap: https://docs.example.test/sitemap.xml",
