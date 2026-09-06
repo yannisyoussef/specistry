@@ -263,7 +263,10 @@ describe("CLI clean-room package", () => {
     } finally {
       await rm(cleanRoom, { force: true, recursive: true });
     }
-  }, 20_000);
+    // Pack, offline install, validate, and an authored build with the
+    // highlighter take ~8 s uninstrumented and ~20 s under coverage on a
+    // GitHub runner; the ceiling is generous so timing never fails the case.
+  }, 120_000);
 });
 
 function command(
@@ -278,7 +281,7 @@ function command(
       ...process.env,
       npm_config_cache: path.join(cwd, ".npm-cache"),
     },
-    timeout: 15_000,
+    timeout: 60_000,
   });
   if (result.error !== undefined) throw result.error;
   return result;
