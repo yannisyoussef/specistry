@@ -52,7 +52,7 @@ The repository is a pnpm monorepo with a thin author-workflow orchestrator. Pnpm
 | `packages/cli`     | CLI parsing/presentation, bounded hosts, acquisition policy, artifacts  | `config`, `model`, `openapi`; the only package allowed filesystem/network I/O |
 | `apps/web`         | Next.js reader: artifact loader, reader projection, server-first routes | `@specra/model` contracts and `@specra/config` only; never parser objects     |
 
-Future packages earn their existence when their slice begins: `content`, `search`, `snippets`, and `ui` remain expected candidates. The concrete orchestration responsibility now lives with `cli`; a generic `core` package is still unjustified.
+`content`, `search`, and `snippets` now exist; `ui` remains an expected candidate. The concrete orchestration responsibility now lives with `cli`; a generic `core` package is still unjustified.
 
 ## Dependency direction
 
@@ -61,17 +61,20 @@ flowchart BT
   Model["model"]
   OpenAPI["openapi adapter"] --> Model
   Config["config"]
-  FutureSearch["future search"] --> Model
-  FutureSnippets["future snippets"] --> Model
-  FutureContent["future content"]
+  Content["content"] --> Model
+  Search["search"] --> Model
+  Search --> Content
+  Snippets["snippets"] --> Model
   Web["web reader"] --> Model
-  Web --> FutureContent
-  Web --> FutureSearch
-  Web --> FutureSnippets
+  Web --> Content
+  Web --> Search
+  Web --> Snippets
   CLI["CLI / orchestration"] --> Config
   CLI --> OpenAPI
   CLI --> Model
-  CLI -. "later" .-> FutureContent
+  CLI --> Content
+  CLI --> Search
+  CLI --> Snippets
 ```
 
 The model never depends on React, Next.js, parsers, config, or a source adapter. The reader never imports raw source representations. `scripts/check-architecture.mjs` discovers every workspace package and enforces one direction table: each package needs an entry and each entry needs a package; source imports and every internal manifest dependency section must follow the table; internal imports must be declared in the importing manifest; relative imports must stay inside their package; and library/executable packages must not use browser globals, opaque runtime loading, process-boundary modules (`child_process`, `worker_threads`, `vm`, `cluster`), or, outside the CLI, filesystem/network modules and the global `fetch` in production code, so no package other than the CLI can open a file or socket and no hidden source loader can exist. Browser-global detection binds identifiers with the TypeScript checker, so locally declared names such as an OpenAPI `document` variable are not false positives. The trusted-config host is the single reviewed opaque-load exception with an exact recorded count, and the bounded-host runner shared by the config and ingestion loaders is the single process-boundary exception. The checker self-tests each rule on every run; a workspace graph tool can replace it when graph complexity justifies one.
@@ -219,6 +222,20 @@ flowchart LR
 ```
 
 `@specra/search` depends on `@specra/model` and `@specra/content` only; its `./client` entry is browser-safe and carries the engine alone. The CLI generates the index from the exact artifacts it is about to write, so search is part of the atomic build. The reader validates the artifact against the manifest digest before serving it and loads the engine on first open. ADR-013 records the engine evaluation and the privacy policy.
+
+## Code samples and SDK mappings (SPEC-008)
+
+```mermaid
+flowchart LR
+  canonical["documentation.json"] --> project["@specra/snippets projection\n(path, query, headers, cookies, bodies, auth, servers)"]
+  config["specra.config.ts sdks\n+ example files"] --> mappings["validated, resolved, highlighted\nSDK examples"]
+  project --> artifact["snippets.json + manifest digest"]
+  mappings --> artifact
+  artifact --> reader["reader (server render)\nselection → six generators"]
+  reader --> rail["Code rail\n(language control, copy)"]
+```
+
+`@specra/snippets` depends on `@specra/model` only and is pure: projection and the six generators (cURL, HTTP, JavaScript, TypeScript, Java, Python) read nothing but their input. The artifact stores projections, so it is linear in operations and independent of environments; the reader generates the texts on render, memoized per artifact digest, and ships no generator to the browser (the architecture gate forbids build-only imports from client islands and the bundle gate scans client chunks). SDK examples are consumer data declared in the config and resolved to canonical identity at build time; Specra never infers an SDK call. ADR-014 records the decisions; the [code samples reference](../code-samples.md) documents the contracts.
 
 ## Runtime responsibilities
 

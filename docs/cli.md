@@ -88,7 +88,7 @@ Success JSON has this stable shape (`artifacts.files` and `artifacts.bytes` appe
 }
 ```
 
-`search.documents` counts the search documents the project produces (SPEC-007); `build` also lists `search.json` among the artifact files. `diagnostics` on a successful result contains warnings only. Failure JSON contains `ok: false` and ordered diagnostics with `code`, fixed value-safe `message`, optional safe `path`, and `severity` (`error` or `warning`). It contains no timestamps, process IDs, absolute machine paths, config or source values, exception messages, or stack traces.
+`search.documents` counts the search documents the project produces (SPEC-007); `snippets.operations` and `snippets.sdkExamples` count the code-sample projections and authored SDK examples (SPEC-008); `build` also lists `search.json` and `snippets.json` among the artifact files. `diagnostics` on a successful result contains warnings only. Failure JSON contains `ok: false` and ordered diagnostics with `code`, fixed value-safe `message`, optional safe `path`, and `severity` (`error` or `warning`). It contains no timestamps, process IDs, absolute machine paths, config or source values, exception messages, or stack traces.
 
 Content diagnostics additionally carry `line` and `column` (1-based) for the offending node; the human report prints them as `[source/docs/guides/attachments.md:42:7]`. `path` uses one grammar for every diagnostic: `scope[#pointer]` where the pointer is an RFC 6901 JSON pointer. Scopes are `config` (`specra.config.ts` data, with `*` for user-chosen record keys and numeric indices for list positions, for example `config#/environments/*/baseUrl` or `config#/openapi/1`), `cli` (command options, `cli#/root`), `source/<project-relative path>` (a source document and pointer, for example `source/schemas/user.yaml#/properties/id`), and `artifact` (the artifact directory or a canonical model pointer). Errors sort before warnings, then by code, then by path with numeric pointer segments compared numerically, then by line and column.
 
@@ -102,25 +102,37 @@ Content diagnostics additionally carry `line` and `column` (1-based) for the off
 
 Configuration and orchestration codes are stable within this contract; source codes are listed in the [OpenAPI ingestion reference](openapi.md#diagnostics):
 
-| Code                       | Action                                                               |
-| -------------------------- | -------------------------------------------------------------------- |
-| `CONFIG_NOT_FOUND`         | Add `specra.config.ts` directly under the selected root              |
-| `CONFIG_LOAD_FAILED`       | Fix config syntax/runtime failure or excessive captured output       |
-| `CONFIG_TIMEOUT`           | Remove hung work or deliberately raise the bounded timeout           |
-| `CONFIG_INVALID`           | Correct the reported schema-v1 field                                 |
-| `CONFIG_NOT_SERIALIZABLE`  | Return only bounded JSON data                                        |
-| `CONFIG_UNSUPPORTED`       | Use supported `schemaVersion: 1`                                     |
-| `CONFIG_PATH_NOT_FOUND`    | Create or correct the configured path                                |
-| `CONFIG_PATH_INVALID`      | Correct the path's file/directory type or inaccessible state         |
-| `CONFIG_PATH_OUTSIDE_ROOT` | Remove traversal/absolute paths or an escaping symlink               |
-| `PROJECT_ROOT_INVALID`     | Select an existing accessible directory                              |
-| `INGESTION_TIMEOUT`        | Raise `--source-timeout` or reduce the sources                       |
-| `INGESTION_FAILED`         | Re-run and report a reproducible failure without secrets             |
-| `ARTIFACT_INVALID`         | Report: the produced model was rejected by the contract              |
-| `ARTIFACT_WRITE_FAILED`    | Check permissions; remove a symlinked `.specra/artifacts`            |
-| `SEARCH_BUILD_FAILED`      | Report: the search index could not be generated from valid artifacts |
-| `CANCELLED`                | Re-run when ready                                                    |
-| `INTERNAL_ERROR`           | Re-run and report a reproducible failure without secrets             |
+| Code                           | Action                                                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CONFIG_NOT_FOUND`             | Add `specra.config.ts` directly under the selected root                                                                                     |
+| `CONFIG_LOAD_FAILED`           | Fix config syntax/runtime failure or excessive captured output                                                                              |
+| `CONFIG_TIMEOUT`               | Remove hung work or deliberately raise the bounded timeout                                                                                  |
+| `CONFIG_INVALID`               | Correct the reported schema-v1 field                                                                                                        |
+| `CONFIG_NOT_SERIALIZABLE`      | Return only bounded JSON data                                                                                                               |
+| `CONFIG_UNSUPPORTED`           | Use supported `schemaVersion: 1`                                                                                                            |
+| `CONFIG_PATH_NOT_FOUND`        | Create or correct the configured path                                                                                                       |
+| `CONFIG_PATH_INVALID`          | Correct the path's file/directory type or inaccessible state                                                                                |
+| `CONFIG_PATH_OUTSIDE_ROOT`     | Remove traversal/absolute paths or an escaping symlink                                                                                      |
+| `PROJECT_ROOT_INVALID`         | Select an existing accessible directory                                                                                                     |
+| `INGESTION_TIMEOUT`            | Raise `--source-timeout` or reduce the sources                                                                                              |
+| `INGESTION_FAILED`             | Re-run and report a reproducible failure without secrets                                                                                    |
+| `ARTIFACT_INVALID`             | Report: the produced model was rejected by the contract                                                                                     |
+| `ARTIFACT_WRITE_FAILED`        | Check permissions; remove a symlinked `.specra/artifacts`                                                                                   |
+| `SEARCH_BUILD_FAILED`          | Report: the search index could not be generated from valid artifacts                                                                        |
+| `SNIPPETS_BUILD_FAILED`        | Report: the code samples could not be generated from valid artifacts                                                                        |
+| `SNIPPET_BODY_TRUNCATED`       | Warning: a request body example hit the example budget; the schema is larger than the bounded example                                       |
+| `SNIPPET_HEADER_SKIPPED`       | Warning: a header parameter name is not an HTTP token and is omitted from examples                                                          |
+| `SNIPPET_SERVER_UNUSABLE`      | Warning: a contract server is relative, plain HTTP off loopback, or carries credentials/query/fragment; it is not offered as an environment |
+| `SDK_ID_DUPLICATE`             | Fix: two `sdks` entries share an `id`                                                                                                       |
+| `SDK_EXAMPLE_TARGET_NOT_FOUND` | Fix: the example's `operation` matches no canonical operation                                                                               |
+| `SDK_EXAMPLE_TARGET_AMBIGUOUS` | Fix: the target matches several services; add `service`                                                                                     |
+| `SDK_EXAMPLE_DUPLICATE`        | Fix: the operation already has an example for this SDK                                                                                      |
+| `SDK_EXAMPLE_CODE_EMPTY`       | Fix: the example code (or file) is empty                                                                                                    |
+| `SDK_EXAMPLE_CODE_TOO_LARGE`   | Fix: the example exceeds 16 KiB                                                                                                             |
+| `SDK_EXAMPLE_FILE_INVALID`     | Fix: the examples file or code file is missing, outside the project, not a file, or not the expected shape                                  |
+| `SDK_EXAMPLE_MISSING`          | Warning: the SDK is declared `complete` but the operation has no example (see the [code samples reference](code-samples.md#sdk-mappings))   |
+| `CANCELLED`                    | Re-run when ready                                                                                                                           |
+| `INTERNAL_ERROR`               | Re-run and report a reproducible failure without secrets                                                                                    |
 
 Authored content and navigation codes (SPEC-006) are reported at `source/docs/<file>:line:column` or `config#/navigation/…`; warnings do not fail the build. The [content authoring reference](content-authoring.md) explains each rule.
 

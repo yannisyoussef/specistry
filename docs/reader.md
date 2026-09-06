@@ -67,6 +67,12 @@ In order: breadcrumb, title (with a `Deprecated` badge when applicable), method 
 
 Contract examples are shown verbatim as pretty-printed JSON, truncated at 4,000 characters with a visible notice. Schemas are rendered by the schema renderer described below.
 
+## Code rail
+
+When the artifact carries `snippets.json` (every `specra build` since SPEC-008 does), the operation page renders the endpoint context rail in Code mode: a `Code` heading, a `Protocol` or `Protocol · SDK` eyebrow, selectors for the environment, body format, and security alternative when there is more than one choice, one language control (a native select grouped into Protocol and SDK options), the selected example on the code surface with a `Copy <label> example` control, the contract's first success-response example when it has one, and a note that examples use placeholders and nothing is sent. The six protocol examples (cURL, HTTP, JavaScript, TypeScript, Java, Python) are generated on the server from the operation's request projection for the selected environment, body, and alternative; SDK examples are the project's authored code and appear only for operations the author mapped. There is no Try it control: execution is SPEC-009.
+
+Layout follows the design contract: from 1280 px the rail is a third glass panel beside the document (340 px, 380 px from 1440 px, 480 px from 1600 px) and sticks under the header with its own scroll; below 1280 px it is an inline bordered section after the page header; below 768 px a bar with a single `Code` link follows the viewport bottom and jumps to that section. The language choice is remembered for the browser session in `sessionStorage`; environment, body, and alternative are URL query state (`?env=…&body=…&auth=…`) validated on the server, so a link shares the selection, the canonical URL stays the operation, and non-default selections are `noindex`. Without JavaScript the cURL example is visible, the other languages sit behind a native disclosure, and the selectors submit with an Apply control. The [code samples reference](code-samples.md) documents the generators, placeholders, escaping, and the SDK mapping contract.
+
 ## Schema rendering
 
 The renderer (SPEC-005) explains canonical schema projections without becoming a JSON Schema engine. It runs on the server in two steps: `apps/web/lib/reader/schema-view.ts` projects a canonical `SchemaNode` into a bounded, context-aware `SchemaView` tree, and `apps/web/components/reader/schema/` lays that tree out as HTML with native `<details>` disclosures. No client JavaScript is involved.
@@ -144,6 +150,7 @@ Contracts above 150 operations switch to a compact navigation: every group is li
 - Search results are plain text from the validated artifact: matches are highlighted by splitting the title into text segments, never by building HTML or regular expressions from the query; the query is bounded to 200 characters and 12 terms; destinations come from the artifact, never from the query. The reader serves the artifact only after checking its digest, size, and document count against the manifest, and only under its content-addressed name.
 - Authored content arrives as a validated JSON content model, never as HTML or code: the renderer maps each node kind to a React element, spreads no authored attribute, and link targets and asset names were validated at build time. Assets are served only when the manifest lists them, from the fixed artifact directory, with `Cache-Control: immutable`, `nosniff`, and `default-src 'none'; sandbox`, so an SVG logo opened directly cannot run scripts. The consumer accent is a validated six-digit colour emitted in a nonce `<style>`; the proxy leaves the asset route's own policy in place and applies the page policy everywhere else.
 - Route segments must match the slug grammar before lookup; anything else is a 404.
+- Code examples are generated on the server from the digest-checked snippets artifact and rendered as text tokens; the `env`, `body`, and `auth` query values are matched against strict grammars and never echoed, and the only environments offered are those the build validated. No request is made from the Code rail and the policy above is unchanged (`connect-src 'self'`).
 - The theme handler accepts `POST` only, rejects cross-site submissions (`Sec-Fetch-Site`, then `Origin` against the host) with 403, follows only printable-ASCII absolute same-origin paths, and sets an `HttpOnly`, `SameSite=Lax` cookie that is `Secure` behind HTTPS (direct or via `X-Forwarded-Proto`).
 - `SPECRA_SITE_URL` must be a bare origin; values with credentials, a path, a query, or a fragment are ignored.
 - Fonts are self-hosted from `node_modules` (OFL variable fonts) and served under `font-src 'self'`.
@@ -158,9 +165,10 @@ Measured on the TestInbox fixture (25 operations) and enforced in CI:
 
 | Measure                                      | Baseline        | Budget                           |
 | -------------------------------------------- | --------------- | -------------------------------- |
-| Operation page client JavaScript (gzip)      | 135.6 KB        | 150 KiB (`pnpm check:bundle`)    |
-| Route-specific chunks beyond the framework   | 5.0 KB          | 40 KiB                           |
-| Operation page HTML                          | ~77 KB          | 200 KiB (browser test)           |
+| Operation page client JavaScript (gzip)      | 137.1 KB        | 150 KiB (`pnpm check:bundle`)    |
+| Route-specific chunks beyond the framework   | 6.5 KB          | 40 KiB                           |
+| Operation page HTML                          | ~180 KB         | 200 KiB (browser test)           |
+| Generator code in client chunks              | none            | forbidden (`pnpm check:bundle`)  |
 | Navigation with 600 operations (server HTML) | static          | no client nodes per item         |
 | Navigation above 150 operations              | compact         | one expanded group per page      |
 | Schema block, 200 properties (server HTML)   | ~69 KB          | 400 view nodes per block         |
