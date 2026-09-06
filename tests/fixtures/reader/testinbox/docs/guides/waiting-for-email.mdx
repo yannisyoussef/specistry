@@ -1,0 +1,49 @@
+---
+title: Waiting for email
+description: Polling, timeouts, and matchers for reliably receiving a message in a test.
+---
+
+Email delivery takes a few hundred milliseconds in the sandbox and a few seconds through real providers. Tests should **wait**, not sleep.
+
+## Use the wait endpoint
+
+[Wait for message](/api/inboxes/wait-for-message) holds the request open until a matching message arrives or the timeout passes, then returns the message.
+
+<Tabs>
+<Tab label="TypeScript">
+```typescript
+const message = await inbox.messages.wait({
+  subject: /verify your account/i,
+  timeout: 30_000,
+});
+```
+</Tab>
+<Tab label="Python">
+```python
+message = inbox.messages.wait(subject=r"verify your account", timeout=30)
+```
+</Tab>
+</Tabs>
+
+## Matchers
+
+| Matcher           | Matches                                   |
+| ----------------- | ----------------------------------------- |
+| `subjectContains` | Case-insensitive substring of the subject |
+| `from`            | Exact sender address                      |
+| `bodyMatches`     | Regular expression over the text body     |
+| `hasAttachment`   | At least one attachment                   |
+
+All present matchers must match; see the [MessageMatcher](/api/inboxes/wait-for-message#request-body) schema.
+
+## Timeouts
+
+<Callout type="tip">
+Start with 30 seconds in CI and 10 seconds locally. A timeout returns `408`, which most test runners surface with the request details.
+</Callout>
+
+## Avoid
+
+- Sleeping a fixed number of seconds before reading the inbox.
+- Reusing one inbox across tests that run in parallel.
+- Matching on the whole HTML body; match on the text body or a link instead.

@@ -23,6 +23,22 @@ export interface ArtifactStatistics {
   readonly operations: number;
   readonly references: number;
   readonly schemas: number;
+  /** Authored pages in the content artifact (SPEC-006, optional). */
+  readonly pages?: number;
+}
+
+export interface ArtifactAssetRecord {
+  /** Artifact-relative POSIX path, e.g. `assets/0123456789abcdef.png`. */
+  readonly path: string;
+  readonly bytes: number;
+  readonly sha256: string;
+}
+
+export interface ArtifactBranding {
+  /** Artifact-relative asset paths and the validated accent (SPEC-006). */
+  readonly logo?: string;
+  readonly favicon?: string;
+  readonly accent?: string;
 }
 
 export interface ArtifactManifest {
@@ -32,7 +48,12 @@ export interface ArtifactManifest {
   readonly project: { readonly id: string; readonly name: string };
   readonly files: {
     readonly documentation: typeof ARTIFACT_DOCUMENTATION_FILENAME;
+    /** Present when the project has authored content (SPEC-006). */
+    readonly content?: string;
+    readonly navigation?: string;
   };
+  readonly assets?: readonly ArtifactAssetRecord[];
+  readonly branding?: ArtifactBranding;
   readonly sources: readonly ArtifactSourceRecord[];
   readonly statistics: ArtifactStatistics;
   /** A written artifact never carries errors; warnings are counted. */
@@ -74,12 +95,71 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
     !isNonEmptyString(value.project.id) ||
     !isNonEmptyString(value.project.name) ||
     !isRecord(value.files) ||
-    !hasOnlyKeys(value.files, ["documentation"]) ||
-    value.files.documentation !== ARTIFACT_DOCUMENTATION_FILENAME
+    !hasOnlyKeys(value.files, ["content", "documentation", "navigation"]) ||
+    value.files.documentation !== ARTIFACT_DOCUMENTATION_FILENAME ||
+    (value.files.content !== undefined &&
+      !ARTIFACT_FILENAME.test(String(value.files.content))) ||
+    (value.files.navigation !== undefined &&
+      !ARTIFACT_FILENAME.test(String(value.files.navigation))) ||
+    (value.files.content === undefined) !==
+      (value.files.navigation === undefined)
   ) {
     throw new TypeError(
       "Artifact manifest project or file entries are invalid.",
     );
+  }
+  const assets: ArtifactAssetRecord[] = [];
+  if (value.assets !== undefined) {
+    if (!Array.isArray(value.assets)) {
+      throw new TypeError("Artifact manifest assets must be a list.");
+    }
+    for (const asset of value.assets) {
+      if (
+        !isRecord(asset) ||
+        !hasOnlyKeys(asset, ["bytes", "path", "sha256"]) ||
+        typeof asset.path !== "string" ||
+        !ASSET_PATH.test(asset.path) ||
+        !isCount(asset.bytes) ||
+        typeof asset.sha256 !== "string" ||
+        !SHA256.test(asset.sha256)
+      ) {
+        throw new TypeError("Artifact manifest asset record is invalid.");
+      }
+      assets.push({
+        bytes: asset.bytes,
+        path: asset.path,
+        sha256: asset.sha256,
+      });
+    }
+  }
+  let branding: ArtifactBranding | undefined;
+  if (value.branding !== undefined) {
+    if (
+      !isRecord(value.branding) ||
+      !hasOnlyKeys(value.branding, ["accent", "favicon", "logo"]) ||
+      (value.branding.logo !== undefined &&
+        (typeof value.branding.logo !== "string" ||
+          !ASSET_PATH.test(value.branding.logo))) ||
+      (value.branding.favicon !== undefined &&
+        (typeof value.branding.favicon !== "string" ||
+          !ASSET_PATH.test(value.branding.favicon))) ||
+      (value.branding.accent !== undefined &&
+        (typeof value.branding.accent !== "string" ||
+          !ACCENT.test(value.branding.accent)))
+    ) {
+      throw new TypeError("Artifact manifest branding is invalid.");
+    }
+    branding = {
+      ...(value.branding.accent === undefined
+        ? {}
+        : { accent: value.branding.accent as string }),
+      ...(value.branding.favicon === undefined
+        ? {}
+        : { favicon: value.branding.favicon as string }),
+      ...(value.branding.logo === undefined
+        ? {}
+        : { logo: value.branding.logo as string }),
+    };
   }
   if (!Array.isArray(value.sources)) {
     throw new TypeError("Artifact manifest sources must be a list.");
@@ -109,13 +189,15 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
     !hasOnlyKeys(statistics, [
       "documents",
       "operations",
+      "pages",
       "references",
       "schemas",
     ]) ||
     !isCount(statistics.documents) ||
     !isCount(statistics.operations) ||
     !isCount(statistics.references) ||
-    !isCount(statistics.schemas)
+    !isCount(statistics.schemas) ||
+    (statistics.pages !== undefined && !isCount(statistics.pages))
   ) {
     throw new TypeError("Artifact manifest statistics are invalid.");
   }
@@ -130,8 +212,18 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
   }
   return {
     artifactFormat: ARTIFACT_MANIFEST_FORMAT,
+    ...(value.assets === undefined ? {} : { assets }),
+    ...(branding === undefined ? {} : { branding }),
     diagnostics: { errors: 0, warnings: diagnostics.warnings },
-    files: { documentation: ARTIFACT_DOCUMENTATION_FILENAME },
+    files: {
+      documentation: ARTIFACT_DOCUMENTATION_FILENAME,
+      ...(value.files.content === undefined
+        ? {}
+        : { content: value.files.content as string }),
+      ...(value.files.navigation === undefined
+        ? {}
+        : { navigation: value.files.navigation as string }),
+    },
     generator: "specra",
     modelVersion: DOCUMENT_MODEL_VERSION,
     project: { id: value.project.id, name: value.project.name },
@@ -139,14 +231,21 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
     statistics: {
       documents: statistics.documents,
       operations: statistics.operations,
+      ...(statistics.pages === undefined ? {} : { pages: statistics.pages }),
       references: statistics.references,
       schemas: statistics.schemas,
     },
   };
 }
 
+const ARTIFACT_FILENAME = /^[a-z][a-z0-9-]*\.json$/;
+const ASSET_PATH = /^assets\/[a-f0-9]{16}\.(?:png|jpg|webp|gif|svg|ico)$/;
+const ACCENT = /^#[0-9a-f]{6}$/;
+
 const MANIFEST_KEYS = [
   "artifactFormat",
+  "assets",
+  "branding",
   "diagnostics",
   "files",
   "generator",

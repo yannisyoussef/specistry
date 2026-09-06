@@ -2,6 +2,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
+  ContentArtifactError,
+  parseContentArtifact,
+  parseNavigationArtifact,
+} from "@specra/content";
+import {
   ARTIFACT_MANIFEST_FILENAME,
   CanonicalModelError,
   parseArtifactManifest,
@@ -10,6 +15,7 @@ import {
   type DocumentationArtifact,
 } from "@specra/model";
 
+import { createReaderContent, type ReaderContent } from "./content";
 import { createReaderIndex, type ReaderIndex } from "./projection";
 
 /**
@@ -27,6 +33,8 @@ export interface ReaderArtifact {
   readonly artifact: DocumentationArtifact;
   readonly manifest: ArtifactManifest;
   readonly index: ReaderIndex;
+  /** Authored content and navigation; absent for API-only projects. */
+  readonly content?: ReaderContent;
   /** Project-relative artifact directory; never an absolute machine path. */
   readonly directory: string;
 }
@@ -130,12 +138,71 @@ export async function readReaderArtifact(
       hint,
     );
   }
+  const content = await readContent(directory, manifest, hint);
   return {
     artifact,
+    ...(content === undefined ? {} : { content }),
     directory: ARTIFACT_DIRECTORY,
     index: createReaderIndex(artifact),
     manifest,
   };
+}
+
+/**
+ * Authored content is optional: the manifest names `content.json` and
+ * `navigation.json` together or not at all. Both are validated strictly and
+ * cross-checked against the manifest's page count before any page renders.
+ */
+async function readContent(
+  directory: string,
+  manifest: ArtifactManifest,
+  hint: string,
+): Promise<ReaderContent | undefined> {
+  if (
+    manifest.files.content === undefined ||
+    manifest.files.navigation === undefined
+  ) {
+    if (
+      manifest.statistics.pages !== undefined &&
+      manifest.statistics.pages > 0
+    ) {
+      throw new ReaderArtifactError(
+        `The artifact manifest reports ${manifest.statistics.pages} authored pages but names no content artifact.`,
+        hint,
+      );
+    }
+    return undefined;
+  }
+  const contentText = await readArtifactFile(
+    directory,
+    manifest.files.content,
+    hint,
+  );
+  const navigationText = await readArtifactFile(
+    directory,
+    manifest.files.navigation,
+    hint,
+  );
+  try {
+    const content = parseContentArtifact(contentText);
+    const navigation = parseNavigationArtifact(navigationText);
+    if (
+      manifest.statistics.pages !== undefined &&
+      manifest.statistics.pages !== content.pages.length
+    ) {
+      throw new ReaderArtifactError(
+        `The artifact manifest reports ${manifest.statistics.pages} authored pages but the content artifact contains ${content.pages.length}.`,
+        hint,
+      );
+    }
+    return createReaderContent(content.pages, navigation, manifest.branding);
+  } catch (error) {
+    if (error instanceof ReaderArtifactError) throw error;
+    throw new ReaderArtifactError(
+      `The authored content artifacts in ${ARTIFACT_DIRECTORY} failed validation (${describe(error)}).`,
+      hint,
+    );
+  }
 }
 
 async function readArtifactFile(
@@ -160,6 +227,7 @@ async function readArtifactFile(
 }
 
 function describe(error: unknown): string {
+  if (error instanceof ContentArtifactError) return error.message.slice(0, 200);
   if (error instanceof CanonicalModelError) {
     const issues = error.diagnostics
       .filter((diagnostic) => diagnostic.severity === "error")

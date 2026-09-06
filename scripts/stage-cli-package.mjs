@@ -37,6 +37,7 @@ const cliManifest = JSON.parse(
 // and the clean-room bundled-dependency assertion together.
 const stagedDependencies = [
   "@specra/config",
+  "@specra/content",
   "@specra/model",
   "@specra/openapi",
   "zod",
@@ -58,7 +59,7 @@ const zodDirectory = await realpath(
 const yamlDirectory = await realpath(
   path.join(repositoryRoot, "packages", "openapi", "node_modules", "yaml"),
 );
-const workspacePackages = ["config", "model", "openapi"];
+const workspacePackages = ["config", "content", "model", "openapi"];
 const manifests = Object.fromEntries(
   await Promise.all(
     workspacePackages.map(async (name) => [
@@ -95,6 +96,65 @@ await cp(yamlDirectory, path.join(destination, "node_modules", "yaml"), {
   recursive: true,
 });
 
+// The content package brings the Markdown parser and highlighter trees. Their
+// closure is resolved package by package from the workspace's pnpm layout
+// (each package's dependencies sit beside it or in the virtual store) and
+// staged flat, so the packed CLI carries exactly what the build needs.
+const contentDirectory = path.join(repositoryRoot, "packages", "content");
+const closure = new Map();
+const pendingClosure = Object.keys(manifests.content.dependencies ?? {}).filter(
+  (name) => !name.startsWith("@specra/"),
+);
+const closureOrigins = new Map(
+  pendingClosure.map((name) => [name, contentDirectory]),
+);
+while (pendingClosure.length > 0) {
+  const name = pendingClosure.pop();
+  if (closure.has(name)) continue;
+  const origin = closureOrigins.get(name);
+  const packageDirectory = await findPackageDirectory(origin, name);
+  closure.set(name, packageDirectory);
+  const manifest = JSON.parse(
+    await readFile(path.join(packageDirectory, "package.json"), "utf8"),
+  );
+  for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+    if (!closure.has(dependency) && !closureOrigins.has(dependency)) {
+      closureOrigins.set(dependency, packageDirectory);
+      pendingClosure.push(dependency);
+    }
+  }
+}
+for (const [name, source] of [...closure.entries()].sort()) {
+  if (name === "yaml") continue;
+  await cp(source, path.join(destination, "node_modules", name), {
+    dereference: true,
+    recursive: true,
+  });
+}
+
+async function findPackageDirectory(fromDirectory, name) {
+  let current = await realpath(fromDirectory);
+  for (;;) {
+    const candidate = path.join(current, "node_modules", name);
+    try {
+      const manifest = await readFile(
+        path.join(candidate, "package.json"),
+        "utf8",
+      );
+      if (JSON.parse(manifest).name === name) return await realpath(candidate);
+    } catch {
+      // keep walking up
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      throw new Error(
+        `Dependency ${name} could not be resolved from ${fromDirectory}.`,
+      );
+    }
+    current = parent;
+  }
+}
+
 const stagedCliManifest = {
   name: cliManifest.name,
   version: cliManifest.version,
@@ -103,11 +163,14 @@ const stagedCliManifest = {
   type: cliManifest.type,
   engines: cliManifest.engines,
   bin: cliManifest.bin,
-  bundleDependencies: cliManifest.bundleDependencies,
+  bundleDependencies: [
+    ...new Set([...cliManifest.bundleDependencies, ...closure.keys()]),
+  ].sort(),
   exports: cliManifest.exports,
   files: cliManifest.files,
   dependencies: {
     "@specra/config": manifests.config.version,
+    "@specra/content": manifests.content.version,
     "@specra/model": manifests.model.version,
     "@specra/openapi": manifests.openapi.version,
     zod: cliManifest.dependencies.zod,

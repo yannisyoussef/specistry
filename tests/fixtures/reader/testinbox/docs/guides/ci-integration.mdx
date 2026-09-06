@@ -1,0 +1,36 @@
+---
+title: CI integration
+description: Running email tests against the sandbox from a continuous-integration pipeline.
+---
+
+Use a **sandbox key** in CI. Sandbox mail never leaves the sandbox, so pipelines can run against real sign-up and reset flows safely.
+
+<Steps>
+<Step title="Store the key as a secret">
+Add `TESTINBOX_API_KEY` to your CI provider's secret store. Never print it in logs.
+</Step>
+<Step title="Create inboxes per test">
+```yaml title=".github/workflows/e2e.yml"
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm test
+        env:
+          TESTINBOX_API_KEY: ${{ secrets.TESTINBOX_API_KEY }}
+```
+</Step>
+<Step title="Tag inboxes by workflow">
+Pass `tags: ["ci", "signup-flow"]` when creating inboxes so the dashboard groups them; see [Inbox lifecycle](../concepts/inbox-lifecycle#tags).
+</Step>
+</Steps>
+
+## Webhooks instead of polling
+
+For pipelines that fan out, register a [webhook](/api/webhooks/create-webhook) for `message.received` and let the delivery trigger the next job.
+
+<Callout type="note">
+Webhook secrets are shown once. Store them next to the API key.
+</Callout>

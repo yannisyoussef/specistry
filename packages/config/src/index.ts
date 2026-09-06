@@ -33,16 +33,67 @@ const environmentSchema = z
   })
   .strict();
 
+const label = z.string().trim().min(1).max(120);
+const pageSlug = z
+  .string()
+  .regex(
+    /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*){0,3}$/,
+    "Page slugs are lower-case kebab-case segments, at most four deep.",
+  );
+const externalLink = z.url().refine((url) => {
+  const parsed = new URL(url);
+  return (
+    (parsed.protocol === "https:" || parsed.protocol === "http:") &&
+    parsed.username === "" &&
+    parsed.password === ""
+  );
+}, "Navigation links must be absolute https or http URLs without credentials.");
+
+/**
+ * Configured documentation navigation (SPEC-006): page slugs, sections (two
+ * levels), exactly one generated API insertion, and external links. Data
+ * only, so it crosses the isolated config host unchanged.
+ */
+export type NavigationNodeInput =
+  | string
+  | { readonly page: string; readonly label?: string | undefined }
+  | {
+      readonly section: string;
+      readonly items: readonly NavigationNodeInput[];
+    }
+  | { readonly api: true; readonly label?: string | undefined }
+  | { readonly link: string; readonly label: string };
+
+const navigationNodeSchema: z.ZodType<NavigationNodeInput> = z.lazy(() =>
+  z.union([
+    pageSlug,
+    z.object({ page: pageSlug, label: label.optional() }).strict(),
+    z
+      .object({
+        section: label,
+        items: z.array(navigationNodeSchema).max(200),
+      })
+      .strict(),
+    z.object({ api: z.literal(true), label: label.optional() }).strict(),
+    z.object({ link: externalLink, label }).strict(),
+  ]),
+);
+
 export const specraConfigSchema = z
   .object({
     schemaVersion: z.literal(1),
     name: z.string().trim().min(1).max(120),
     openapi: z.union([relativePath, z.array(relativePath).min(1)]),
     docs: relativePath.default("./docs"),
+    navigation: z.array(navigationNodeSchema).max(500).optional(),
     branding: z
       .object({
         logo: relativePath.optional(),
         favicon: relativePath.optional(),
+        accent: z
+          .string()
+          .regex(/^#[0-9a-fA-F]{6}$/, "Accent must be a six-digit hex colour.")
+          .optional(),
       })
       .strict()
       .optional(),
@@ -169,12 +220,18 @@ function matchesLabels(
 
 function unwrapSchema(schema: z.ZodType | undefined): z.ZodType | undefined {
   let current = schema;
-  while (
-    current instanceof z.ZodOptional ||
-    current instanceof z.ZodDefault ||
-    current instanceof z.ZodNullable
-  ) {
-    current = current.unwrap() as z.ZodType;
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (
+      current instanceof z.ZodOptional ||
+      current instanceof z.ZodDefault ||
+      current instanceof z.ZodNullable
+    ) {
+      current = current.unwrap() as z.ZodType;
+    } else if (current instanceof z.ZodLazy) {
+      current = current.unwrap() as z.ZodType;
+    } else {
+      return current;
+    }
   }
   return current;
 }

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { loadReaderArtifact } from "../lib/reader/artifact";
+import { authoredPaths } from "../lib/reader/content";
 import { indexablePaths, siteUrl } from "../lib/reader/metadata";
 
 /**
@@ -14,10 +15,10 @@ import { indexablePaths, siteUrl } from "../lib/reader/metadata";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { index } = await loadReaderArtifact();
+  const { content, index } = await loadReaderArtifact();
   const base = siteUrl(index);
   if (base === undefined) return [];
-  return indexablePaths(index).map((path) => ({
+  return indexablePaths(index, authoredPaths(content)).map((path) => ({
     url: new URL(path, base).href,
   }));
 }

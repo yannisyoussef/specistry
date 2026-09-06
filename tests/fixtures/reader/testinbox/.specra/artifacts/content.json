@@ -1,0 +1,3098 @@
+{
+  "contentVersion": 1,
+  "pages": [
+    {
+      "body": [
+        {
+          "cards": [
+            {
+              "description": "First test email in five minutes.",
+              "href": "/docs/quickstart",
+              "target": "page",
+              "title": "Quickstart"
+            },
+            {
+              "description": "API keys, sandbox versus production.",
+              "href": "/docs/authentication",
+              "target": "page",
+              "title": "Authentication"
+            },
+            {
+              "description": "Polling, timeouts, and matchers.",
+              "href": "/docs/guides/waiting-for-email",
+              "target": "page",
+              "title": "Waiting for email"
+            },
+            {
+              "description": "Inboxes, messages, attachments, webhooks.",
+              "href": "/api",
+              "target": "api",
+              "title": "API reference"
+            }
+          ],
+          "kind": "cards"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "The workflow"
+            }
+          ],
+          "depth": 2,
+          "id": "the-workflow",
+          "kind": "heading"
+        },
+        {
+          "kind": "steps",
+          "steps": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Every test gets its own address. A short "
+                    },
+                    {
+                      "kind": "code",
+                      "value": "ttl"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " keeps the sandbox clean."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ],
+              "title": "Create an inbox"
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Use the inbox address wherever your application would send email."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ],
+              "title": "Trigger your application"
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": "Wait for message"
+                        }
+                      ],
+                      "href": "/api/inboxes/wait-for-message",
+                      "kind": "link",
+                      "target": "api"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " blocks until a matching message arrives."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ],
+              "title": "Wait for an email"
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Read the parsed body, links, and attachments from the "
+                    },
+                    {
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": "message"
+                        }
+                      ],
+                      "href": "/api/messages/get-message",
+                      "kind": "link",
+                      "target": "api"
+                    },
+                    {
+                      "kind": "text",
+                      "value": "."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ],
+              "title": "Assert its contents"
+            }
+          ]
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Install"
+            }
+          ],
+          "depth": 2,
+          "id": "install",
+          "kind": "heading"
+        },
+        {
+          "blocks": [
+            {
+              "kind": "code",
+              "language": "bash",
+              "lines": [
+                [
+                  {
+                    "cls": "fn",
+                    "text": "npm"
+                  },
+                  {
+                    "text": " "
+                  },
+                  {
+                    "cls": "str",
+                    "text": "install"
+                  },
+                  {
+                    "text": " "
+                  },
+                  {
+                    "cls": "str",
+                    "text": "@testinbox/client"
+                  }
+                ]
+              ],
+              "title": "npm",
+              "value": "npm install @testinbox/client"
+            },
+            {
+              "kind": "code",
+              "language": "bash",
+              "lines": [
+                [
+                  {
+                    "cls": "fn",
+                    "text": "pnpm"
+                  },
+                  {
+                    "text": " "
+                  },
+                  {
+                    "cls": "str",
+                    "text": "add"
+                  },
+                  {
+                    "text": " "
+                  },
+                  {
+                    "cls": "str",
+                    "text": "@testinbox/client"
+                  }
+                ]
+              ],
+              "title": "pnpm",
+              "value": "pnpm add @testinbox/client"
+            }
+          ],
+          "kind": "codeGroup"
+        }
+      ],
+      "description": "Create disposable inboxes and receive real application emails directly from your automated tests. One API, no mail server.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "the-workflow",
+          "text": "The workflow"
+        },
+        {
+          "depth": 2,
+          "id": "install",
+          "text": "Install"
+        }
+      ],
+      "id": "",
+      "route": "/",
+      "slug": "",
+      "sourcePath": "docs/index.mdx",
+      "text": "Quickstart\nFirst test email in five minutes.\nAuthentication\nAPI keys, sandbox versus production.\nWaiting for email\nPolling, timeouts, and matchers.\nAPI reference\nInboxes, messages, attachments, webhooks.\nThe workflowThe workflow\nCreate an inbox\nEvery test gets its own address. A short ttl keeps the sandbox clean.Trigger your application\nUse the inbox address wherever your application would send email.Wait for an email\nWait for message blocks until a matching message arrives.Assert its contents\nRead the parsed body, links, and attachments from the message.InstallInstall\nnpm install @testinbox/client\npnpm add @testinbox/client\n",
+      "title": "Email testing built for automation"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Every request carries a credential. Most integrations use an "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "API key"
+                }
+              ],
+              "kind": "strong"
+            },
+            {
+              "kind": "text",
+              "value": "; dashboard sessions and team-management integrations use OAuth 2.0."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "API keys"
+            }
+          ],
+          "depth": 2,
+          "id": "api-keys",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Send the key in the "
+            },
+            {
+              "kind": "code",
+              "value": "X-Api-Key"
+            },
+            {
+              "kind": "text",
+              "value": " header. Keys are scoped to a project and an environment."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "kind": "code",
+          "language": "http",
+          "lines": [
+            [
+              {
+                "cls": "kw",
+                "text": "GET"
+              },
+              {
+                "text": " /v1/inboxes "
+              },
+              {
+                "cls": "kw",
+                "text": "HTTP"
+              },
+              {
+                "text": "/"
+              },
+              {
+                "cls": "num",
+                "text": "1.1"
+              }
+            ],
+            [
+              {
+                "cls": "tag",
+                "text": "Host"
+              },
+              {
+                "cls": "kw",
+                "text": ":"
+              },
+              {
+                "text": " "
+              },
+              {
+                "cls": "str",
+                "text": "api.testinbox.email"
+              }
+            ],
+            [
+              {
+                "cls": "tag",
+                "text": "X-Api-Key"
+              },
+              {
+                "cls": "kw",
+                "text": ":"
+              },
+              {
+                "text": " "
+              },
+              {
+                "cls": "str",
+                "text": "tib_sandbox_0123abcd"
+              }
+            ]
+          ],
+          "title": "Request",
+          "value": "GET /v1/inboxes HTTP/1.1\nHost: api.testinbox.email\nX-Api-Key: tib_sandbox_0123abcd"
+        },
+        {
+          "align": [
+            null,
+            null,
+            null
+          ],
+          "header": [
+            [
+              {
+                "kind": "text",
+                "value": "Environment"
+              }
+            ],
+            [
+              {
+                "kind": "text",
+                "value": "Prefix"
+              }
+            ],
+            [
+              {
+                "kind": "text",
+                "value": "Mail leaves the sandbox"
+              }
+            ]
+          ],
+          "kind": "table",
+          "rows": [
+            [
+              [
+                {
+                  "kind": "text",
+                  "value": "Sandbox"
+                }
+              ],
+              [
+                {
+                  "kind": "code",
+                  "value": "tib_sandbox_"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "No"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "text",
+                  "value": "Production"
+                }
+              ],
+              [
+                {
+                  "kind": "code",
+                  "value": "tib_live_"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Yes"
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "API keys are secrets. Use them from CI and servers only; never embed them in front-end code or commit them to a repository."
+                }
+              ],
+              "kind": "paragraph"
+            }
+          ],
+          "kind": "callout",
+          "title": "Keep keys out of the browser",
+          "type": "warning"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Bearer tokens"
+            }
+          ],
+          "depth": 2,
+          "id": "bearer-tokens",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Short-lived tokens issued by the dashboard work everywhere an API key does. They expire after one hour."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "OAuth 2.0"
+            }
+          ],
+          "depth": 2,
+          "id": "oauth-2-0",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Team-management operations such as "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Invite team member"
+                }
+              ],
+              "href": "/api/team/invite-team-member",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " require the "
+            },
+            {
+              "kind": "code",
+              "value": "team:write"
+            },
+            {
+              "kind": "text",
+              "value": " scope through the authorization-code flow. The "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Create webhook"
+                }
+              ],
+              "href": "/api/webhooks/create-webhook",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " operation shows how scopes combine with a key."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Revoke the key in the dashboard first, then rotate the secret in your CI provider. Revocation is immediate; in-flight requests fail with "
+                },
+                {
+                  "kind": "code",
+                  "value": "401"
+                },
+                {
+                  "kind": "text",
+                  "value": "."
+                }
+              ],
+              "kind": "paragraph"
+            }
+          ],
+          "kind": "callout",
+          "title": "Rotating a leaked key",
+          "type": "danger"
+        }
+      ],
+      "description": "API keys, bearer tokens, and the difference between sandbox and production credentials.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "api-keys",
+          "text": "API keys"
+        },
+        {
+          "depth": 2,
+          "id": "bearer-tokens",
+          "text": "Bearer tokens"
+        },
+        {
+          "depth": 2,
+          "id": "oauth-2-0",
+          "text": "OAuth 2.0"
+        }
+      ],
+      "id": "authentication",
+      "route": "/docs/authentication",
+      "slug": "authentication",
+      "sourcePath": "docs/authentication.mdx",
+      "text": "Every request carries a credential. Most integrations use an API key; dashboard sessions and team-management integrations use OAuth 2.0.API keysAPI keys\nSend the key in the X-Api-Key header. Keys are scoped to a project and an environment.GET /v1/inboxes HTTP/1.1\nHost: api.testinbox.email\nX-Api-Key: tib_sandbox_0123abcd\nEnvironmentPrefixMail leaves the sandboxSandboxtib_sandbox_NoProductiontib_live_YesKeep keys out of the browser\nAPI keys are secrets. Use them from CI and servers only; never embed them in front-end code or commit them to a repository.Bearer tokensBearer tokens\nShort-lived tokens issued by the dashboard work everywhere an API key does. They expire after one hour.OAuth 2.0OAuth 2.0\nTeam-management operations such as Invite team member require the team:write scope through the authorization-code flow. The Create webhook operation shows how scopes combine with a key.Rotating a leaked key\nRevoke the key in the dashboard first, then rotate the secret in your CI provider. Revocation is immediate; in-flight requests fail with 401.",
+      "title": "Authentication"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "An inbox moves through three states."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "alt": "Inbox lifecycle: created, active, expired",
+          "kind": "image",
+          "src": "assets/8a8489932558b153.png"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Created"
+            }
+          ],
+          "depth": 2,
+          "id": "created",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Create inbox"
+                }
+              ],
+              "href": "/api/inboxes/create-inbox",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " returns an address immediately. The inbox starts with an empty message list and a "
+            },
+            {
+              "kind": "code",
+              "value": "ttl"
+            },
+            {
+              "kind": "text",
+              "value": " in seconds (default 3600, maximum 86400)."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Active"
+            }
+          ],
+          "depth": 2,
+          "id": "active",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "While active, the inbox accepts every message sent to its address. Messages are parsed on arrival; see "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Get message"
+                }
+              ],
+              "href": "/api/messages/get-message",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " for the parsed shape, including the "
+            },
+            {
+              "kind": "code",
+              "value": "content"
+            },
+            {
+              "kind": "text",
+              "value": " variants."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Expired"
+            }
+          ],
+          "depth": 2,
+          "id": "expired",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "When the "
+            },
+            {
+              "kind": "code",
+              "value": "ttl"
+            },
+            {
+              "kind": "text",
+              "value": " elapses the inbox stops receiving mail but stays readable for 24 hours, so a slow CI job can still inspect what arrived. After that it is deleted, together with its messages and attachments."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Expiry is measured from creation, not from the last message. Extend the "
+                },
+                {
+                  "kind": "code",
+                  "value": "ttl"
+                },
+                {
+                  "kind": "text",
+                  "value": " with "
+                },
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Update inbox"
+                    }
+                  ],
+                  "href": "/api/inboxes/update-inbox",
+                  "kind": "link",
+                  "target": "api"
+                },
+                {
+                  "kind": "text",
+                  "value": " if a test needs more time."
+                }
+              ],
+              "kind": "paragraph"
+            }
+          ],
+          "kind": "blockquote"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Tags"
+            }
+          ],
+          "depth": 2,
+          "id": "tags",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Tags are free-form labels (at most 10 per inbox) used by "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "List inboxes"
+                }
+              ],
+              "href": "/api/inboxes/list-inboxes",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " filters and by webhook filters. Choose stable tags such as "
+            },
+            {
+              "kind": "code",
+              "value": "signup-flow"
+            },
+            {
+              "kind": "text",
+              "value": " rather than per-run identifiers."
+            }
+          ],
+          "kind": "paragraph"
+        }
+      ],
+      "description": "How inboxes are created, receive mail, expire, and are deleted.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "created",
+          "text": "Created"
+        },
+        {
+          "depth": 2,
+          "id": "active",
+          "text": "Active"
+        },
+        {
+          "depth": 2,
+          "id": "expired",
+          "text": "Expired"
+        },
+        {
+          "depth": 2,
+          "id": "tags",
+          "text": "Tags"
+        }
+      ],
+      "id": "concepts/inbox-lifecycle",
+      "route": "/docs/concepts/inbox-lifecycle",
+      "slug": "concepts/inbox-lifecycle",
+      "sourcePath": "docs/concepts/inbox-lifecycle.md",
+      "text": "An inbox moves through three states.CreatedCreated\nCreate inbox returns an address immediately. The inbox starts with an empty message list and a ttl in seconds (default 3600, maximum 86400).ActiveActive\nWhile active, the inbox accepts every message sent to its address. Messages are parsed on arrival; see Get message for the parsed shape, including the content variants.ExpiredExpired\nWhen the ttl elapses the inbox stops receiving mail but stays readable for 24 hours, so a slow CI job can still inspect what arrived. After that it is deleted, together with its messages and attachments.Expiry is measured from creation, not from the last message. Extend the ttl with Update inbox if a test needs more time.TagsTags\nTags are free-form labels (at most 10 per inbox) used by List inboxes filters and by webhook filters. Choose stable tags such as signup-flow rather than per-run identifiers.",
+      "title": "Inbox lifecycle"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Attachments are parsed when a message arrives and listed on the "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "message"
+                }
+              ],
+              "href": "/api/messages/get-message",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Listing"
+            }
+          ],
+          "depth": 2,
+          "id": "listing",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "List attachments"
+                }
+              ],
+              "href": "/api/attachments/list-attachments",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " returns metadata only: file name, content type, and size."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Downloading"
+            }
+          ],
+          "depth": 2,
+          "id": "downloading",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Download attachment"
+                }
+              ],
+              "href": "/api/attachments/download-attachment",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " streams the bytes with the original "
+            },
+            {
+              "kind": "code",
+              "value": "Content-Type"
+            },
+            {
+              "kind": "text",
+              "value": ". Pass "
+            },
+            {
+              "kind": "code",
+              "value": "disposition=attachment"
+            },
+            {
+              "kind": "text",
+              "value": " to force a download header."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "kind": "code",
+          "language": "bash",
+          "lines": [
+            [
+              {
+                "cls": "fn",
+                "text": "curl"
+              },
+              {
+                "text": " "
+              },
+              {
+                "cls": "str",
+                "text": "-H"
+              },
+              {
+                "text": " "
+              },
+              {
+                "cls": "str",
+                "text": "\"X-Api-Key: "
+              },
+              {
+                "cls": "var",
+                "text": "$TESTINBOX_API_KEY"
+              },
+              {
+                "cls": "str",
+                "text": "\""
+              },
+              {
+                "text": " "
+              },
+              {
+                "cls": "str",
+                "text": "\\"
+              }
+            ],
+            [
+              {
+                "text": "  "
+              },
+              {
+                "cls": "str",
+                "text": "\"https://api.testinbox.email/v1/attachments/att_01J7QA\""
+              },
+              {
+                "text": " "
+              },
+              {
+                "cls": "str",
+                "text": "-o"
+              },
+              {
+                "text": " "
+              },
+              {
+                "cls": "str",
+                "text": "invoice.pdf"
+              }
+            ]
+          ],
+          "value": "curl -H \"X-Api-Key: $TESTINBOX_API_KEY\" \\\n  \"https://api.testinbox.email/v1/attachments/att_01J7QA\" -o invoice.pdf"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Limits"
+            }
+          ],
+          "depth": 2,
+          "id": "limits",
+          "kind": "heading"
+        },
+        {
+          "items": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Messages larger than 25 MB are rejected by the sandbox."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ]
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Attachments are kept as long as their message."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ]
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Inline images referenced by the HTML body appear as attachments with a "
+                    },
+                    {
+                      "kind": "code",
+                      "value": "contentId"
+                    },
+                    {
+                      "kind": "text",
+                      "value": "."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ]
+            }
+          ],
+          "kind": "list",
+          "ordered": false
+        }
+      ],
+      "description": "Listing and downloading attachments, and the limits that apply.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "listing",
+          "text": "Listing"
+        },
+        {
+          "depth": 2,
+          "id": "downloading",
+          "text": "Downloading"
+        },
+        {
+          "depth": 2,
+          "id": "limits",
+          "text": "Limits"
+        }
+      ],
+      "id": "guides/attachments",
+      "route": "/docs/guides/attachments",
+      "slug": "guides/attachments",
+      "sourcePath": "docs/guides/attachments.md",
+      "text": "Attachments are parsed when a message arrives and listed on the message.ListingListing\nList attachments returns metadata only: file name, content type, and size.DownloadingDownloading\nDownload attachment streams the bytes with the original Content-Type. Pass disposition=attachment to force a download header.curl -H \"X-Api-Key: $TESTINBOX_API_KEY\" \\\n  \"https://api.testinbox.email/v1/attachments/att_01J7QA\" -o invoice.pdf\nLimitsLimits\nMessages larger than 25 MB are rejected by the sandbox.Attachments are kept as long as their message.Inline images referenced by the HTML body appear as attachments with a contentId.",
+      "title": "Attachments"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Use a "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "sandbox key"
+                }
+              ],
+              "kind": "strong"
+            },
+            {
+              "kind": "text",
+              "value": " in CI. Sandbox mail never leaves the sandbox, so pipelines can run against real sign-up and reset flows safely."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "kind": "steps",
+          "steps": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Add "
+                    },
+                    {
+                      "kind": "code",
+                      "value": "TESTINBOX_API_KEY"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " to your CI provider's secret store. Never print it in logs."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ],
+              "title": "Store the key as a secret"
+            },
+            {
+              "children": [
+                {
+                  "kind": "code",
+                  "language": "yaml",
+                  "lines": [
+                    [
+                      {
+                        "cls": "tag",
+                        "text": "jobs"
+                      },
+                      {
+                        "text": ":"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "  "
+                      },
+                      {
+                        "cls": "tag",
+                        "text": "e2e"
+                      },
+                      {
+                        "text": ":"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "    "
+                      },
+                      {
+                        "cls": "tag",
+                        "text": "runs-on"
+                      },
+                      {
+                        "text": ": "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "ubuntu-latest"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "    "
+                      },
+                      {
+                        "cls": "tag",
+                        "text": "steps"
+                      },
+                      {
+                        "text": ":"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "      - "
+                      },
+                      {
+                        "cls": "tag",
+                        "text": "uses"
+                      },
+                      {
+                        "text": ": "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "actions/checkout@v4"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "      - "
+                      },
+                      {
+                        "cls": "tag",
+                        "text": "run"
+                      },
+                      {
+                        "text": ": "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "npm ci"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "      - "
+                      },
+                      {
+                        "cls": "tag",
+                        "text": "run"
+                      },
+                      {
+                        "text": ": "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "npm test"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "        "
+                      },
+                      {
+                        "cls": "tag",
+                        "text": "env"
+                      },
+                      {
+                        "text": ":"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "          "
+                      },
+                      {
+                        "cls": "tag",
+                        "text": "TESTINBOX_API_KEY"
+                      },
+                      {
+                        "text": ": "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "${{ secrets.TESTINBOX_API_KEY }}"
+                      }
+                    ]
+                  ],
+                  "title": ".github/workflows/e2e.yml",
+                  "value": "jobs:\n  e2e:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci\n      - run: npm test\n        env:\n          TESTINBOX_API_KEY: ${{ secrets.TESTINBOX_API_KEY }}"
+                }
+              ],
+              "title": "Create inboxes per test"
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Pass "
+                    },
+                    {
+                      "kind": "code",
+                      "value": "tags: [\"ci\", \"signup-flow\"]"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " when creating inboxes so the dashboard groups them; see "
+                    },
+                    {
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": "Inbox lifecycle"
+                        }
+                      ],
+                      "href": "/docs/concepts/inbox-lifecycle#tags",
+                      "kind": "link",
+                      "target": "page"
+                    },
+                    {
+                      "kind": "text",
+                      "value": "."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ],
+              "title": "Tag inboxes by workflow"
+            }
+          ]
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Webhooks instead of polling"
+            }
+          ],
+          "depth": 2,
+          "id": "webhooks-instead-of-polling",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "For pipelines that fan out, register a "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "webhook"
+                }
+              ],
+              "href": "/api/webhooks/create-webhook",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " for "
+            },
+            {
+              "kind": "code",
+              "value": "message.received"
+            },
+            {
+              "kind": "text",
+              "value": " and let the delivery trigger the next job."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Webhook secrets are shown once. Store them next to the API key."
+                }
+              ],
+              "kind": "paragraph"
+            }
+          ],
+          "kind": "callout",
+          "type": "note"
+        }
+      ],
+      "description": "Running email tests against the sandbox from a continuous-integration pipeline.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "webhooks-instead-of-polling",
+          "text": "Webhooks instead of polling"
+        }
+      ],
+      "id": "guides/ci-integration",
+      "route": "/docs/guides/ci-integration",
+      "slug": "guides/ci-integration",
+      "sourcePath": "docs/guides/ci-integration.mdx",
+      "text": "Use a sandbox key in CI. Sandbox mail never leaves the sandbox, so pipelines can run against real sign-up and reset flows safely.Store the key as a secret\nAdd TESTINBOX_API_KEY to your CI provider's secret store. Never print it in logs.Create inboxes per test\njobs:\n  e2e:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci\n      - run: npm test\n        env:\n          TESTINBOX_API_KEY: ${{ secrets.TESTINBOX_API_KEY }}\nTag inboxes by workflow\nPass tags: [\"ci\", \"signup-flow\"] when creating inboxes so the dashboard groups them; see Inbox lifecycle.Webhooks instead of pollingWebhooks instead of polling\nFor pipelines that fan out, register a webhook for message.received and let the delivery trigger the next job.Webhook secrets are shown once. Store them next to the API key.",
+      "title": "CI integration"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Email delivery takes a few hundred milliseconds in the sandbox and a few seconds through real providers. Tests should "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "wait"
+                }
+              ],
+              "kind": "strong"
+            },
+            {
+              "kind": "text",
+              "value": ", not sleep."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Use the wait endpoint"
+            }
+          ],
+          "depth": 2,
+          "id": "use-the-wait-endpoint",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Wait for message"
+                }
+              ],
+              "href": "/api/inboxes/wait-for-message",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " holds the request open until a matching message arrives or the timeout passes, then returns the message."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "kind": "tabs",
+          "tabs": [
+            {
+              "children": [
+                {
+                  "kind": "code",
+                  "language": "typescript",
+                  "lines": [
+                    [
+                      {
+                        "cls": "kw",
+                        "text": "const"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "message"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "="
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "await"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "inbox"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "var",
+                        "text": "messages"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "fn",
+                        "text": "wait"
+                      },
+                      {
+                        "text": "({"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "  "
+                      },
+                      {
+                        "cls": "attr",
+                        "text": "subject:"
+                      },
+                      {
+                        "cls": "str",
+                        "text": " /verify your account/"
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "i"
+                      },
+                      {
+                        "text": ","
+                      }
+                    ],
+                    [
+                      {
+                        "text": "  "
+                      },
+                      {
+                        "cls": "attr",
+                        "text": "timeout:"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "num",
+                        "text": "30_000"
+                      },
+                      {
+                        "text": ","
+                      }
+                    ],
+                    [
+                      {
+                        "text": "});"
+                      }
+                    ]
+                  ],
+                  "value": "const message = await inbox.messages.wait({\n  subject: /verify your account/i,\n  timeout: 30_000,\n});"
+                }
+              ],
+              "label": "TypeScript"
+            },
+            {
+              "children": [
+                {
+                  "kind": "code",
+                  "language": "python",
+                  "lines": [
+                    [
+                      {
+                        "text": "message "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "="
+                      },
+                      {
+                        "text": " inbox.messages.wait("
+                      },
+                      {
+                        "cls": "var",
+                        "text": "subject"
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "=r"
+                      },
+                      {
+                        "cls": "str",
+                        "text": "\"verify your account\""
+                      },
+                      {
+                        "text": ", "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "timeout"
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "="
+                      },
+                      {
+                        "cls": "num",
+                        "text": "30"
+                      },
+                      {
+                        "text": ")"
+                      }
+                    ]
+                  ],
+                  "value": "message = inbox.messages.wait(subject=r\"verify your account\", timeout=30)"
+                }
+              ],
+              "label": "Python"
+            }
+          ]
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Matchers"
+            }
+          ],
+          "depth": 2,
+          "id": "matchers",
+          "kind": "heading"
+        },
+        {
+          "align": [
+            null,
+            null
+          ],
+          "header": [
+            [
+              {
+                "kind": "text",
+                "value": "Matcher"
+              }
+            ],
+            [
+              {
+                "kind": "text",
+                "value": "Matches"
+              }
+            ]
+          ],
+          "kind": "table",
+          "rows": [
+            [
+              [
+                {
+                  "kind": "code",
+                  "value": "subjectContains"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Case-insensitive substring of the subject"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "code",
+                  "value": "from"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Exact sender address"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "code",
+                  "value": "bodyMatches"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Regular expression over the text body"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "code",
+                  "value": "hasAttachment"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "At least one attachment"
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "All present matchers must match; see the "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "MessageMatcher"
+                }
+              ],
+              "href": "/api/inboxes/wait-for-message#request-body",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": " schema."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Timeouts"
+            }
+          ],
+          "depth": 2,
+          "id": "timeouts",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Start with 30 seconds in CI and 10 seconds locally. A timeout returns "
+                },
+                {
+                  "kind": "code",
+                  "value": "408"
+                },
+                {
+                  "kind": "text",
+                  "value": ", which most test runners surface with the request details."
+                }
+              ],
+              "kind": "paragraph"
+            }
+          ],
+          "kind": "callout",
+          "type": "tip"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Avoid"
+            }
+          ],
+          "depth": 2,
+          "id": "avoid",
+          "kind": "heading"
+        },
+        {
+          "items": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Sleeping a fixed number of seconds before reading the inbox."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ]
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Reusing one inbox across tests that run in parallel."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ]
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Matching on the whole HTML body; match on the text body or a link instead."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ]
+            }
+          ],
+          "kind": "list",
+          "ordered": false
+        }
+      ],
+      "description": "Polling, timeouts, and matchers for reliably receiving a message in a test.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "use-the-wait-endpoint",
+          "text": "Use the wait endpoint"
+        },
+        {
+          "depth": 2,
+          "id": "matchers",
+          "text": "Matchers"
+        },
+        {
+          "depth": 2,
+          "id": "timeouts",
+          "text": "Timeouts"
+        },
+        {
+          "depth": 2,
+          "id": "avoid",
+          "text": "Avoid"
+        }
+      ],
+      "id": "guides/waiting-for-email",
+      "route": "/docs/guides/waiting-for-email",
+      "slug": "guides/waiting-for-email",
+      "sourcePath": "docs/guides/waiting-for-email.mdx",
+      "text": "Email delivery takes a few hundred milliseconds in the sandbox and a few seconds through real providers. Tests should wait, not sleep.Use the wait endpointUse the wait endpoint\nWait for message holds the request open until a matching message arrives or the timeout passes, then returns the message.TypeScript\nconst message = await inbox.messages.wait({\n  subject: /verify your account/i,\n  timeout: 30_000,\n});\nPython\nmessage = inbox.messages.wait(subject=r\"verify your account\", timeout=30)\nMatchersMatchers\nMatcherMatchessubjectContainsCase-insensitive substring of the subjectfromExact sender addressbodyMatchesRegular expression over the text bodyhasAttachmentAt least one attachmentAll present matchers must match; see the MessageMatcher schema.TimeoutsTimeouts\nStart with 30 seconds in CI and 10 seconds locally. A timeout returns 408, which most test runners surface with the request details.AvoidAvoid\nSleeping a fixed number of seconds before reading the inbox.Reusing one inbox across tests that run in parallel.Matching on the whole HTML body; match on the text body or a link instead.",
+      "title": "Waiting for email"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "TestInbox gives every automated test a "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "disposable inbox"
+                }
+              ],
+              "kind": "strong"
+            },
+            {
+              "kind": "text",
+              "value": " with a real address. Your application sends email exactly as it does in production; your test reads the message back through the API and asserts on it."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "What you get"
+            }
+          ],
+          "depth": 2,
+          "id": "what-you-get",
+          "kind": "heading"
+        },
+        {
+          "items": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Inboxes that expire on their own ("
+                    },
+                    {
+                      "kind": "code",
+                      "value": "ttl"
+                    },
+                    {
+                      "kind": "text",
+                      "value": "), so sandboxes stay clean."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ]
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Messages parsed into text, HTML, links, headers, and attachments."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ]
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Webhooks for event-driven pipelines instead of polling."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ]
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Verified domains when you need readable addresses."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ]
+            }
+          ],
+          "kind": "list",
+          "ordered": false
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "What it is not"
+            }
+          ],
+          "depth": 2,
+          "id": "what-it-is-not",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "TestInbox is not a mail server for production traffic and it never relays mail outward. Sandbox mail never leaves the sandbox."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Next steps"
+            }
+          ],
+          "depth": 2,
+          "id": "next-steps",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Read the "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Quickstart"
+                }
+              ],
+              "href": "/docs/quickstart",
+              "kind": "link",
+              "target": "page"
+            },
+            {
+              "kind": "text",
+              "value": ", then the "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "inbox lifecycle"
+                }
+              ],
+              "href": "/docs/concepts/inbox-lifecycle",
+              "kind": "link",
+              "target": "page"
+            },
+            {
+              "kind": "text",
+              "value": " to understand expiry, or jump straight to the "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "API reference"
+                }
+              ],
+              "href": "/api",
+              "kind": "link",
+              "target": "api"
+            },
+            {
+              "kind": "text",
+              "value": "."
+            }
+          ],
+          "kind": "paragraph"
+        }
+      ],
+      "description": "What TestInbox is, what it is not, and how the pieces fit together.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "what-you-get",
+          "text": "What you get"
+        },
+        {
+          "depth": 2,
+          "id": "what-it-is-not",
+          "text": "What it is not"
+        },
+        {
+          "depth": 2,
+          "id": "next-steps",
+          "text": "Next steps"
+        }
+      ],
+      "id": "introduction",
+      "route": "/docs/introduction",
+      "slug": "introduction",
+      "sourcePath": "docs/introduction.md",
+      "text": "TestInbox gives every automated test a disposable inbox with a real address. Your application sends email exactly as it does in production; your test reads the message back through the API and asserts on it.What you getWhat you get\nInboxes that expire on their own (ttl), so sandboxes stay clean.Messages parsed into text, HTML, links, headers, and attachments.Webhooks for event-driven pipelines instead of polling.Verified domains when you need readable addresses.What it is notWhat it is not\nTestInbox is not a mail server for production traffic and it never relays mail outward. Sandbox mail never leaves the sandbox.Next stepsNext steps\nRead the Quickstart, then the inbox lifecycle to understand expiry, or jump straight to the API reference.",
+      "title": "Introduction"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "Create an API key in the dashboard and export it as "
+                },
+                {
+                  "kind": "code",
+                  "value": "TESTINBOX_API_KEY"
+                },
+                {
+                  "kind": "text",
+                  "value": ". Sandbox and production keys are separate; see "
+                },
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Authentication"
+                    }
+                  ],
+                  "href": "/docs/authentication#api-keys",
+                  "kind": "link",
+                  "target": "page"
+                },
+                {
+                  "kind": "text",
+                  "value": "."
+                }
+              ],
+              "kind": "paragraph"
+            }
+          ],
+          "kind": "callout",
+          "title": "Before you start",
+          "type": "note"
+        },
+        {
+          "kind": "steps",
+          "steps": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Every test gets its own address. A short "
+                    },
+                    {
+                      "kind": "code",
+                      "value": "ttl"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " keeps the sandbox clean; the inbox is deleted when it expires."
+                    }
+                  ],
+                  "kind": "paragraph"
+                },
+                {
+                  "kind": "code",
+                  "language": "typescript",
+                  "lines": [
+                    [
+                      {
+                        "cls": "kw",
+                        "text": "const"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "inbox"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "="
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "await"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "client"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "var",
+                        "text": "inboxes"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "fn",
+                        "text": "create"
+                      },
+                      {
+                        "text": "({ "
+                      },
+                      {
+                        "cls": "attr",
+                        "text": "ttl:"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "num",
+                        "text": "600"
+                      },
+                      {
+                        "text": " });"
+                      }
+                    ]
+                  ],
+                  "title": "signup.test.ts",
+                  "value": "const inbox = await client.inboxes.create({ ttl: 600 });"
+                },
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Returns an "
+                    },
+                    {
+                      "children": [
+                        {
+                          "kind": "text",
+                          "value": "Inbox"
+                        }
+                      ],
+                      "href": "/api/inboxes/create-inbox#response-201",
+                      "kind": "link",
+                      "target": "api"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " with "
+                    },
+                    {
+                      "kind": "code",
+                      "value": "address"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " and "
+                    },
+                    {
+                      "kind": "code",
+                      "value": "expiresAt"
+                    },
+                    {
+                      "kind": "text",
+                      "value": "."
+                    }
+                  ],
+                  "kind": "paragraph"
+                }
+              ],
+              "title": "Create an inbox"
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "text",
+                      "value": "Use the inbox address wherever your application would send email: a sign-up form, a password reset, an invoice."
+                    }
+                  ],
+                  "kind": "paragraph"
+                },
+                {
+                  "kind": "code",
+                  "language": "typescript",
+                  "lines": [
+                    [
+                      {
+                        "cls": "kw",
+                        "text": "await"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "app"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "fn",
+                        "text": "signUp"
+                      },
+                      {
+                        "text": "({ "
+                      },
+                      {
+                        "cls": "attr",
+                        "text": "email:"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "inbox"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "var",
+                        "text": "address"
+                      },
+                      {
+                        "text": " });"
+                      }
+                    ]
+                  ],
+                  "value": "await app.signUp({ email: inbox.address });"
+                }
+              ],
+              "title": "Trigger your application"
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "kind": "code",
+                      "value": "wait()"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " blocks until a message matching your criteria arrives or the timeout passes. Match by subject, sender, or body."
+                    }
+                  ],
+                  "kind": "paragraph"
+                },
+                {
+                  "kind": "code",
+                  "language": "typescript",
+                  "lines": [
+                    [
+                      {
+                        "cls": "kw",
+                        "text": "const"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "message"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "="
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "await"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "inbox"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "var",
+                        "text": "messages"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "fn",
+                        "text": "wait"
+                      },
+                      {
+                        "text": "({ "
+                      },
+                      {
+                        "cls": "attr",
+                        "text": "subject:"
+                      },
+                      {
+                        "cls": "str",
+                        "text": " /verify/"
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "i"
+                      },
+                      {
+                        "text": ", "
+                      },
+                      {
+                        "cls": "attr",
+                        "text": "timeout:"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "num",
+                        "text": "30_000"
+                      },
+                      {
+                        "text": " });"
+                      }
+                    ]
+                  ],
+                  "value": "const message = await inbox.messages.wait({ subject: /verify/i, timeout: 30_000 });"
+                }
+              ],
+              "title": "Wait for an email"
+            },
+            {
+              "children": [
+                {
+                  "kind": "code",
+                  "language": "typescript",
+                  "lines": [
+                    [
+                      {
+                        "cls": "fn",
+                        "text": "expect"
+                      },
+                      {
+                        "text": "("
+                      },
+                      {
+                        "cls": "var",
+                        "text": "message"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "var",
+                        "text": "links"
+                      },
+                      {
+                        "text": "["
+                      },
+                      {
+                        "cls": "num",
+                        "text": "0"
+                      },
+                      {
+                        "text": "])."
+                      },
+                      {
+                        "cls": "fn",
+                        "text": "toContain"
+                      },
+                      {
+                        "text": "("
+                      },
+                      {
+                        "cls": "str",
+                        "text": "\"/verify?token=\""
+                      },
+                      {
+                        "text": ");"
+                      }
+                    ]
+                  ],
+                  "value": "expect(message.links[0]).toContain(\"/verify?token=\");"
+                }
+              ],
+              "title": "Assert its contents"
+            }
+          ]
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Choose your client"
+            }
+          ],
+          "depth": 2,
+          "id": "choose-your-client",
+          "kind": "heading"
+        },
+        {
+          "kind": "tabs",
+          "tabs": [
+            {
+              "children": [
+                {
+                  "kind": "code",
+                  "language": "typescript",
+                  "lines": [
+                    [
+                      {
+                        "cls": "kw",
+                        "text": "import"
+                      },
+                      {
+                        "text": " { "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "TestInbox"
+                      },
+                      {
+                        "text": " } "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "from"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "\"@testinbox/client\""
+                      },
+                      {
+                        "text": ";"
+                      }
+                    ],
+                    [],
+                    [
+                      {
+                        "cls": "kw",
+                        "text": "const"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "client"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "="
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "new"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "fn",
+                        "text": "TestInbox"
+                      },
+                      {
+                        "text": "({ "
+                      },
+                      {
+                        "cls": "attr",
+                        "text": "apiKey:"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "process"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "var",
+                        "text": "env"
+                      },
+                      {
+                        "text": "."
+                      },
+                      {
+                        "cls": "var",
+                        "text": "TESTINBOX_API_KEY"
+                      },
+                      {
+                        "text": " });"
+                      }
+                    ]
+                  ],
+                  "value": "import { TestInbox } from \"@testinbox/client\";\n\nconst client = new TestInbox({ apiKey: process.env.TESTINBOX_API_KEY });"
+                }
+              ],
+              "label": "TypeScript"
+            },
+            {
+              "children": [
+                {
+                  "kind": "code",
+                  "language": "python",
+                  "lines": [
+                    [
+                      {
+                        "cls": "kw",
+                        "text": "from"
+                      },
+                      {
+                        "text": " testinbox "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "import"
+                      },
+                      {
+                        "text": " TestInbox"
+                      }
+                    ],
+                    [],
+                    [
+                      {
+                        "text": "client "
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "="
+                      },
+                      {
+                        "text": " TestInbox("
+                      },
+                      {
+                        "cls": "var",
+                        "text": "api_key"
+                      },
+                      {
+                        "cls": "kw",
+                        "text": "="
+                      },
+                      {
+                        "text": "os.environ["
+                      },
+                      {
+                        "cls": "str",
+                        "text": "\"TESTINBOX_API_KEY\""
+                      },
+                      {
+                        "text": "])"
+                      }
+                    ]
+                  ],
+                  "value": "from testinbox import TestInbox\n\nclient = TestInbox(api_key=os.environ[\"TESTINBOX_API_KEY\"])"
+                }
+              ],
+              "label": "Python"
+            },
+            {
+              "children": [
+                {
+                  "kind": "code",
+                  "language": "bash",
+                  "lines": [
+                    [
+                      {
+                        "cls": "fn",
+                        "text": "curl"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "-X"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "POST"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "https://api.testinbox.email/v1/inboxes"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "\\"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "  "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "-H"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "\"X-Api-Key: "
+                      },
+                      {
+                        "cls": "var",
+                        "text": "$TESTINBOX_API_KEY"
+                      },
+                      {
+                        "cls": "str",
+                        "text": "\""
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "\\"
+                      }
+                    ],
+                    [
+                      {
+                        "text": "  "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "-d"
+                      },
+                      {
+                        "text": " "
+                      },
+                      {
+                        "cls": "str",
+                        "text": "'{\"ttl\": 600}'"
+                      }
+                    ]
+                  ],
+                  "value": "curl -X POST https://api.testinbox.email/v1/inboxes \\\n  -H \"X-Api-Key: $TESTINBOX_API_KEY\" \\\n  -d '{\"ttl\": 600}'"
+                }
+              ],
+              "label": "cURL"
+            }
+          ]
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Where next"
+            }
+          ],
+          "depth": 2,
+          "id": "where-next",
+          "kind": "heading"
+        },
+        {
+          "cards": [
+            {
+              "description": "Matchers, timeouts, and polling strategies.",
+              "href": "/docs/guides/waiting-for-email",
+              "target": "page",
+              "title": "Waiting for email"
+            },
+            {
+              "description": "Run against the sandbox from GitHub Actions.",
+              "href": "/docs/guides/ci-integration",
+              "target": "page",
+              "title": "CI integration"
+            }
+          ],
+          "kind": "cards"
+        }
+      ],
+      "description": "Receive your first test email in under five minutes. You need an API key from the dashboard and a project that sends email.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "choose-your-client",
+          "text": "Choose your client"
+        },
+        {
+          "depth": 2,
+          "id": "where-next",
+          "text": "Where next"
+        }
+      ],
+      "id": "quickstart",
+      "route": "/docs/quickstart",
+      "sidebarTitle": "Quickstart",
+      "slug": "quickstart",
+      "sourcePath": "docs/quickstart.mdx",
+      "text": "Before you start\nCreate an API key in the dashboard and export it as TESTINBOX_API_KEY. Sandbox and production keys are separate; see Authentication.Create an inbox\nEvery test gets its own address. A short ttl keeps the sandbox clean; the inbox is deleted when it expires.const inbox = await client.inboxes.create({ ttl: 600 });\nReturns an Inbox with address and expiresAt.Trigger your application\nUse the inbox address wherever your application would send email: a sign-up form, a password reset, an invoice.await app.signUp({ email: inbox.address });\nWait for an email\nwait() blocks until a message matching your criteria arrives or the timeout passes. Match by subject, sender, or body.const message = await inbox.messages.wait({ subject: /verify/i, timeout: 30_000 });\nAssert its contents\nexpect(message.links[0]).toContain(\"/verify?token=\");\nChoose your clientChoose your client\nTypeScript\nimport { TestInbox } from \"@testinbox/client\";\n\nconst client = new TestInbox({ apiKey: process.env.TESTINBOX_API_KEY });\nPython\nfrom testinbox import TestInbox\n\nclient = TestInbox(api_key=os.environ[\"TESTINBOX_API_KEY\"])\ncURL\ncurl -X POST https://api.testinbox.email/v1/inboxes \\\n  -H \"X-Api-Key: $TESTINBOX_API_KEY\" \\\n  -d '{\"ttl\": 600}'\nWhere nextWhere next\nWaiting for email\nMatchers, timeouts, and polling strategies.\nCI integration\nRun against the sandbox from GitHub Actions.\n",
+      "title": "Quickstart"
+    },
+    {
+      "body": [
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Errors"
+            }
+          ],
+          "depth": 2,
+          "id": "errors",
+          "kind": "heading"
+        },
+        {
+          "align": [
+            null,
+            null,
+            null
+          ],
+          "header": [
+            [
+              {
+                "kind": "text",
+                "value": "Status"
+              }
+            ],
+            [
+              {
+                "kind": "text",
+                "value": "Meaning"
+              }
+            ],
+            [
+              {
+                "kind": "text",
+                "value": "What to do"
+              }
+            ]
+          ],
+          "kind": "table",
+          "rows": [
+            [
+              [
+                {
+                  "kind": "code",
+                  "value": "401"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Missing or revoked credential"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Check the "
+                },
+                {
+                  "kind": "code",
+                  "value": "X-Api-Key"
+                },
+                {
+                  "kind": "text",
+                  "value": " header"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "code",
+                  "value": "404"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "The inbox or message no longer exists"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Inboxes expire; see the inbox lifecycle"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "code",
+                  "value": "408"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Wait timed out"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Increase the timeout or check the matcher"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "code",
+                  "value": "409"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "The requested address is already in use"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Choose another "
+                },
+                {
+                  "kind": "code",
+                  "value": "localPart"
+                }
+              ]
+            ],
+            [
+              [
+                {
+                  "kind": "code",
+                  "value": "429"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Rate limited"
+                }
+              ],
+              [
+                {
+                  "kind": "text",
+                  "value": "Retry after the "
+                },
+                {
+                  "kind": "code",
+                  "value": "Retry-After"
+                },
+                {
+                  "kind": "text",
+                  "value": " header"
+                }
+              ]
+            ]
+          ]
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Reading raw content safely"
+            }
+          ],
+          "depth": 2,
+          "id": "reading-raw-content-safely",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Message bodies are untrusted input. The API returns them as text, and so does this documentation: markup such as "
+            },
+            {
+              "kind": "code",
+              "value": "<script>alert(1)</script>"
+            },
+            {
+              "kind": "text",
+              "value": " or an "
+            },
+            {
+              "kind": "code",
+              "value": "<img onerror>"
+            },
+            {
+              "kind": "text",
+              "value": " attribute is data, never code. The same holds for entities like <b>bold</b>, bidirectional controls such as \"‮reversed\", and zero-width characters (\"zero​width\")."
+            }
+          ],
+          "kind": "paragraph"
+        },
+        {
+          "kind": "code",
+          "language": "html",
+          "lines": [
+            [
+              {
+                "cls": "tag",
+                "text": "<p>"
+              },
+              {
+                "text": "Welcome! "
+              },
+              {
+                "cls": "tag",
+                "text": "<a"
+              },
+              {
+                "text": " "
+              },
+              {
+                "cls": "attr",
+                "text": "href"
+              },
+              {
+                "text": "="
+              },
+              {
+                "cls": "str",
+                "text": "\"https://acme.dev/verify?token=…\""
+              },
+              {
+                "cls": "tag",
+                "text": ">"
+              },
+              {
+                "text": "Verify"
+              },
+              {
+                "cls": "tag",
+                "text": "</a></p>"
+              }
+            ],
+            [
+              {
+                "cls": "tag",
+                "text": "<script>"
+              },
+              {
+                "cls": "fn",
+                "text": "alert"
+              },
+              {
+                "text": "("
+              },
+              {
+                "cls": "str",
+                "text": "\"never executed by the reader\""
+              },
+              {
+                "text": ")"
+              },
+              {
+                "cls": "tag",
+                "text": "</script>"
+              }
+            ]
+          ],
+          "title": "Example body",
+          "value": "<p>Welcome! <a href=\"https://acme.dev/verify?token=…\">Verify</a></p>\n<script>alert(\"never executed by the reader\")</script>"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Getting help"
+            }
+          ],
+          "depth": 2,
+          "id": "getting-help",
+          "kind": "heading"
+        },
+        {
+          "children": [
+            {
+              "kind": "text",
+              "value": "Write to "
+            },
+            {
+              "children": [
+                {
+                  "kind": "text",
+                  "value": "support@testinbox.email"
+                }
+              ],
+              "href": "mailto:support@testinbox.email",
+              "kind": "link",
+              "target": "mailto"
+            },
+            {
+              "kind": "text",
+              "value": " with the request id from the "
+            },
+            {
+              "kind": "code",
+              "value": "X-Request-Id"
+            },
+            {
+              "kind": "text",
+              "value": " header."
+            }
+          ],
+          "kind": "paragraph"
+        }
+      ],
+      "description": "Common errors, what they mean, and the safe way to read raw message data.",
+      "headings": [
+        {
+          "depth": 2,
+          "id": "errors",
+          "text": "Errors"
+        },
+        {
+          "depth": 2,
+          "id": "reading-raw-content-safely",
+          "text": "Reading raw content safely"
+        },
+        {
+          "depth": 2,
+          "id": "getting-help",
+          "text": "Getting help"
+        }
+      ],
+      "id": "troubleshooting",
+      "route": "/docs/troubleshooting",
+      "slug": "troubleshooting",
+      "sourcePath": "docs/troubleshooting.md",
+      "text": "ErrorsErrors\nStatusMeaningWhat to do401Missing or revoked credentialCheck the X-Api-Key header404The inbox or message no longer existsInboxes expire; see the inbox lifecycle408Wait timed outIncrease the timeout or check the matcher409The requested address is already in useChoose another localPart429Rate limitedRetry after the Retry-After headerReading raw content safelyReading raw content safely\nMessage bodies are untrusted input. The API returns them as text, and so does this documentation: markup such as <script>alert(1)</script> or an <img onerror> attribute is data, never code. The same holds for entities like <b>bold</b>, bidirectional controls such as \"‮reversed\", and zero-width characters (\"zero​width\").<p>Welcome! <a href=\"https://acme.dev/verify?token=…\">Verify</a></p>\n<script>alert(\"never executed by the reader\")</script>\nGetting helpGetting help\nWrite to support@testinbox.email with the request id from the X-Request-Id header.",
+      "title": "Troubleshooting"
+    }
+  ]
+}

@@ -74,6 +74,7 @@ export function formatHumanResult(
       : "Specra project is valid.",
     `Project: ${sanitizeTerminal(result.context.config.name)}`,
     `Sources: ${statistics.documents} document(s), ${statistics.operations} operation(s), ${statistics.schemas} schema(s)`,
+    `Docs: ${result.content.pages} page(s), ${result.content.assets} asset(s)`,
   ];
   if ("artifacts" in result) {
     lines.push(
@@ -98,6 +99,8 @@ export function formatJsonResult(
 ): string {
   const diagnostics = result.diagnostics.map((diagnostic) => ({
     code: diagnostic.code,
+    ...(diagnostic.column === undefined ? {} : { column: diagnostic.column }),
+    ...(diagnostic.line === undefined ? {} : { line: diagnostic.line }),
     message: diagnostic.message,
     ...(diagnostic.path === undefined ? {} : { path: diagnostic.path }),
     severity: diagnostic.severity,
@@ -112,6 +115,7 @@ export function formatJsonResult(
                 files: result.artifacts.files,
               }
             : { directory: ARTIFACT_DIRECTORY },
+        content: result.content,
         diagnostics,
         ok: true,
         sources: result.ingestion.sources,
@@ -162,10 +166,14 @@ function formatDiagnostics(diagnostics: readonly Diagnostic[]): string[] {
 }
 
 function formatDiagnostic(diagnostic: Diagnostic): string {
+  const position =
+    diagnostic.line === undefined
+      ? ""
+      : `:${diagnostic.line}${diagnostic.column === undefined ? "" : `:${diagnostic.column}`}`;
   const path =
     diagnostic.path === undefined
       ? ""
-      : ` [${sanitizeTerminal(diagnostic.path)}]`;
+      : ` [${sanitizeTerminal(diagnostic.path)}${position}]`;
   const severity = diagnostic.severity === "warning" ? "warning " : "";
   return `${severity}${diagnostic.code}${path}`;
 }

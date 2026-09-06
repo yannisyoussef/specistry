@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { loadReaderArtifact } from "./lib/reader/artifact";
+import { DOCS_ROOT, findPage } from "./lib/reader/content";
 import { API_ROOT, resolveRoute } from "./lib/reader/projection";
 
 /**
@@ -13,7 +14,7 @@ import { API_ROOT, resolveRoute } from "./lib/reader/projection";
  * for React's debugging source maps only. The proxy runs for every route
  * (there is no prefetch exemption: the reader uses plain links), overwrites
  * the internal headers a client could otherwise spoof, and rewrites unknown
- * API reference routes to a server-rendered 404 so the not-found page is real
+ * API reference and authored routes to a server-rendered 404 so the not-found page is real
  * HTML rather than a client-rendered error shell.
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
@@ -49,6 +50,14 @@ async function notFoundRewrite(
 ): Promise<URL | undefined> {
   if (pathname === NOT_FOUND_ROUTE)
     return new URL(NOT_FOUND_ROUTE, request.url);
+  if (pathname.startsWith(`${DOCS_ROOT}/`)) {
+    // Authored routes: only pages the build emitted exist. `/docs` itself
+    // redirects to the homepage in the route handler.
+    const { content } = await loadReaderArtifact();
+    return findPage(content, pathname) === undefined
+      ? new URL(NOT_FOUND_ROUTE, request.url)
+      : undefined;
+  }
   if (pathname !== API_ROOT && !pathname.startsWith(`${API_ROOT}/`)) {
     return undefined;
   }

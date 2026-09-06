@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
 
+import {
+  apiLabel,
+  hasDocs,
+  sidebarNodes,
+  type ReaderContent,
+  type SidebarNode,
+} from "../../lib/reader/content";
 import { API_ROOT, type ReaderIndex } from "../../lib/reader/projection";
 import { THEME_LABELS, THEME_MODES, type ThemeMode } from "../../lib/theme";
 import { MobileNav } from "./mobile-nav";
@@ -7,14 +14,16 @@ import { MethodLabel } from "./primitives";
 import { SidebarScroll } from "./sidebar-scroll";
 
 /**
- * Reader shell: glass header, API navigation, document panel, and footer.
- * Everything is server-rendered once; the mobile drawer clones the sidebar
+ * Reader shell: glass header, one composed navigation (authored sections and
+ * the generated API reference in the configured order), document panel, and
+ * footer. Everything is server-rendered once; the mobile drawer clones the
  * navigation when it opens, and the sidebar scroll island only positions the
  * current item.
  */
 
 export interface ShellProps {
   readonly index: ReaderIndex;
+  readonly content?: ReaderContent | undefined;
   readonly currentPath: string;
   readonly mode: ThemeMode;
   readonly children: ReactNode;
@@ -30,7 +39,17 @@ const SIDEBAR_WRAPPER_ID = "api-sidebar-region";
  */
 export const COLLAPSE_NAVIGATION_ABOVE = 150;
 
-export function Shell({ children, currentPath, index, mode }: ShellProps) {
+export function Shell({
+  children,
+  content,
+  currentPath,
+  index,
+  mode,
+}: ShellProps) {
+  const docs = hasDocs(content);
+  const inApi =
+    currentPath === API_ROOT || currentPath.startsWith(`${API_ROOT}/`);
+  const logo = content?.branding?.logo;
   return (
     <div className="shell">
       <a className="skip-link" href="#content">
@@ -44,24 +63,41 @@ export function Shell({ children, currentPath, index, mode }: ShellProps) {
             source={NAVIGATION_ID}
           />
           <a className="wordmark" href="/">
-            <span aria-hidden="true" className="wordmark__mark" />
+            {logo === undefined ? (
+              <span aria-hidden="true" className="wordmark__mark" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element -- logo is a validated artifact asset
+              <img
+                alt=""
+                className="wordmark__logo"
+                height="20"
+                src={`/${logo}`}
+                width="20"
+              />
+            )}
             <span className="wordmark__name">{index.project.name}</span>
             <span className="wordmark__suffix">Docs</span>
           </a>
           <nav aria-label="Primary">
             <ul className="tabs">
+              {docs ? (
+                <li>
+                  <a
+                    aria-current={inApi ? undefined : "page"}
+                    className="tab"
+                    href="/"
+                  >
+                    Docs
+                  </a>
+                </li>
+              ) : null}
               <li>
                 <a
-                  aria-current={
-                    currentPath === API_ROOT ||
-                    currentPath.startsWith(`${API_ROOT}/`)
-                      ? "page"
-                      : undefined
-                  }
+                  aria-current={inApi ? "page" : undefined}
                   className="tab"
                   href={API_ROOT}
                 >
-                  API reference
+                  {apiLabel(index, content)}
                 </a>
               </li>
             </ul>
@@ -69,12 +105,16 @@ export function Shell({ children, currentPath, index, mode }: ShellProps) {
         </div>
       </header>
       <aside
-        aria-label="API navigation"
+        aria-label={docs ? "Documentation navigation" : "API navigation"}
         className="shell__sidebar"
         id={SIDEBAR_WRAPPER_ID}
       >
         <div className="panel sidebar" id={SIDEBAR_ID}>
-          <ApiNavigation currentPath={currentPath} index={index} />
+          <ComposedNavigation
+            content={content}
+            currentPath={currentPath}
+            index={index}
+          />
         </div>
         <SidebarScroll target={SIDEBAR_ID} />
       </aside>
@@ -99,13 +139,173 @@ export function isGenericVersion(label: string): boolean {
   return label.trim().toLowerCase() === "current";
 }
 
-function ApiNavigation({
+/**
+ * Authored sections and the API reference in configured order. Without
+ * authored content the API groups render alone, exactly as before.
+ */
+function ComposedNavigation({
+  content,
+  currentPath,
+  index,
+}: Readonly<{
+  content: ReaderContent | undefined;
+  currentPath: string;
+  index: ReaderIndex;
+}>) {
+  if (!hasDocs(content) || content === undefined) {
+    return (
+      <nav aria-label="API reference" id={NAVIGATION_ID}>
+        <ApiGroups currentPath={currentPath} index={index} />
+      </nav>
+    );
+  }
+  const nodes = sidebarNodes(content.navigation.items, currentPath);
+  return (
+    <nav aria-label="Documentation" className="nav-docs" id={NAVIGATION_ID}>
+      <DocsNodes currentPath={currentPath} index={index} nodes={nodes} />
+    </nav>
+  );
+}
+
+function DocsNodes({
+  currentPath,
+  index,
+  nodes,
+  depth = 0,
+}: Readonly<{
+  currentPath: string;
+  index: ReaderIndex;
+  nodes: readonly SidebarNode[];
+  depth?: number;
+}>) {
+  return (
+    <>
+      {nodes.map((node, position) => {
+        switch (node.kind) {
+          case "section":
+            return (
+              <div
+                className={`nav-group${depth > 0 ? " nav-group--nested" : ""}`}
+                key={`${node.label}-${position}`}
+              >
+                <span className="eyebrow nav-group__title">{node.label}</span>
+                {node.items.some((item) => item.kind === "section") ? (
+                  <DocsNodes
+                    currentPath={currentPath}
+                    depth={depth + 1}
+                    index={index}
+                    nodes={node.items}
+                  />
+                ) : (
+                  <ul className="nav-list">
+                    {node.items.map((item, itemPosition) => (
+                      <DocsLeaf
+                        currentPath={currentPath}
+                        index={index}
+                        key={`${item.kind}-${itemPosition}`}
+                        node={item}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          case "api":
+            return (
+              <div className="nav-api" key="api">
+                <span className="eyebrow nav-group__title nav-api__title">
+                  <a
+                    aria-current={currentPath === API_ROOT ? "page" : undefined}
+                    href={API_ROOT}
+                  >
+                    {node.label}
+                  </a>
+                </span>
+                <ApiGroups currentPath={currentPath} index={index} />
+              </div>
+            );
+          default:
+            return (
+              <ul className="nav-list" key={`${node.kind}-${position}`}>
+                <DocsLeaf currentPath={currentPath} index={index} node={node} />
+              </ul>
+            );
+        }
+      })}
+    </>
+  );
+}
+
+function DocsLeaf({
+  currentPath,
+  index,
+  node,
+}: Readonly<{
+  currentPath: string;
+  index: ReaderIndex;
+  node: SidebarNode;
+}>) {
+  switch (node.kind) {
+    case "page":
+      return (
+        <li>
+          <a
+            aria-current={node.current ? "page" : undefined}
+            className="nav-item"
+            href={node.href}
+          >
+            <span className="nav-item__label">{node.label}</span>
+          </a>
+        </li>
+      );
+    case "link":
+      return (
+        <li>
+          <a
+            className="nav-item nav-item--external"
+            href={node.href}
+            rel="noopener noreferrer"
+          >
+            <span className="nav-item__label">{node.label}</span>
+            <span aria-hidden="true" className="nav-item__external">
+              ↗
+            </span>
+            <span className="visually-hidden"> (external link)</span>
+          </a>
+        </li>
+      );
+    case "api":
+      return (
+        <li>
+          <ApiGroups currentPath={currentPath} index={index} />
+        </li>
+      );
+    case "section":
+      return (
+        <li className="nav-group nav-group--nested">
+          <span className="eyebrow nav-group__title">{node.label}</span>
+          <ul className="nav-list">
+            {node.items.map((item, position) => (
+              <DocsLeaf
+                currentPath={currentPath}
+                index={index}
+                key={`${item.kind}-${position}`}
+                node={item}
+              />
+            ))}
+          </ul>
+        </li>
+      );
+  }
+}
+
+function ApiGroups({
   currentPath,
   index,
 }: Readonly<{ currentPath: string; index: ReaderIndex }>) {
   const compact = index.operationCount > COLLAPSE_NAVIGATION_ABOVE;
   return (
-    <nav aria-label="API reference" id={NAVIGATION_ID}>
+    <>
       {index.services.map((service) => (
         <div className="nav-service" key={service.id}>
           {index.singleService ? null : (
@@ -177,7 +377,7 @@ function ApiNavigation({
           })}
         </div>
       ))}
-    </nav>
+    </>
   );
 }
 

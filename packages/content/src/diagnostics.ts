@@ -28,6 +28,7 @@ export type ContentDiagnosticCode =
   | "CONTENT_LINK_SCHEME_FORBIDDEN"
   | "CONTENT_LINK_TARGET_MISSING"
   | "CONTENT_PARSE_FAILED"
+  | "CONTENT_SOURCE_OUTSIDE_ROOT"
   | "CONTENT_UNSUPPORTED"
   | "NAVIGATION_API_DUPLICATE"
   | "NAVIGATION_DEPTH_EXCEEDED"
@@ -94,6 +95,8 @@ export const CONTENT_DIAGNOSTIC_MESSAGES: Readonly<
   CONTENT_LINK_TARGET_MISSING:
     "The internal link points at a page or API route that does not exist.",
   CONTENT_PARSE_FAILED: "The document could not be parsed as Markdown.",
+  CONTENT_SOURCE_OUTSIDE_ROOT:
+    "The authored file resolves outside the documentation root and was not compiled.",
   CONTENT_UNSUPPORTED:
     "The Markdown construct is not supported by the Specra content model.",
   NAVIGATION_API_DUPLICATE:

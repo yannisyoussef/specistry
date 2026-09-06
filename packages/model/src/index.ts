@@ -94,6 +94,8 @@ export {
   ARTIFACT_MANIFEST_FORMAT,
   parseArtifactManifest,
   serializeArtifactManifest,
+  type ArtifactAssetRecord,
+  type ArtifactBranding,
   type ArtifactManifest,
   type ArtifactSourceRecord,
   type ArtifactStatistics,

@@ -2,7 +2,8 @@
  * Reader design tokens (docs/design/reader-v1.md). The consumer supplies one
  * accent (`--brand`); every other colour derives from it and the mode. Light is
  * the default; dark applies with `data-mode="dark"` or, without an explicit
- * choice, with the system preference.
+ * choice, with the system preference. Colours are declared once with
+ * `light-dark()`, so a mode is only a `color-scheme` switch (ADR-004).
  */
 :root {
   --brand: #2a6fdb;
@@ -48,193 +49,121 @@
   --ga-dark: calc(0.06 + var(--glass-intensity) * 0.1);
   --glass-blur: calc(8px + var(--glass-intensity) * 28px);
 
-  /* Glass · light */
+  /* Glass · light is the default scheme; dark switches below. */
   color-scheme: light;
+  --panel-blur: blur(var(--glass-blur)) saturate(1.5);
+  --overlay-blur: blur(30px) saturate(1.6);
+
   --page-bg:
     radial-gradient(
       ellipse 60% 70% at 12% 0%,
-      color-mix(in oklch, var(--brand) 28%, white),
+      light-dark(
+        color-mix(in oklch, var(--brand) 28%, white),
+        color-mix(in oklch, var(--brand) 45%, #0c0c10)
+      ),
       transparent 60%
     ),
     radial-gradient(
       ellipse 50% 60% at 95% 100%,
-      color-mix(in oklch, var(--brand) 18%, white),
+      light-dark(
+        color-mix(in oklch, var(--brand) 18%, white),
+        color-mix(in oklch, var(--brand) 30%, #0c0c10)
+      ),
       transparent 60%
     ),
-    radial-gradient(ellipse 40% 40% at 60% 40%, white, transparent 70%), #eef0f3;
-  --page-bg-solid: #eef0f3;
-  --panel-bg: rgba(255, 255, 255, var(--ga-light));
-  --panel-border: rgba(255, 255, 255, 0.75);
-  --panel-blur: blur(var(--glass-blur)) saturate(1.5);
+    radial-gradient(
+      ellipse 40% 40% at 60% 40%,
+      light-dark(white, transparent),
+      transparent 70%
+    ),
+    light-dark(#eef0f3, #0b0b0e);
+  --page-bg-solid: light-dark(#eef0f3, #0b0b0e);
+  --panel-bg: light-dark(
+    rgba(255, 255, 255, var(--ga-light)),
+    rgba(255, 255, 255, var(--ga-dark))
+  );
+  --panel-border: light-dark(
+    rgba(255, 255, 255, 0.75),
+    rgba(255, 255, 255, 0.12)
+  );
   --panel-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 12px 40px rgba(20, 20, 23, 0.08);
-  --divider: rgba(20, 20, 23, 0.08);
-  --border: rgba(20, 20, 23, 0.1);
-  --border-strong: rgba(20, 20, 23, 0.22);
-  --surface: #ffffff;
-  --surface-subtle: rgba(255, 255, 255, 0.4);
-  --active-bg: rgba(255, 255, 255, 0.85);
-  --text-strong: #141417;
-  --text-body: #333338;
-  --text-muted: #6c6c73;
-  --text-faint: #93939a;
-  --brand-ink: color-mix(in oklch, var(--brand) 85%, black);
+    0 1px 0 light-dark(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.08))
+      inset,
+    0 12px 40px light-dark(rgba(20, 20, 23, 0.08), rgba(0, 0, 0, 0.5));
+  --divider: light-dark(rgba(20, 20, 23, 0.08), rgba(255, 255, 255, 0.08));
+  --border: light-dark(rgba(20, 20, 23, 0.1), rgba(255, 255, 255, 0.12));
+  --border-strong: light-dark(
+    rgba(20, 20, 23, 0.22),
+    rgba(255, 255, 255, 0.24)
+  );
+  --surface: light-dark(#ffffff, #121216);
+  --surface-subtle: light-dark(
+    rgba(255, 255, 255, 0.4),
+    rgba(255, 255, 255, 0.05)
+  );
+  --active-bg: light-dark(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.1));
+  --text-strong: light-dark(#141417, #f4f4f5);
+  --text-body: light-dark(#333338, #c4c4c9);
+  --text-muted: light-dark(#6c6c73, #9a9aa1);
+  --text-faint: light-dark(#93939a, #6f6f76);
+  --brand-ink: light-dark(
+    color-mix(in oklch, var(--brand) 85%, black),
+    color-mix(in oklch, var(--brand) 65%, white)
+  );
   --text-accent: var(--brand-ink);
-  --primary-bg: #141417;
-  --primary-fg: #ffffff;
-  --code-bg: rgba(255, 255, 255, 0.92);
-  --code-border: rgba(20, 20, 23, 0.12);
-  --code-text: #1f1f23;
+  --primary-bg: light-dark(#141417, #f4f4f5);
+  --primary-fg: light-dark(#ffffff, #0e0e10);
+  --code-bg: light-dark(rgba(255, 255, 255, 0.92), rgba(0, 0, 0, 0.45));
+  --code-border: light-dark(rgba(20, 20, 23, 0.12), rgba(255, 255, 255, 0.14));
+  --code-text: light-dark(#1f1f23, #e4e4e7);
   --code-shadow:
-    0 1px 0 rgba(255, 255, 255, 1) inset, 0 4px 14px rgba(20, 20, 23, 0.08);
-  --overlay-bg: rgba(255, 255, 255, 0.92);
-  --tab-inactive: var(--text-muted);
-  --overlay-blur: blur(30px) saturate(1.6);
-  --scrim: rgba(20, 20, 23, 0.25);
-  --m-get: #1f55ad;
-  --m-post: #178049;
-  --m-put: #8a5a00;
-  --m-patch: #8a5a00;
-  --m-delete: #d40606;
-  --m-other: #333338;
-  --status-success: #178049;
-  --status-warning: #8a5a00;
-  --status-danger: #d40606;
-  --status-info: #1f55ad;
-  --callout-warning-bg: rgba(245, 163, 0, 0.12);
-  --callout-warning-border: rgba(204, 134, 0, 0.45);
-  --syn-key: #1f55ad;
-  --syn-str: #178049;
-  --syn-num: #e25800;
-  --syn-kw: #aa0606;
-  --syn-cmt: #93939a;
+    0 1px 0 light-dark(rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.06)) inset,
+    0 4px 14px light-dark(rgba(20, 20, 23, 0.08), rgba(0, 0, 0, 0.35));
+  --overlay-bg: light-dark(rgba(255, 255, 255, 0.92), rgba(20, 20, 26, 0.9));
+  --tab-inactive: light-dark(var(--text-muted), var(--text-body));
+  --scrim: light-dark(rgba(20, 20, 23, 0.25), rgba(0, 0, 0, 0.45));
+  --m-get: light-dark(#1f55ad, #6fa3ff);
+  --m-post: light-dark(#178049, #4fc98a);
+  --m-put: light-dark(#8a5a00, #f5b942);
+  --m-patch: light-dark(#8a5a00, #f5b942);
+  --m-delete: light-dark(#d40606, #ff6f6a);
+  --m-other: light-dark(#333338, #c4c4c9);
+  --status-success: light-dark(#178049, #4fc98a);
+  --status-warning: light-dark(#8a5a00, #f5b942);
+  --status-danger: light-dark(#d40606, #ff6f6a);
+  --status-info: light-dark(#1f55ad, #6fa3ff);
+  --callout-warning-bg: light-dark(
+    rgba(245, 163, 0, 0.12),
+    rgba(245, 185, 66, 0.12)
+  );
+  --callout-warning-border: light-dark(
+    rgba(204, 134, 0, 0.45),
+    rgba(245, 185, 66, 0.4)
+  );
+  --syn-key: light-dark(#1f55ad, #8fb5ff);
+  --syn-str: light-dark(#178049, #7fd6a4);
+  --syn-num: light-dark(#e25800, #ffb27a);
+  --syn-kw: light-dark(#aa0606, #ff8f8a);
+  --syn-cmt: light-dark(#6c6c73, #9a9aa1);
+  --syn-fn: light-dark(#5b2fb3, #c4a6ff);
+  --syn-tag: light-dark(#1f55ad, #8fb5ff);
+  --syn-type: light-dark(#0e6e6a, #6fd3cd);
+  --syn-var: light-dark(#333338, #e4e4e7);
 }
 
-/* Glass · dark */
+/* Glass · dark: the scheme switch flips every light-dark() value. */
 :root[data-mode="dark"] {
   color-scheme: dark;
-  --page-bg:
-    radial-gradient(
-      ellipse 60% 70% at 10% 0%,
-      color-mix(in oklch, var(--brand) 45%, #0c0c10),
-      transparent 60%
-    ),
-    radial-gradient(
-      ellipse 50% 60% at 95% 100%,
-      color-mix(in oklch, var(--brand) 30%, #0c0c10),
-      transparent 60%
-    ),
-    #0b0b0e;
-  --page-bg-solid: #0b0b0e;
-  --panel-bg: rgba(255, 255, 255, var(--ga-dark));
-  --panel-border: rgba(255, 255, 255, 0.12);
   --panel-blur: blur(var(--glass-blur)) saturate(1.4);
-  --panel-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 20px 60px rgba(0, 0, 0, 0.5);
-  --divider: rgba(255, 255, 255, 0.08);
-  --border: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.24);
-  --surface: #121216;
-  --surface-subtle: rgba(255, 255, 255, 0.05);
-  --active-bg: rgba(255, 255, 255, 0.1);
-  --text-strong: #f4f4f5;
-  --text-body: #c4c4c9;
-  --text-muted: #9a9aa1;
-  --text-faint: #6f6f76;
-  --brand-ink: color-mix(in oklch, var(--brand) 65%, white);
-  --text-accent: var(--brand-ink);
-  --primary-bg: #f4f4f5;
-  --primary-fg: #0e0e10;
-  --code-bg: rgba(0, 0, 0, 0.45);
-  --code-border: rgba(255, 255, 255, 0.14);
-  --code-text: #e4e4e7;
-  --code-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
-  --overlay-bg: rgba(20, 20, 26, 0.9);
   --overlay-blur: blur(28px) saturate(1.4);
-  --scrim: rgba(0, 0, 0, 0.45);
-  --tab-inactive: var(--text-body);
-  --m-get: #6fa3ff;
-  --m-post: #4fc98a;
-  --m-put: #f5b942;
-  --m-patch: #f5b942;
-  --m-delete: #ff6f6a;
-  --m-other: #c4c4c9;
-  --status-success: #4fc98a;
-  --status-warning: #f5b942;
-  --status-danger: #ff6f6a;
-  --status-info: #6fa3ff;
-  --callout-warning-bg: rgba(245, 185, 66, 0.12);
-  --callout-warning-border: rgba(245, 185, 66, 0.4);
-  --syn-key: #8fb5ff;
-  --syn-str: #7fd6a4;
-  --syn-num: #ffb27a;
-  --syn-kw: #ff8f8a;
-  --syn-cmt: #6c6c73;
 }
 
 /* System preference applies only when the reader has no explicit choice. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-mode="light"]):not([data-mode="dark"]) {
     color-scheme: dark;
-    --page-bg:
-      radial-gradient(
-        ellipse 60% 70% at 10% 0%,
-        color-mix(in oklch, var(--brand) 45%, #0c0c10),
-        transparent 60%
-      ),
-      radial-gradient(
-        ellipse 50% 60% at 95% 100%,
-        color-mix(in oklch, var(--brand) 30%, #0c0c10),
-        transparent 60%
-      ),
-      #0b0b0e;
-    --page-bg-solid: #0b0b0e;
-    --panel-bg: rgba(255, 255, 255, var(--ga-dark));
-    --panel-border: rgba(255, 255, 255, 0.12);
     --panel-blur: blur(var(--glass-blur)) saturate(1.4);
-    --panel-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 20px 60px rgba(0, 0, 0, 0.5);
-    --divider: rgba(255, 255, 255, 0.08);
-    --border: rgba(255, 255, 255, 0.12);
-    --border-strong: rgba(255, 255, 255, 0.24);
-    --surface: #121216;
-    --surface-subtle: rgba(255, 255, 255, 0.05);
-    --active-bg: rgba(255, 255, 255, 0.1);
-    --text-strong: #f4f4f5;
-    --text-body: #c4c4c9;
-    --text-muted: #9a9aa1;
-    --text-faint: #6f6f76;
-    --brand-ink: color-mix(in oklch, var(--brand) 65%, white);
-    --text-accent: var(--brand-ink);
-    --primary-bg: #f4f4f5;
-    --primary-fg: #0e0e10;
-    --code-bg: rgba(0, 0, 0, 0.45);
-    --code-border: rgba(255, 255, 255, 0.14);
-    --code-text: #e4e4e7;
-    --code-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 6px 18px rgba(0, 0, 0, 0.35);
-    --overlay-bg: rgba(20, 20, 26, 0.9);
     --overlay-blur: blur(28px) saturate(1.4);
-    --scrim: rgba(0, 0, 0, 0.45);
-    --tab-inactive: var(--text-body);
-    --m-get: #6fa3ff;
-    --m-post: #4fc98a;
-    --m-put: #f5b942;
-    --m-patch: #f5b942;
-    --m-delete: #ff6f6a;
-    --m-other: #c4c4c9;
-    --status-success: #4fc98a;
-    --status-warning: #f5b942;
-    --status-danger: #ff6f6a;
-    --status-info: #6fa3ff;
-    --callout-warning-bg: rgba(245, 185, 66, 0.12);
-    --callout-warning-border: rgba(245, 185, 66, 0.4);
-    --syn-key: #8fb5ff;
-    --syn-str: #7fd6a4;
-    --syn-num: #ffb27a;
-    --syn-kw: #ff8f8a;
-    --syn-cmt: #6c6c73;
   }
 }
 

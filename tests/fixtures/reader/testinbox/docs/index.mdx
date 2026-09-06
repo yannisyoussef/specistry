@@ -1,0 +1,39 @@
+---
+title: Email testing built for automation
+description: Create disposable inboxes and receive real application emails directly from your automated tests. One API, no mail server.
+---
+
+<Cards>
+<Card title="Quickstart" href="./quickstart" description="First test email in five minutes." />
+<Card title="Authentication" href="./authentication" description="API keys, sandbox versus production." />
+<Card title="Waiting for email" href="./guides/waiting-for-email" description="Polling, timeouts, and matchers." />
+<Card title="API reference" href="/api" description="Inboxes, messages, attachments, webhooks." />
+</Cards>
+
+## The workflow
+
+<Steps>
+<Step title="Create an inbox">
+Every test gets its own address. A short `ttl` keeps the sandbox clean.
+</Step>
+<Step title="Trigger your application">
+Use the inbox address wherever your application would send email.
+</Step>
+<Step title="Wait for an email">
+[Wait for message](/api/inboxes/wait-for-message) blocks until a matching message arrives.
+</Step>
+<Step title="Assert its contents">
+Read the parsed body, links, and attachments from the [message](/api/messages/get-message).
+</Step>
+</Steps>
+
+## Install
+
+<CodeGroup>
+```bash title="npm"
+npm install @testinbox/client
+```
+```bash title="pnpm"
+pnpm add @testinbox/client
+```
+</CodeGroup>

@@ -7,6 +7,80 @@ import {
   specraConfigSchema,
 } from "./index.js";
 
+describe("navigation and branding", () => {
+  it("accepts configured navigation and a hex accent", () => {
+    const parsed = parseConfig({
+      branding: { accent: "#3366FF", logo: "./assets/logo.svg" },
+      name: "Example",
+      navigation: [
+        "introduction",
+        { label: "Start", page: "getting-started/quickstart" },
+        {
+          items: ["guides/ci", { items: ["guides/deep"], section: "Nested" }],
+          section: "Guides",
+        },
+        { api: true, label: "Reference" },
+        { label: "Status", link: "https://status.example.test" },
+      ],
+      openapi: "./openapi.yaml",
+      schemaVersion: 1,
+    });
+    expect(parsed.navigation).toHaveLength(5);
+    expect(parsed.branding?.accent).toBe("#3366FF");
+  });
+
+  it("rejects invalid navigation entries, links, and accents", () => {
+    const base = {
+      name: "Example",
+      openapi: "./openapi.yaml",
+      schemaVersion: 1,
+    } as const;
+    expect(() => parseConfig({ ...base, navigation: ["Bad Slug"] })).toThrow();
+    expect(() =>
+      parseConfig({ ...base, navigation: [{ api: false }] }),
+    ).toThrow();
+    expect(() =>
+      parseConfig({
+        ...base,
+        navigation: [{ label: "x", link: "javascript:alert(1)" }],
+      }),
+    ).toThrow();
+    expect(() =>
+      parseConfig({
+        ...base,
+        navigation: [{ label: "x", link: "https://u:p@example.test" }],
+      }),
+    ).toThrow();
+    expect(() =>
+      parseConfig({
+        ...base,
+        navigation: [{ section: "S", items: ["a"], extra: 1 }],
+      }),
+    ).toThrow();
+    expect(() =>
+      parseConfig({ ...base, branding: { accent: "red" } }),
+    ).toThrow();
+    expect(() =>
+      parseConfig({ ...base, branding: { accent: "url(x)" } }),
+    ).toThrow();
+    expect(() =>
+      parseConfig({ ...base, branding: { accent: "#abc" } }),
+    ).toThrow();
+  });
+
+  it("redacts navigation issue paths through the recursive schema", () => {
+    expect(redactIssuePath(["navigation", 2, "items", 0, "page"])).toBe(
+      "navigation.2.items.0.page",
+    );
+    expect(redactIssuePath(["navigation", 0, "link"])).toBe(
+      "navigation.0.link",
+    );
+    expect(redactIssuePath(["branding", "accent"])).toBe("branding.accent");
+    expect(isRedactedIssuePath("navigation.2.items.0.page")).toBe(true);
+    expect(isRedactedIssuePath("navigation.x")).toBe(false);
+  });
+});
+
 describe("parseConfig", () => {
   it("applies secure defaults", () => {
     expect(
@@ -83,8 +157,15 @@ describe("parseConfig", () => {
 describe("issue path redaction", () => {
   const schemaLabels = [
     "branding",
+    "branding.accent",
     "branding.favicon",
     "branding.logo",
+    "navigation",
+    "navigation.0",
+    "navigation.0.api",
+    "navigation.0.items",
+    "navigation.0.items.1.page",
+    "navigation.3.link",
     "config",
     "docs",
     "environments",

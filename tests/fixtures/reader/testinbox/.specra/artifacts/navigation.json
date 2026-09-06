@@ -1,0 +1,78 @@
+{
+  "items": [
+    {
+      "items": [
+        {
+          "kind": "page",
+          "label": "Introduction",
+          "route": "/docs/introduction"
+        },
+        {
+          "kind": "page",
+          "label": "Quickstart",
+          "route": "/docs/quickstart"
+        },
+        {
+          "kind": "page",
+          "label": "Authentication",
+          "route": "/docs/authentication"
+        }
+      ],
+      "kind": "section",
+      "label": "Getting started"
+    },
+    {
+      "items": [
+        {
+          "kind": "page",
+          "label": "Inbox lifecycle",
+          "route": "/docs/concepts/inbox-lifecycle"
+        }
+      ],
+      "kind": "section",
+      "label": "Concepts"
+    },
+    {
+      "items": [
+        {
+          "kind": "page",
+          "label": "Waiting for email",
+          "route": "/docs/guides/waiting-for-email"
+        },
+        {
+          "kind": "page",
+          "label": "Attachments",
+          "route": "/docs/guides/attachments"
+        },
+        {
+          "kind": "page",
+          "label": "CI integration",
+          "route": "/docs/guides/ci-integration"
+        }
+      ],
+      "kind": "section",
+      "label": "Guides"
+    },
+    {
+      "kind": "api",
+      "label": "API reference"
+    },
+    {
+      "items": [
+        {
+          "kind": "page",
+          "label": "Troubleshooting",
+          "route": "/docs/troubleshooting"
+        },
+        {
+          "href": "https://status.testinbox.email",
+          "kind": "link",
+          "label": "Status page"
+        }
+      ],
+      "kind": "section",
+      "label": "Resources"
+    }
+  ],
+  "navigationVersion": 1
+}

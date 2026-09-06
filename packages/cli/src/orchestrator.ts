@@ -6,6 +6,7 @@ import { DEFAULT_INGESTION_LIMITS } from "@specra/openapi";
 
 import { toDocumentId } from "./acquisition.js";
 import { removeStaleArtifacts, writeArtifacts } from "./artifacts.js";
+import { buildContent } from "./content.js";
 import { loadConfigIsolated } from "./config-loader.js";
 import {
   ARTIFACT_DIRECTORY,
@@ -59,7 +60,7 @@ export async function createBuildContext(
   return await buildContext(options);
 }
 
-/** Validates configuration, paths, and the real OpenAPI sources. */
+/** Validates configuration, paths, the OpenAPI sources, and authored content. */
 export async function validateProject(
   options: ValidationOptions = {},
 ): Promise<ValidationResult> {
@@ -67,9 +68,22 @@ export async function validateProject(
   if (!contextResult.ok) return contextResult;
   const ingested = await ingest(contextResult.context, options);
   if (!ingested.ok) return ingested;
+  if (contextResult.context.signal.aborted) return cancelled();
+  const content = await buildContent(
+    contextResult.context,
+    ingested.artifactJson,
+  );
+  const diagnostics = sortDiagnostics([
+    ...ingested.diagnostics,
+    ...content.diagnostics,
+  ]);
+  if (!content.ok) {
+    return { diagnostics, ok: false, outcome: "validation-failure" };
+  }
   return {
+    content: { assets: content.assets.length, pages: content.pages },
     context: contextResult.context,
-    diagnostics: ingested.diagnostics,
+    diagnostics,
     ingestion: ingested.ingestion,
     ok: true,
     outcome: "success",
@@ -97,16 +111,36 @@ export async function buildProject(
     }
     return ingested;
   }
+  if (context.signal.aborted) return cancelled();
+  const content = await buildContent(context, ingested.artifactJson);
+  const diagnostics = sortDiagnostics([
+    ...ingested.diagnostics,
+    ...content.diagnostics,
+  ]);
+  if (!content.ok) {
+    await removeStaleArtifacts(context.projectRoot, context.paths.artifactRoot);
+    return { diagnostics, ok: false, outcome: "validation-failure" };
+  }
   const written = await writeArtifacts({
     artifactRoot: context.paths.artifactRoot,
-    documentationJson: ingested.artifactJson,
+    assets: content.assets,
+    ...(content.branding === undefined ? {} : { branding: content.branding }),
+    ...(content.contentJson === undefined
+      ? {}
+      : {
+          contentJson: content.contentJson,
+          contentSources: content.sources,
+          navigationJson: content.navigationJson,
+          pages: content.pages,
+        }),
+    documentationJson: content.documentationJson,
     ingestion: ingested.ingestion,
     project: {
       id: ingested.projectId,
       name: context.config.name,
     },
     projectRoot: context.projectRoot,
-    warnings: ingested.diagnostics.length,
+    warnings: diagnostics.length,
   });
   if (!written.ok) {
     return failure("internal-failure", [
@@ -115,8 +149,9 @@ export async function buildProject(
   }
   return {
     artifacts: written.artifacts,
+    content: { assets: content.assets.length, pages: content.pages },
     context,
-    diagnostics: ingested.diagnostics,
+    diagnostics,
     ingestion: ingested.ingestion,
     ok: true,
     outcome: "success",

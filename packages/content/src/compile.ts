@@ -979,7 +979,11 @@ function titleFromMeta(meta: string | undefined): string | undefined | null {
   return match[1];
 }
 
-/** Docs-root-relative asset path from an image URL; relative forms only. */
+/**
+ * Page-relative asset path from an image URL. Only relative forms are kept;
+ * `..` segments survive so the build can resolve them against the page's
+ * directory and confine the result to the documentation root.
+ */
 function assetPath(url: string): string | undefined {
   if (url.length === 0 || url.length > 512) return undefined;
   if (
@@ -992,13 +996,12 @@ function assetPath(url: string): string | undefined {
   if (url.includes("?") || url.includes("#") || /[\s\0]/.test(url)) {
     return undefined;
   }
-  const segments: string[] = [];
-  for (const segment of url.split("/")) {
-    if (segment === "" || segment === ".") continue;
-    if (segment === "..") return undefined;
-    segments.push(segment);
+  const segments = url
+    .split("/")
+    .filter((segment) => segment !== "" && segment !== ".");
+  if (segments.length === 0 || segments.every((segment) => segment === "..")) {
+    return undefined;
   }
-  if (segments.length === 0) return undefined;
   return segments.join("/");
 }
 
