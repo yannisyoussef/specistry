@@ -268,7 +268,7 @@ adds a network origin to the Content Security Policy, or accepts a
 destination the build did not validate. The browser suite runs a fake target
 API on the fixture's local environment and asserts it receives zero requests
 while every control is exercised. Execution is the browser-direct playground
-(SPEC-009), which will reuse the request projection rather than a second
+([SPEC-009](playground.md)), which reuses the request projection rather than a second
 serializer.
 
 ## Extension boundary

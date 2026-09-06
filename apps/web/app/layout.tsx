@@ -12,6 +12,7 @@ import "./styles/schema.css";
 import "./styles/content.css";
 import "./styles/search.css";
 import "./styles/code.css";
+import "./styles/playground.css";
 
 import { Shell } from "../components/reader/shell";
 import { loadReaderArtifact } from "../lib/reader/artifact";
@@ -65,10 +66,12 @@ export default async function RootLayout({
           <style nonce={nonce}>{accent}</style>
         )}
         {nonce === undefined ? null : (
-          // Search needs script; without it the trigger disappears rather
-          // than sitting dead in the header (navigation still works).
+          // Search and the mobile Try it link need script; without it they
+          // disappear rather than sitting dead (navigation still works).
           <noscript>
-            <style nonce={nonce}>{".search-trigger{display:none}"}</style>
+            <style nonce={nonce}>
+              {".search-trigger,.code-bar__try{display:none}"}
+            </style>
           </noscript>
         )}
       </head>

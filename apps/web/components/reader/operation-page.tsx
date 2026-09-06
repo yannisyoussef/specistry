@@ -1,4 +1,5 @@
 import type { CodeView } from "../../lib/reader/code-view";
+import type { PlaygroundView } from "../../lib/reader/playground-view";
 import {
   schemaFocusHref,
   type ExampleView,
@@ -36,8 +37,13 @@ import {
  */
 export function OperationPage({
   code,
+  playground,
   view,
-}: Readonly<{ code?: CodeView | undefined; view: OperationView }>) {
+}: Readonly<{
+  code?: CodeView | undefined;
+  playground?: PlaygroundView | undefined;
+  view: OperationView;
+}>) {
   const singleService = view.service.href === API_ROOT;
   return (
     <article
@@ -75,7 +81,11 @@ export function OperationPage({
       </div>
 
       {code === undefined ? null : (
-        <CodeRail action={view.summary.href} view={code} />
+        <CodeRail
+          action={view.summary.href}
+          playground={playground}
+          view={code}
+        />
       )}
 
       <div className="operation__body">
@@ -194,6 +204,13 @@ export function OperationPage({
           <a className="button button--primary code-bar__action" href="#code">
             Code
           </a>
+          {playground === undefined ? null : (
+            // Needs script (it opens the Try it tab); a noscript rule in the
+            // layout hides it so it is never a dead control.
+            <a className="button code-bar__action code-bar__try" href="#try-it">
+              Try it
+            </a>
+          )}
         </nav>
       )}
     </article>

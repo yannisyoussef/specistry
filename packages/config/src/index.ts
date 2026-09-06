@@ -201,6 +201,37 @@ export function parseSdkExamplesFile(
   return sdkExamplesFileSchema.parse(value);
 }
 
+/** Response bytes the playground reads before stopping; bounded hard. */
+export const PLAYGROUND_DEFAULT_RESPONSE_LIMIT_BYTES = 1_048_576;
+export const PLAYGROUND_MAX_RESPONSE_LIMIT_BYTES = 4 * 1_048_576;
+export const PLAYGROUND_DEFAULT_TIMEOUT_MS = 30_000;
+export const PLAYGROUND_MAX_TIMEOUT_MS = 120_000;
+
+/**
+ * Browser-direct playground policy (SPEC-009). `mode` is the switch and
+ * `environments` lists, by name, the configured environments approved for
+ * live execution; nothing else is ever a destination. Limits are bounded
+ * so no project can raise them past the safety maximum.
+ */
+const playgroundSchema = z
+  .object({
+    mode: z.enum(["browser", "disabled"]).default("disabled"),
+    environments: z.array(environmentId).max(16).default([]),
+    responseLimitBytes: z
+      .number()
+      .int()
+      .min(1_024)
+      .max(PLAYGROUND_MAX_RESPONSE_LIMIT_BYTES)
+      .default(PLAYGROUND_DEFAULT_RESPONSE_LIMIT_BYTES),
+    timeoutMs: z
+      .number()
+      .int()
+      .min(1_000)
+      .max(PLAYGROUND_MAX_TIMEOUT_MS)
+      .default(PLAYGROUND_DEFAULT_TIMEOUT_MS),
+  })
+  .strict();
+
 export const specraConfigSchema = z
   .object({
     schemaVersion: z.literal(1),
@@ -221,14 +252,80 @@ export const specraConfigSchema = z
       .optional(),
     environments: z.record(environmentId, environmentSchema).default({}),
     sdks: z.array(sdkSchema).max(32).default([]),
-    playground: z
-      .object({
-        mode: z.enum(["browser", "disabled"]).default("disabled"),
-      })
-      .strict()
-      .default({ mode: "disabled" }),
+    playground: playgroundSchema.default({
+      environments: [],
+      mode: "disabled",
+      responseLimitBytes: PLAYGROUND_DEFAULT_RESPONSE_LIMIT_BYTES,
+      timeoutMs: PLAYGROUND_DEFAULT_TIMEOUT_MS,
+    }),
   })
-  .strict();
+  .strict()
+  .superRefine((config, context) => {
+    // Live execution is an explicit, per-environment opt-in: an
+    // environment configured for code examples is not thereby approved
+    // for network requests, and every listed name must exist.
+    config.playground.environments.forEach((id, index) => {
+      if (!Object.hasOwn(config.environments, id)) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "Playground environments must name a configured environment.",
+          path: ["playground", "environments", index],
+        });
+      } else if (!isExactExecutionOrigin(config.environments[id]?.baseUrl)) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "Playground environments must be exact HTTPS origins (plain HTTP only on loopback) without credentials, query, fragment, or wildcards.",
+          path: ["playground", "environments", index],
+        });
+      }
+    });
+    if (
+      config.playground.environments.length > 0 &&
+      config.playground.mode !== "browser"
+    ) {
+      context.addIssue({
+        code: "custom",
+        message:
+          'Playground environments require `playground.mode: "browser"`.',
+        path: ["playground", "mode"],
+      });
+    }
+  });
+
+/**
+ * Whether a base URL can be approved for browser execution (SPEC-009): an
+ * absolute HTTPS URL, or plain HTTP on a loopback host, with a DNS-shaped
+ * hostname and no userinfo, query, or fragment. The build re-derives the
+ * exact origin from the same URL; this check fails early, in the config.
+ */
+export function isExactExecutionOrigin(baseUrl: string | undefined): boolean {
+  if (baseUrl === undefined) return false;
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+  if (
+    parsed.username !== "" ||
+    parsed.password !== "" ||
+    parsed.search !== "" ||
+    parsed.hash !== "" ||
+    baseUrl.endsWith("?") ||
+    baseUrl.endsWith("#")
+  ) {
+    return false;
+  }
+  const hostname = parsed.hostname;
+  if (!/^[a-z0-9.-]+$|^\[[0-9a-f:.]+\]$/i.test(hostname)) return false;
+  if (parsed.protocol === "https:") return true;
+  return (
+    parsed.protocol === "http:" &&
+    ["127.0.0.1", "localhost", "[::1]"].includes(hostname)
+  );
+}
 
 export type SpecraConfig = z.output<typeof specraConfigSchema>;
 export type SpecraConfigInput = z.input<typeof specraConfigSchema>;

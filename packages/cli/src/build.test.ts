@@ -72,6 +72,7 @@ describe("buildProject", () => {
         "manifest.json",
         "search.json",
         "snippets.json",
+        "playground.json",
       ],
     });
     expect(first.ingestion.statistics).toEqual({
@@ -84,6 +85,7 @@ describe("buildProject", () => {
     expect((await readdir(artifactDirectory)).sort()).toEqual([
       "documentation.json",
       "manifest.json",
+      "playground.json",
       "search.json",
       "snippets.json",
     ]);
@@ -101,6 +103,7 @@ describe("buildProject", () => {
       diagnostics: { errors: 0, warnings: 0 },
       files: {
         documentation: "documentation.json",
+        playground: "playground.json",
         search: "search.json",
         snippets: "snippets.json",
       },
@@ -110,6 +113,14 @@ describe("buildProject", () => {
       search: {
         bytes: expect.any(Number) as number,
         documents: 2,
+        sha256: expect.stringMatching(/^[0-9a-f]{64}$/) as string,
+        version: 1,
+      },
+      playground: {
+        bytes: expect.any(Number) as number,
+        enabled: false,
+        environments: 0,
+        operations: 1,
         sha256: expect.stringMatching(/^[0-9a-f]{64}$/) as string,
         version: 1,
       },

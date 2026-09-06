@@ -47,7 +47,11 @@ describe("reader fixtures", () => {
       });
       expect(built.status, `${built.stdout}\n${built.stderr}`).toBe(0);
       expect(JSON.parse(built.stdout)).toMatchObject({ ok: true });
-      for (const file of ["documentation.json", "manifest.json"]) {
+      for (const file of [
+        "documentation.json",
+        "manifest.json",
+        "playground.json",
+      ]) {
         const fresh = await readFile(
           path.join(project, ".specra", "artifacts", file),
           "utf8",

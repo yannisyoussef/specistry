@@ -8,6 +8,7 @@ import { toDocumentId } from "./acquisition.js";
 import { removeStaleArtifacts, writeArtifacts } from "./artifacts.js";
 import { buildContent } from "./content.js";
 import { buildSearchArtifact, countSearchDocuments } from "./search.js";
+import { buildPlayground } from "./playground.js";
 import { buildSnippets } from "./snippets.js";
 import { loadConfigIsolated } from "./config-loader.js";
 import {
@@ -90,12 +91,29 @@ export async function validateProject(
     contextResult.context,
     content.documentationJson,
   );
+  if (!snippets.ok) {
+    return {
+      diagnostics: sortDiagnostics([
+        ...ingested.diagnostics,
+        ...content.diagnostics,
+        ...snippets.diagnostics,
+      ]),
+      ok: false,
+      outcome: "validation-failure",
+    };
+  }
+  const playground = buildPlayground(
+    contextResult.context,
+    content.documentationJson,
+    snippets.json,
+  );
   const diagnostics = sortDiagnostics([
     ...ingested.diagnostics,
     ...content.diagnostics,
     ...snippets.diagnostics,
+    ...playground.diagnostics,
   ]);
-  if (!snippets.ok) {
+  if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
     return { diagnostics, ok: false, outcome: "validation-failure" };
   }
   return {
@@ -105,6 +123,11 @@ export async function validateProject(
     ingestion: ingested.ingestion,
     ok: true,
     outcome: "success",
+    playground: {
+      enabled: playground.enabled,
+      environments: playground.environments,
+      operations: playground.operations,
+    },
     search: {
       documents: countSearchDocuments(content, snippets.operationTerms),
     },
@@ -161,12 +184,39 @@ export async function buildProject(
       createDiagnostic("SNIPPETS_BUILD_FAILED", artifactPath("")),
     ]);
   }
+  if (!snippets.ok) {
+    await removeStaleArtifacts(context.projectRoot, context.paths.artifactRoot);
+    return {
+      diagnostics: sortDiagnostics([
+        ...ingested.diagnostics,
+        ...content.diagnostics,
+        ...snippets.diagnostics,
+      ]),
+      ok: false,
+      outcome: "validation-failure",
+    };
+  }
+  // The playground policy is derived from the same artifacts, offline.
+  let playground;
+  try {
+    playground = buildPlayground(
+      context,
+      content.documentationJson,
+      snippets.json,
+    );
+  } catch {
+    await removeStaleArtifacts(context.projectRoot, context.paths.artifactRoot);
+    return failure("internal-failure", [
+      createDiagnostic("PLAYGROUND_BUILD_FAILED", artifactPath("")),
+    ]);
+  }
   const diagnostics = sortDiagnostics([
     ...ingested.diagnostics,
     ...content.diagnostics,
     ...snippets.diagnostics,
+    ...playground.diagnostics,
   ]);
-  if (!snippets.ok) {
+  if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
     await removeStaleArtifacts(context.projectRoot, context.paths.artifactRoot);
     return { diagnostics, ok: false, outcome: "validation-failure" };
   }
@@ -202,6 +252,12 @@ export async function buildProject(
     },
     projectRoot: context.projectRoot,
     search: { documents: search.documents, json: search.json },
+    playground: {
+      enabled: playground.enabled,
+      environments: playground.environments,
+      json: playground.json,
+      operations: playground.operations,
+    },
     snippets: {
       json: snippets.json,
       operations: snippets.operations,
@@ -222,6 +278,11 @@ export async function buildProject(
     ingestion: ingested.ingestion,
     ok: true,
     outcome: "success",
+    playground: {
+      enabled: playground.enabled,
+      environments: playground.environments,
+      operations: playground.operations,
+    },
     search: { documents: search.documents },
     snippets: {
       operations: snippets.operations,

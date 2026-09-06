@@ -15,6 +15,7 @@
     "@specra/content",
     "@specra/model",
     "@specra/openapi",
+    "@specra/playground",
     "@specra/search",
     "@specra/snippets",
     "zod"
@@ -39,6 +40,7 @@
     "@specra/content": "workspace:*",
     "@specra/model": "workspace:*",
     "@specra/openapi": "workspace:*",
+    "@specra/playground": "workspace:*",
     "@specra/search": "workspace:*",
     "@specra/snippets": "workspace:*",
     "zod": "4.5.4"

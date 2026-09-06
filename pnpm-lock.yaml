@@ -14,12 +14,18 @@ importers:
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
+      '@specra/config':
+        specifier: workspace:*
+        version: link:packages/config
       '@specra/content':
         specifier: workspace:*
         version: link:packages/content
       '@specra/model':
         specifier: workspace:*
         version: link:packages/model
+      '@specra/playground':
+        specifier: workspace:*
+        version: link:packages/playground
       '@specra/search':
         specifier: workspace:*
         version: link:packages/search
@@ -98,6 +104,9 @@ importers:
       '@specra/model':
         specifier: workspace:*
         version: link:../../packages/model
+      '@specra/playground':
+        specifier: workspace:*
+        version: link:../../packages/playground
       '@specra/search':
         specifier: workspace:*
         version: link:../../packages/search
@@ -141,6 +150,9 @@ importers:
       '@specra/openapi':
         specifier: workspace:*
         version: link:../openapi
+      '@specra/playground':
+        specifier: workspace:*
+        version: link:../playground
       '@specra/search':
         specifier: workspace:*
         version: link:../search
@@ -226,6 +238,19 @@ importers:
       yaml:
         specifier: 2.9.0
         version: 2.9.0
+    devDependencies:
+      '@types/node':
+        specifier: 24.13.3
+        version: 24.13.3
+
+  packages/playground:
+    dependencies:
+      '@specra/model':
+        specifier: workspace:*
+        version: link:../model
+      '@specra/snippets':
+        specifier: workspace:*
+        version: link:../snippets
     devDependencies:
       '@types/node':
         specifier: 24.13.3

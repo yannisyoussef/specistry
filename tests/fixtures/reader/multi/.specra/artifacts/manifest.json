@@ -6,11 +6,20 @@
   },
   "files": {
     "documentation": "documentation.json",
+    "playground": "playground.json",
     "search": "search.json",
     "snippets": "snippets.json"
   },
   "generator": "specra",
   "modelVersion": 1,
+  "playground": {
+    "bytes": 5135,
+    "enabled": false,
+    "environments": 0,
+    "operations": 10,
+    "sha256": "2ca4a4d5fc3ac2c7668a109fd5db43136277e4f53c231d10e69d6c2f5a68c550",
+    "version": 1
+  },
   "project": {
     "id": "project_3b461578d597485a",
     "name": "Acme Platform"

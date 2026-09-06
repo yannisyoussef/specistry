@@ -106,6 +106,7 @@ describe("specra build with code samples and SDK mappings", () => {
       "production",
       "sandbox",
       "local",
+      "strict",
     ]);
     expect(snippets.environments[2]?.baseUrl).toBe("http://127.0.0.1:47391/v1");
     expect(snippets.sdks.map((sdk) => sdk.id)).toEqual(["typescript", "java"]);

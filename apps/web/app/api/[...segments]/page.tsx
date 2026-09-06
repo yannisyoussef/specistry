@@ -19,6 +19,7 @@ import {
   type OperationView,
   type SchemaBlockRef,
 } from "../../../lib/reader/operation-view";
+import { createPlaygroundView } from "../../../lib/reader/playground-view";
 import { resolveRoute, type RouteTarget } from "../../../lib/reader/projection";
 import {
   createSchemaView,
@@ -224,9 +225,11 @@ export default async function ApiRoute({ params, searchParams }: Params) {
       );
     case "operation": {
       const view = operationViewFor(target);
+      const { playground } = await loadReaderArtifact();
       return (
         <OperationPage
           code={await codeViewFor(view, await searchParams)}
+          playground={createPlaygroundView(playground, view)}
           view={view}
         />
       );

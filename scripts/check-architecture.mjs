@@ -43,6 +43,16 @@ const boundaries = new Map([
     "@specra/snippets",
     { allowed: new Set(["@specra/model"]), constrained: true },
   ],
+  // The playground projects forms and executes requests from the browser
+  // (SPEC-009); it sees the model and the protocol layer only, never a
+  // parser, React, or the server.
+  [
+    "@specra/playground",
+    {
+      allowed: new Set(["@specra/model", "@specra/snippets"]),
+      constrained: true,
+    },
+  ],
   [
     "@specra/cli",
     {
@@ -51,6 +61,7 @@ const boundaries = new Map([
         "@specra/content",
         "@specra/model",
         "@specra/openapi",
+        "@specra/playground",
         "@specra/search",
         "@specra/snippets",
       ]),
@@ -64,6 +75,7 @@ const boundaries = new Map([
         "@specra/config",
         "@specra/content",
         "@specra/model",
+        "@specra/playground",
         "@specra/search",
         "@specra/snippets",
       ]),
@@ -79,6 +91,12 @@ const opaqueLoadExceptions = new Map([
   ["packages/cli/src/config-worker.ts", 1],
 ]);
 const processBoundaryExceptions = new Set(["packages/cli/src/bounded-host.ts"]);
+// The one module allowed to call the global fetch: the playground's
+// browser executor (SPEC-009). It runs only in the reader's client island;
+// every other package, the CLI, and the reader server stay network-free.
+const networkFetchExceptions = new Set([
+  "packages/playground/src/client/execute.ts",
+]);
 const processBoundaryModules = new Set(
   ["child_process", "cluster", "vm", "worker_threads"].flatMap((name) => [
     name,
@@ -123,10 +141,15 @@ const clientForbiddenPackages = new Set([
   "@specra/config",
   "@specra/content",
   "@specra/openapi",
+  "@specra/playground",
   "@specra/search",
   "@specra/snippets",
 ]);
-const clientAllowedSpecifiers = new Set(["@specra/search/client"]);
+const clientAllowedSpecifiers = new Set([
+  "@specra/playground/client",
+  "@specra/search/client",
+  "@specra/snippets/protocol",
+]);
 
 function isClientModule(source) {
   return /^(?:\s|\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)*["']use client["']/.test(
@@ -223,7 +246,12 @@ for (const component of components) {
         );
       }
     }
-    if (boundary.constrained && production && analysis.usesNetworkFetch) {
+    if (
+      boundary.constrained &&
+      production &&
+      analysis.usesNetworkFetch &&
+      !networkFetchExceptions.has(relativeFile)
+    ) {
       violations.push(
         `${relativeFile} calls the global fetch inside the ${component.name} package boundary.`,
       );
@@ -284,6 +312,17 @@ if (
     "Architecture checker self-test failed for the I/O boundary module set.",
   );
 }
+// SPEC-009: exactly one module may call the global fetch, and it is the
+// playground's browser executor; a forwarding route or a server-side
+// executor would have to widen this set in review.
+if (
+  networkFetchExceptions.size !== 1 ||
+  !networkFetchExceptions.has("packages/playground/src/client/execute.ts")
+) {
+  violations.push(
+    "Architecture checker self-test failed: the fetch exception set must contain only the playground browser executor.",
+  );
+}
 if (
   !isClientModule('"use client";\nimport x from "y";') ||
   !isClientModule("// island\n'use client';") ||
@@ -292,6 +331,9 @@ if (
   !isClientImportForbidden("@specra/content/highlight") ||
   !isClientImportForbidden("@specra/search") ||
   isClientImportForbidden("@specra/search/client") ||
+  isClientImportForbidden("@specra/snippets/protocol") ||
+  isClientImportForbidden("@specra/playground/client") ||
+  !isClientImportForbidden("@specra/playground") ||
   isClientImportForbidden("react")
 ) {
   violations.push(

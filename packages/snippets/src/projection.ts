@@ -23,6 +23,14 @@ import {
   secretPlaceholderFor,
 } from "./sanitize.js";
 import {
+  joinDelimited,
+  renderPathTemplate,
+  serializeCookieParameter,
+  serializeHeaderParameter,
+  serializePathParameter,
+  serializeQueryParameter,
+} from "./serialize.js";
+import {
   PLACEHOLDERS,
   SNIPPET_LIMITS,
   type AuthAlternative,
@@ -34,8 +42,6 @@ import {
 } from "./types.js";
 import {
   boundEnvironments,
-  encodePathLiteral,
-  encodePathValue,
   encodeQueryValue,
   serverEnvironment,
 } from "./url.js";
@@ -66,8 +72,6 @@ export interface OperationProjection {
   readonly diagnostics: readonly ProjectionDiagnostic[];
 }
 
-type Primitive = boolean | number | string | null;
-
 export function projectOperation(
   service: ApiService,
   operation: Operation,
@@ -86,7 +90,7 @@ export function projectOperation(
   for (const parameter of byLocation("path")) {
     pathValues.set(parameter.name, serializePath(parameter, registry));
   }
-  const path = renderPath(operation.path, pathValues);
+  const path = renderPathTemplate(operation.path, pathValues);
 
   const query: Pair[] = [];
   for (const parameter of byLocation("query")) {
@@ -115,7 +119,7 @@ export function projectOperation(
     const value = valueOf(parameter, registry);
     cookies.push({
       name: parameter.name,
-      value: encodeQueryValue(joinDelimited(value, ",")),
+      value: serializeCookieParameter(value),
     });
   }
 
@@ -229,115 +233,21 @@ function replaceGenericStrings(value: JsonValue, name: string): JsonValue {
   return value;
 }
 
-function primitiveText(value: JsonValue): string {
-  if (value === null) return "";
-  if (typeof value === "object") return JSON.stringify(value);
-  return sanitizeLine(String(value));
-}
-
-function isPrimitive(value: JsonValue): value is Primitive {
-  return value === null || typeof value !== "object";
-}
-
-function entriesOf(value: JsonValue): readonly (readonly [string, string])[] {
-  if (Array.isArray(value)) {
-    return value.map((item, index) => [String(index), primitiveText(item)]);
-  }
-  if (value !== null && typeof value === "object") {
-    return Object.entries(value).map(([key, item]) => [
-      sanitizeLine(key, 120),
-      primitiveText(item),
-    ]);
-  }
-  return [["", primitiveText(value)]];
-}
-
-function joinDelimited(value: JsonValue, delimiter: string): string {
-  if (isPrimitive(value)) return primitiveText(value);
-  if (Array.isArray(value)) return value.map(primitiveText).join(delimiter);
-  return entriesOf(value)
-    .flatMap(([key, item]) => [key, item])
-    .join(delimiter);
-}
-
 // --- path -----------------------------------------------------------------
 
 function serializePath(
   parameter: Parameter,
   registry: ApiService["schemas"],
 ): string {
-  const value = valueOf(parameter, registry);
-  const style =
+  const serialization =
     parameter.valueKind === "schema" && parameter.location === "path"
-      ? parameter.serialization.style
-      : "simple";
-  const explode =
-    parameter.valueKind === "schema" && parameter.location === "path"
-      ? parameter.serialization.explode
-      : false;
-  const name = parameter.name;
-  if (isPrimitive(value)) {
-    const encoded = encodePathValue(primitiveText(value));
-    switch (style) {
-      case "label":
-        return `.${encoded}`;
-      case "matrix":
-        return `;${encodePathValue(name)}=${encoded}`;
-      default:
-        return encoded;
-    }
-  }
-  const array = Array.isArray(value);
-  const items = array
-    ? value.map((item) => encodePathValue(primitiveText(item)))
-    : entriesOf(value).map(
-        ([key, item]) => [encodePathValue(key), encodePathValue(item)] as const,
-      );
-  const flat = array
-    ? (items as string[])
-    : (items as (readonly [string, string])[]).flatMap(([key, item]) => [
-        key,
-        item,
-      ]);
-  const pairs = array
-    ? (items as string[])
-    : (items as (readonly [string, string])[]).map(
-        ([key, item]) => `${key}=${item}`,
-      );
-  switch (style) {
-    case "label":
-      return explode ? `.${pairs.join(".")}` : `.${flat.join(",")}`;
-    case "matrix":
-      if (!explode) return `;${encodePathValue(name)}=${flat.join(",")}`;
-      return array
-        ? pairs.map((item) => `;${encodePathValue(name)}=${item}`).join("")
-        : pairs.map((pair) => `;${pair}`).join("");
-    default:
-      return explode && !array ? pairs.join(",") : flat.join(",");
-  }
-}
-
-/** Substitutes `{name}` in the template; unknown names become placeholders. */
-function renderPath(
-  template: string,
-  values: ReadonlyMap<string, string>,
-): string {
-  const clean = sanitizeLine(template, 2_048);
-  let result = "";
-  let rest = clean;
-  for (;;) {
-    const open = rest.indexOf("{");
-    const close = open === -1 ? -1 : rest.indexOf("}", open);
-    if (open === -1 || close === -1) {
-      result += encodePathLiteral(rest);
-      break;
-    }
-    result += encodePathLiteral(rest.slice(0, open));
-    const name = rest.slice(open + 1, close);
-    result += values.get(name) ?? placeholderFor(name);
-    rest = rest.slice(close + 1);
-  }
-  return result.startsWith("/") ? result : `/${result}`;
+      ? parameter.serialization
+      : { explode: false, style: "simple" as const };
+  return serializePathParameter(
+    parameter.name,
+    valueOf(parameter, registry),
+    serialization,
+  );
 }
 
 // --- query ----------------------------------------------------------------
@@ -346,53 +256,16 @@ function serializeQuery(
   parameter: Parameter,
   registry: ApiService["schemas"],
 ): readonly Pair[] {
-  const value = valueOf(parameter, registry);
   const serialization =
     parameter.valueKind === "schema" && parameter.location === "query"
       ? parameter.serialization
       : { allowReserved: false, explode: true, style: "form" as const };
-  const { allowReserved, explode, style } = serialization;
-  const name = encodeQueryValue(sanitizeLine(parameter.name, 120));
-  const encode = (text: string) => encodeQueryValue(text, allowReserved);
-  if (parameter.valueKind === "content") {
-    // Content-typed parameters carry a serialized document (JSON) as the value.
-    return [{ name, value: encode(JSON.stringify(value)) }];
-  }
-  if (isPrimitive(value))
-    return [{ name, value: encode(primitiveText(value)) }];
-  if (Array.isArray(value)) {
-    const items = value.map((item) => encode(primitiveText(item)));
-    if (items.length === 0) return [];
-    if (explode) return items.map((item) => ({ name, value: item }));
-    const delimiter =
-      style === "spaceDelimited"
-        ? "%20"
-        : style === "pipeDelimited"
-          ? "|"
-          : ",";
-    return [{ name, value: items.join(delimiter) }];
-  }
-  const entries = entriesOf(value);
-  if (style === "deepObject") {
-    return entries.map(([key, item]) => ({
-      name: `${name}[${encodeQueryValue(key)}]`,
-      value: encode(item),
-    }));
-  }
-  if (explode) {
-    return entries.map(([key, item]) => ({
-      name: encodeQueryValue(key),
-      value: encode(item),
-    }));
-  }
-  return [
-    {
-      name,
-      value: entries
-        .flatMap(([key, item]) => [encodeQueryValue(key), encode(item)])
-        .join(","),
-    },
-  ];
+  return serializeQueryParameter(
+    parameter.name,
+    valueOf(parameter, registry),
+    serialization,
+    parameter.valueKind === "content",
+  );
 }
 
 // --- headers --------------------------------------------------------------
@@ -401,18 +274,11 @@ function serializeSimple(
   parameter: Parameter,
   registry: ApiService["schemas"],
 ): string {
-  const value = valueOf(parameter, registry);
   const explode =
     parameter.valueKind === "schema" && parameter.location === "header"
       ? parameter.serialization.explode
       : false;
-  if (isPrimitive(value)) return primitiveText(value);
-  if (Array.isArray(value)) return value.map(primitiveText).join(",");
-  return explode
-    ? entriesOf(value)
-        .map(([key, item]) => `${key}=${item}`)
-        .join(",")
-    : joinDelimited(value, ",");
+  return serializeHeaderParameter(valueOf(parameter, registry), explode);
 }
 
 // --- bodies ---------------------------------------------------------------

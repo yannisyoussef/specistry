@@ -18,3 +18,4 @@ ADRs record decisions that constrain multiple slices or security boundaries. Sta
 | [ADR-012](012-authored-content-pipeline.md)                             | Authored content pipeline, routes, and navigation composition | ACCEPTED |
 | [ADR-013](013-build-time-self-hosted-search.md)                         | Build-time, self-hosted search                                | ACCEPTED |
 | [ADR-014](014-protocol-snippet-projection-and-explicit-sdk-mappings.md) | Protocol snippet projection and explicit SDK mappings         | ACCEPTED |
+| [ADR-015](015-browser-direct-playground.md)                             | Browser-direct playground policy and execution boundary       | ACCEPTED |

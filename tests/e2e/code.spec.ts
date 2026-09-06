@@ -1,5 +1,3 @@
-import { createServer, type Server } from "node:http";
-
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -7,12 +5,14 @@ import { expect, test, type Page } from "@playwright/test";
  * The Code rail in the production reader (SPEC-008 §182–§183): default
  * examples, language switching, environment/body/auth selection through
  * the URL, copy, SDK examples, operations without an SDK, keyboard use,
- * the no-JavaScript fallback, and the no-network canary: a fake target API
- * listens on the fixture's "local" environment and must receive nothing.
+ * the no-JavaScript fallback, and the no-network canary: the fake target
+ * API on the fixture's "local" environment (started by the Playwright
+ * config for SPEC-009) records every request and must receive nothing
+ * from the Code rail.
  */
 
 const OPERATION = "/api/inboxes/create-inbox";
-const CANARY_PORT = 47391;
+const CANARY = "http://127.0.0.1:47391";
 
 async function readyRail(page: Page) {
   const rail = page.getByRole("complementary", { name: "Code" });
@@ -26,27 +26,23 @@ function visibleExample(rail: ReturnType<Page["getByRole"]>) {
   return rail.locator(".code-switcher__panel:not([hidden]) pre");
 }
 
-// One worker: the canary server binds a fixed port once for the whole file.
+// One worker: the canary list is shared for the whole file.
 test.describe.configure({ mode: "serial" });
 
 test.describe("code rail", () => {
-  let canary: Server;
-  let hits = 0;
+  // Every request any page of this file makes to the fake target API. The
+  // API's own log is shared with the playground suite, so the page is the
+  // witness here.
+  const hits: string[] = [];
 
-  test.beforeAll(async () => {
-    canary = createServer((request, response) => {
-      hits += 1;
-      response.statusCode = 500;
-      response.end("canary");
+  test.beforeEach(({ page }) => {
+    page.on("request", (request) => {
+      if (request.url().startsWith(CANARY)) hits.push(request.url());
     });
-    await new Promise<void>((resolve) =>
-      canary.listen(CANARY_PORT, "127.0.0.1", resolve),
-    );
   });
 
-  test.afterAll(async () => {
-    await new Promise<void>((resolve) => canary.close(() => resolve()));
-    expect(hits, "the target API must never be called").toBe(0);
+  test.afterAll(() => {
+    expect(hits, "the target API must never be called").toEqual([]);
   });
 
   test("shows cURL by default and switches between all six protocol languages", async ({
@@ -231,7 +227,10 @@ test.describe("code rail", () => {
     const response = await request.get(OPERATION);
     const html = await response.text();
     expect(html.length).toBeLessThan(200 * 1_024);
-    expect(html).not.toContain("Try it");
+    // SPEC-009: the Try it tab needs script and is never in the server HTML;
+    // the mobile bar link is, hidden by the layout's noscript rule.
+    expect(html).not.toContain('role="tablist"');
+    expect(html).not.toContain('type="password"');
     expect(html).not.toContain("Coming soon");
   });
 

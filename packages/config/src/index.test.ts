@@ -93,7 +93,12 @@ describe("parseConfig", () => {
     ).toEqual(
       expect.objectContaining({
         docs: "./docs",
-        playground: { mode: "disabled" },
+        playground: {
+          environments: [],
+          mode: "disabled",
+          responseLimitBytes: 1_048_576,
+          timeoutMs: 30_000,
+        },
       }),
     );
   });
@@ -259,6 +264,61 @@ describe("sdks", () => {
   });
 });
 
+describe("playground opt-in", () => {
+  const base = {
+    environments: {
+      local: { baseUrl: "http://127.0.0.1:4010" },
+      production: { baseUrl: "https://api.example.com" },
+    },
+    name: "Example",
+    openapi: "./openapi.yaml",
+    schemaVersion: 1,
+  } as const;
+
+  it("approves only listed environments under browser mode", () => {
+    const parsed = parseConfig({
+      ...base,
+      playground: { environments: ["local"], mode: "browser" },
+    });
+    expect(parsed.playground).toEqual({
+      environments: ["local"],
+      mode: "browser",
+      responseLimitBytes: 1_048_576,
+      timeoutMs: 30_000,
+    });
+  });
+
+  it("rejects unknown environments, listed environments without browser mode, and limits past the maximum", () => {
+    expect(() =>
+      parseConfig({
+        ...base,
+        playground: { environments: ["staging"], mode: "browser" },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseConfig({ ...base, playground: { environments: ["local"] } }),
+    ).toThrow();
+    expect(() =>
+      parseConfig({
+        ...base,
+        playground: { mode: "browser", responseLimitBytes: 5 * 1_048_576 },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseConfig({
+        ...base,
+        playground: { mode: "browser", timeoutMs: 600_000 },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseConfig({
+        ...base,
+        playground: { mode: "browser", resolveDestination: () => "x" },
+      }),
+    ).toThrow();
+  });
+});
+
 describe("issue path redaction", () => {
   const schemaLabels = [
     "branding",
@@ -283,6 +343,10 @@ describe("issue path redaction", () => {
     "openapi.12",
     "playground",
     "playground.mode",
+    "playground.environments",
+    "playground.environments.0",
+    "playground.responseLimitBytes",
+    "playground.timeoutMs",
     "schemaVersion",
     "sdks",
     "sdks.0",
