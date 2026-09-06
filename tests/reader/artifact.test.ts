@@ -129,7 +129,7 @@ describe("reader artifact boundary", () => {
       },
     );
     const loaded = await loadReaderArtifact(project);
-    expect(loaded.index.operationCount).toBe(13);
+    expect(loaded.index.operationCount).toBe(14);
   });
 });
 

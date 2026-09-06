@@ -14,3 +14,4 @@ ADRs record decisions that constrain multiple slices or security boundaries. Sta
 | [ADR-008](008-cli-orchestration-and-config-execution.md)     | CLI orchestration and config execution                      | ACCEPTED |
 | [ADR-009](009-openapi-ingestion-and-source-isolation.md)     | OpenAPI ingestion, acquisition policy, and parser isolation | ACCEPTED |
 | [ADR-010](010-reader-projection-and-operation-urls.md)       | Reader projection boundary and operation URL policy         | ACCEPTED |
+| [ADR-011](011-schema-display-names.md)                       | Schema display names in canonical model v1 (additive)       | ACCEPTED |

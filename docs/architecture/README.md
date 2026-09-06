@@ -130,7 +130,18 @@ flowchart LR
 - **Source model:** original JSON/YAML bytes and origin metadata; immutable input, retained only for diagnostics when policy permits.
 - **Parser model:** adapter-private representation retaining OpenAPI vocabulary and source pointers. It never crosses package boundaries into rendering.
 - **Normalized model:** the canonical model in `@specra/model`; source-independent semantics, stable IDs, normalized methods/statuses, explicit unsupported nodes and diagnostics.
-- **Rendering model:** small derived view state for a route or component. It may add presentation grouping, but never source semantics. SPEC-004 implements it as the reader projection in `apps/web/lib/reader` (route identity, navigation grouping, operation views, schema summaries, page metadata), documented in ADR-010.
+- **Rendering model:** small derived view state for a route or component. It may add presentation grouping, but never source semantics. SPEC-004 implements it as the reader projection in `apps/web/lib/reader` (route identity, navigation grouping, operation views, page metadata), documented in ADR-010; SPEC-005 adds the schema view projection (`schema-view.ts`), a bounded, context-aware tree over the canonical schema registry that the server renderer turns into native-disclosure HTML.
+
+  ```text
+  Canonical schema registry (ApiService.schemas, SchemaId → SchemaNode)
+            ↓ createSchemaView(node, { context, registry, budget })
+  Schema view projection (SchemaView tree with structural locators)
+            ↓ <SchemaBlock> / <SchemaDisclosure> (React Server Components)
+  Server HTML with native <details>/<summary> disclosures
+            ↓ (no client state; the focused view is a validated query on the operation route)
+  ```
+
+  Renderer state ownership: the server owns everything. Expansion identity is the structural locator, disclosure state is the browser's native `open` attribute, recursion is decided by the ancestry of registry IDs during projection, and the only "navigation state" is the `?schema=&at=` query of the focused view. Budgets (depth 6, 400 nodes, 200 properties, 20 variants, 200 enum values) live in `DEFAULT_SCHEMA_BUDGET` and are enforced in the projection, never in the renderer. See the [reader reference](../reader.md#schema-rendering) and ADR-011 for the additive schema-name contract.
 
 There is no second domain model between normalized and canonical. Search and snippets derive their own purpose-built documents from canonical input rather than mutating it.
 

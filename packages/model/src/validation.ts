@@ -1528,6 +1528,7 @@ const SCHEMA_METADATA_KEYS = [
   "examples",
   "extensions",
   "kind",
+  "name",
   "readOnly",
   "title",
   "writeOnly",
@@ -1610,6 +1611,13 @@ function validateSchemaMetadata(
   path: string,
   diagnostics: Map<string, CanonicalDiagnostic>,
 ): void {
+  // A display name is optional, but when present it must be a non-empty string.
+  if (
+    value.name !== undefined &&
+    (typeof value.name !== "string" || value.name.length === 0)
+  ) {
+    add(diagnostics, "INVALID_SCHEMA", `${path}/name`);
+  }
   validateOptionalString(
     value.title,
     `${path}/title`,

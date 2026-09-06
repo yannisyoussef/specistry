@@ -49,7 +49,75 @@ Group slugs are slugified tag names; operation slugs are the contract `operation
 
 In order: breadcrumb, title (with a `Deprecated` badge when applicable), method and path with a copy control, description, deprecation callout, authentication (OR alternatives of AND-joined schemes, anonymous alternatives spelled out), parameters grouped by location with required/optional/deprecated stated in words, request body per media type with a schema summary and one level of properties, responses in deterministic order (numeric codes, `1XX`–`5XX` ranges, `default`) with headers and either media blocks or "No response body", and the servers the operation applies to.
 
-Schema detail is deliberately restrained: a type phrase, a constraints line, and direct properties (capped at 200 rows). Nested structure is announced as not expanded; the SPEC-005 schema renderer replaces this summary. Contract examples are shown verbatim as pretty-printed JSON, truncated at 4,000 characters with a visible notice.
+Contract examples are shown verbatim as pretty-printed JSON, truncated at 4,000 characters with a visible notice. Schemas are rendered by the schema renderer described below.
+
+## Schema rendering
+
+The renderer (SPEC-005) explains canonical schema projections without becoming a JSON Schema engine. It runs on the server in two steps: `apps/web/lib/reader/schema-view.ts` projects a canonical `SchemaNode` into a bounded, context-aware `SchemaView` tree, and `apps/web/components/reader/schema/` lays that tree out as HTML with native `<details>` disclosures. No client JavaScript is involved.
+
+### What each canonical kind reads as
+
+| Canonical node                            | Reads as                                                                                                                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `scalar`                                  | `string`, `string · email`, `integer`, `string · enum`, `string · constant`; constraints as `1–254 chars`, `0–10`, `default 3`, `always card`                            |
+| `any`                                     | `any value` with the note "Free-form: no constraints are declared."                                                                                                      |
+| `boolean-schema` `true` / `false`         | `any value` / `no value` with the note "Explicit `true`/`false` schema: …" so they never look like empty objects                                                         |
+| `type-less`                               | `unspecified type` (`constant` or `enum` when only those keywords exist) with the note "No type is declared; the constraints apply to … values."                         |
+| `unknown`                                 | `not represented` with the reason (unsupported vocabulary, invalid source, unresolved reference) and a pointer to the build diagnostics                                  |
+| `object`                                  | property rows in canonical display order; `map of X` when it declares no properties and typed additional properties; "No additional properties are allowed." when closed |
+| `array` / `tuple`                         | `array of User`, `tuple of 3 items` with slot rows and the remainder rule                                                                                                |
+| `composition` `allOf` / `oneOf` / `anyOf` | "All of the following, combined:", "Exactly one of the following:", "One or more of the following (any combination):" with each part or variant as its own disclosure    |
+| `composition` `not`                       | `not string` with a "must not match" row                                                                                                                                 |
+| `ref`                                     | the definition's display `name` (ADR-011), then its `title`, then its shape                                                                                              |
+
+`X or null` (an `anyOf`/`oneOf` of one schema and `null`) reads as `X or null` on the concrete schema rather than as a two-variant composition.
+
+### References and recursion
+
+Registry entries carry their definition name, so references read as `User`, `array of Address`, or `Payment`, never as an ID. A referenced structure is expanded inline within the budgets below and offers "Open User ↗", which renders that definition as the root of a focused view. When a reference points at a schema that is already open above it (direct, indirect, array, or composed recursion), the renderer shows `↻ User · recursive` with an "Open" link instead of expanding, so recursion never grows the DOM. The focused view of a recursion marker opens exactly one more level and marks the next repetition the same way.
+
+### Composition and polymorphism
+
+`allOf` is never flattened: each part is a disclosure (open by default) labelled by its name, so provenance, required sets, and annotations stay visible. `oneOf` and `anyOf` are disclosure lists (closed by default) with distinct wording; a discriminator renders as "Selected by `type`: `card` → CardPayment, …", each value linking to its variant, and every variant shows the values that select it. Compositions beyond twenty variants show the count and a link to the focused view.
+
+### Request and response context
+
+Every block knows whether it documents a request (request bodies, parameters) or a response (response bodies, headers), and the media-type header says so ("Request schema" / "Response schema"). In request context, read-only properties are omitted; in response context, write-only properties are omitted. The omission is always stated on the object: "Not sent in requests (read-only): id, createdAt" or "Not returned in responses (write-only): password". Properties that remain keep their `read-only`/`write-only` flag. The same referenced schema therefore renders differently in the two contexts, and nothing is cached across contexts.
+
+### Expansion behaviour and budgets
+
+The root of a block shows its own line and its first level open; nested structure sits behind native disclosures that are closed by default. Budgets (`DEFAULT_SCHEMA_BUDGET`) bound every block:
+
+| Budget                | Value | When exceeded                                                                        |
+| --------------------- | ----- | ------------------------------------------------------------------------------------ |
+| Nesting depth         | 6     | "nested deeper than shown" with an "Open …" link to the focused view                 |
+| View nodes per block  | 400   | "more than shown here" with an "Open …" link                                         |
+| Properties shown open | 30    | the rest sits behind "Show N more properties"                                        |
+| Properties per object | 200   | "N further properties not shown here" with "Open all N properties"                   |
+| Variants              | 20    | "N further variants not shown here" with "Open all N variants"                       |
+| Enum values previewed | 8     | the rest behind "Show N more values"; beyond 200, "N further values not listed here" |
+
+Expansion identity is a structural locator from the block root (`p3.i.v1`: property 3, its items, variant 1), never object identity, so the same schema in two branches has two locators and every locator resolves deterministically in both contexts.
+
+### Focused view
+
+Links from recursion markers, budget cut-offs, and named references open `/api/<group>/<operation>?schema=<block>&at=<locator>`: the operation page renders that node as the root, with a trail (`Request body · application/json › content › HtmlContent`), the method and path, and a "Back to <operation>" link. Both query values are matched against strict grammars (`schema` is a block anchor, `at` is a locator of at most 40 steps) before any lookup; anything else redirects to the operation. Focused views carry `robots: noindex` and a canonical link to the operation, so they add no indexable URLs.
+
+### Accessibility and no-script behaviour
+
+Disclosures are native `<details>`/`<summary>` pairs, so Enter and Space toggle them, focus stays on the control, and the expanded state is announced by the platform; there is no ARIA tree. Summary labels are short ("3 properties", "items", "3 variants") with the property name appended visually hidden ("3 properties of content"), which keeps screen-reader output proportional to the structure rather than repeating "property, type, required" for every row. Required state, read/write state, deprecation, recursion, and budget cut-offs are words, not colour. Without JavaScript everything still works: disclosures open natively and the focused view is a plain link.
+
+### Known projection limitations
+
+- Definition names are display data and may repeat inside one registry (two files that both define `User`); the reader shows them as they are and relies on IDs for navigation.
+- `allOf` parts are shown separately; the renderer does not compute the merged object or detect conflicting constraints.
+- Discriminator mapping links resolve only to variants of the same composition; values mapped to schemas outside it show the name without a link.
+- Schema-level `examples` are not rendered; media-type examples are (SPEC-004 policy).
+- Deep links exist for variants (`#<block>--<locator>`) and focused views only; individual property rows are not addressable.
+
+### Performance
+
+Measured by `pnpm test:performance` (`tests/performance/schema-render.test.ts`, evidence in `schema-measurements.json`): a 20-property object renders as ~200 elements, a 200-property object as ~1,950 elements and 69 KB, a worst-case block at the node budget as ~5,100 elements and ~190 KB, and the edge fixture's largest response as ~3,000 elements and 114 KB; projection takes well under a millisecond in every case and rendering under 35 ms. The complex-page HTML budget is 512 KiB uncompressed (edge fixture), the TestInbox pages stay under 200 KiB, and the focused view of a 250-property object stays under 6,000 DOM elements. Client JavaScript is unchanged by the renderer.
 
 Contracts above 150 operations switch to a compact navigation: every group is listed, only the current group expands, and the reference index previews eight operations per group with a link to the full group page.
 
@@ -77,5 +145,7 @@ Measured on the TestInbox fixture (25 operations) and enforced in CI:
 | Operation page HTML                          | ~77 KB   | 200 KiB (browser test)        |
 | Navigation with 600 operations (server HTML) | static   | no client nodes per item      |
 | Navigation above 150 operations              | compact  | one expanded group per page   |
+| Schema block, 200 properties (server HTML)   | ~69 KB   | 400 view nodes per block      |
+| Complex operation page HTML (edge fixture)   | ~456 KB  | 512 KiB (browser test)        |
 
 The framework bootstrap (React 19 and the Next runtime, about 130 KB gzip) dominates; the reader's own client code is the two islands.

@@ -104,3 +104,36 @@ test.describe("mobile reader", () => {
     expect(await horizontalOverflow(page)).toBe(0);
   });
 });
+
+test.describe("schema renderer on mobile", () => {
+  test("keeps complex schemas readable at 375 and 320 CSS px with touch-sized disclosures", async ({
+    page,
+  }) => {
+    await page.goto("/api/messages/get-message");
+    expect(await horizontalOverflow(page)).toBe(0);
+    const summary = page.locator("#response-200-application-json summary", {
+      hasText: "3 variants",
+    });
+    const box = await summary.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await summary.tap();
+    await page.locator("summary", { hasText: "MultipartContent" }).tap();
+    await page.locator("summary", { hasText: /^items of parts$/ }).tap();
+    await expect(page.getByText("recursive").first()).toBeVisible();
+    expect(await horizontalOverflow(page)).toBe(0);
+    await page.setViewportSize({ height: 640, width: 320 });
+    await page.goto("http://127.0.0.1:3101/api/operations/schema-shapes");
+    expect(await horizontalOverflow(page)).toBe(0);
+    const big = page.locator(".schema-row", { hasText: /^bigObject/ }).first();
+    await big.locator("summary", { hasText: "250 properties" }).tap();
+    await big.getByText("Show 170 more properties").tap();
+    expect(await horizontalOverflow(page)).toBe(0);
+    // Nested indentation stays bounded: the deepest guide is still on screen.
+    const deep = page.locator(".schema-row", { hasText: /^deepTree/ }).first();
+    await deep.locator("summary").first().tap();
+    const guides = deep.locator(".schema-children");
+    const last = await guides.last().boundingBox();
+    expect((last?.x ?? 0) + (last?.width ?? 0)).toBeLessThanOrEqual(320);
+    expect(last?.width ?? 0).toBeGreaterThan(180);
+  });
+});

@@ -92,3 +92,100 @@ test("navigation · long sidebar and reference index", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Navigation" })).toBeVisible();
   await expect(page).toHaveScreenshot("drawer-mobile-light.png");
 });
+
+/**
+ * Schema renderer states (SPEC-005): the same fixtures the browser suite
+ * asserts semantically, captured for the approved Glass design.
+ */
+test.describe("schema renderer", () => {
+  test("simple object · desktop light and dark", async ({ page }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/api/inboxes/create-inbox#request-body", "light");
+    await expect(page).toHaveScreenshot("schema-object-desktop-light.png");
+    await settle(page, "/api/inboxes/create-inbox#request-body", "dark");
+    await expect(page).toHaveScreenshot("schema-object-desktop-dark.png");
+  });
+
+  test("oneOf with discriminator, expanded variant, and recursion marker", async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/api/messages/get-message#responses", "light");
+    const response = page.locator("#response-200-application-json");
+    await response.locator("summary", { hasText: "3 variants" }).click();
+    await response.locator("summary", { hasText: "MultipartContent" }).click();
+    await response.locator("summary", { hasText: /^items of parts$/ }).click();
+    await response.scrollIntoViewIfNeeded();
+    await expect(page).toHaveScreenshot("schema-variants-desktop-light.png", {
+      fullPage: true,
+    });
+  });
+
+  test("composed allOf and deep nesting · dark", async ({ page }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/api/webhooks/create-webhook#responses", "dark");
+    const response = page.locator("#response-201-application-json");
+    await response.scrollIntoViewIfNeeded();
+    await expect(page).toHaveScreenshot("schema-allof-desktop-dark.png", {
+      fullPage: true,
+    });
+    await settle(page, "/api/operations/schema-shapes", "dark", EDGE_URL);
+    const deep = page.locator(".schema-row", { hasText: /^deepTree/ }).first();
+    await deep.locator("summary").first().click();
+    await deep.scrollIntoViewIfNeeded();
+    await expect(page).toHaveScreenshot("schema-deep-desktop-dark.png");
+  });
+
+  test("large schema bounded state and focused view", async ({ page }) => {
+    await page.setViewportSize(viewports.laptop);
+    await settle(
+      page,
+      "/api/operations/schema-shapes?schema=response-200-application-json&at=p22",
+      "light",
+      EDGE_URL,
+    );
+    await expect(page).toHaveScreenshot("schema-large-focus-laptop-light.png");
+  });
+
+  test("read and write context difference", async ({ page }) => {
+    await page.setViewportSize(viewports.desktop);
+    await settle(page, "/api/operations/replace-profile", "light", EDGE_URL);
+    await page.locator("#request-body").scrollIntoViewIfNeeded();
+    await expect(page).toHaveScreenshot("schema-context-desktop-light.png", {
+      fullPage: true,
+    });
+  });
+
+  test("complex schema on mobile · 375 and 320", async ({ page }) => {
+    // Disclosure state is set directly: this captures the open layout, while
+    // the mobile browser suite proves the taps themselves.
+    const openVariants = async () => {
+      const response = page.locator("#response-200-application-json");
+      await response
+        .locator("details")
+        .filter({ has: page.locator("summary", { hasText: "3 variants" }) })
+        .first()
+        .evaluate((node) => {
+          (node as HTMLDetailsElement).open = true;
+        });
+      await response
+        .locator("details.schema-variant__details")
+        .nth(1)
+        .evaluate((node) => {
+          (node as HTMLDetailsElement).open = true;
+        });
+    };
+    await page.setViewportSize(viewports.mobile);
+    await settle(page, "/api/messages/get-message#responses", "light");
+    await openVariants();
+    await expect(page).toHaveScreenshot("schema-mobile-375-light.png", {
+      fullPage: true,
+    });
+    await page.setViewportSize({ height: 640, width: 320 });
+    await settle(page, "/api/messages/get-message#responses", "dark");
+    await openVariants();
+    await expect(page).toHaveScreenshot("schema-mobile-320-dark.png", {
+      fullPage: true,
+    });
+  });
+});

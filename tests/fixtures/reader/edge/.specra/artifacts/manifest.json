@@ -15,15 +15,15 @@
   },
   "sources": [
     {
-      "bytes": 8040,
+      "bytes": 33255,
       "path": "openapi.yaml",
-      "sha256": "c600c11e44ef00a7b4f27c3255d2bd6c9f394a801e8169f6d1d784a4f462bda2"
+      "sha256": "64bd6df794fc56556cb61c4b6ba518ba60bac9677c1899f22d79d31b37004b08"
     }
   ],
   "statistics": {
     "documents": 1,
-    "operations": 13,
-    "references": 6,
-    "schemas": 1
+    "operations": 14,
+    "references": 20,
+    "schemas": 14
   }
 }

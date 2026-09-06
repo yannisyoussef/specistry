@@ -10,3 +10,5 @@ tests/fixtures/openapi/adversarial/malformed.yaml
 prompts
 # Canonical artifacts are byte-exact CLI output, never reformatted.
 tests/fixtures/reader/*/.specra/
+# Hostile fixture with a 2,000-character mapping key that YAML formatters reject.
+tests/fixtures/reader/edge/openapi.yaml

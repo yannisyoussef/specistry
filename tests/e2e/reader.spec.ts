@@ -389,3 +389,260 @@ test.describe("desktop reader", () => {
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });
 });
+
+test.describe("schema renderer", () => {
+  test("renders nested schemas as native disclosures that work with the keyboard", async ({
+    page,
+  }) => {
+    await page.goto("/api/messages/get-message");
+    const response = page.locator("#response-200-application-json");
+    await expect(response.locator(".media-block__context")).toHaveText(
+      "Response schema",
+    );
+    // Recursion is a marker, never inline expansion: MultipartContent parts
+    // reference MessageContent, which is already open above.
+    await expect(
+      response.getByText("Exactly one of the following:"),
+    ).toBeHidden();
+    const summary = response.locator("summary", { hasText: "3 variants" });
+    await summary.focus();
+    await expect(summary).toBeFocused();
+    await page.keyboard.press("Enter");
+    expect(
+      await summary.evaluate(
+        (node) => (node.parentElement as HTMLDetailsElement).open,
+      ),
+    ).toBe(true);
+    await expect(summary).toBeFocused();
+    await expect(
+      response.getByText("Exactly one of the following:"),
+    ).toBeVisible();
+    const multipart = response.locator("summary", {
+      hasText: "MultipartContent",
+    });
+    await multipart.focus();
+    await page.keyboard.press("Space");
+    await expect(
+      response.getByText("Nested parts; a part may itself be multipart."),
+    ).toBeVisible();
+    await response.locator("summary", { hasText: /^items of parts$/ }).click();
+    await expect(response.getByText("recursive").first()).toBeVisible();
+    expect(
+      await response.locator("[role='tree'], [role='treeitem']").count(),
+    ).toBe(0);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+
+  test("links discriminator values to their variants and opens a focused view with a trail", async ({
+    page,
+  }) => {
+    await page.goto("/api/messages/get-message");
+    const response = page.locator("#response-200-application-json");
+    await response.locator("summary", { hasText: "3 variants" }).click();
+    await response.getByRole("link", { name: "HtmlContent" }).first().click();
+    await expect(page).toHaveURL(/#response-200-application-json--p\d+-v1$/);
+    await expect(page.locator(".schema-variant__details:target")).toContainText(
+      "HtmlContent",
+    );
+    await page
+      .getByRole("link", { name: "Open MessageContent" })
+      .first()
+      .click();
+    await expect(page).toHaveURL(
+      /\/api\/messages\/get-message\?schema=response-200-application-json&at=p\d+$/,
+    );
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("content");
+    await expect(
+      page.getByRole("navigation", { name: "Schema position" }),
+    ).toContainText("Response 200 · application/json");
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+      "content",
+      /noindex/,
+    );
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      /\/api\/messages\/get-message$/,
+    );
+    await expect(page.getByText("Exactly one of the following:")).toBeVisible();
+    await page.getByRole("link", { name: /Back to Get message/ }).click();
+    await expect(page).toHaveURL(
+      /\/api\/messages\/get-message#response-200-application-json$/,
+    );
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+
+  test("redirects malformed or unknown schema queries to the operation", async ({
+    request,
+  }) => {
+    for (const query of [
+      "schema=../../etc",
+      "schema=response-200-application-json&at=p0/..",
+      "schema=nope",
+      "schema=response-200-application-json&at=p99",
+      "schema=response-200-application-json&at=%3Cscript%3E",
+    ]) {
+      const response = await request.get(`/api/messages/get-message?${query}`, {
+        maxRedirects: 0,
+      });
+      expect(response.status(), query).toBe(307);
+      expect(response.headers()["location"], query).toMatch(
+        /\/api\/messages\/get-message$/,
+      );
+    }
+  });
+
+  test("keeps request and response context apart for the same referenced schema", async ({
+    page,
+  }) => {
+    await page.goto(`${EDGE_URL}/api/operations/replace-profile`);
+    const request = page.locator("#request-body-application-json");
+    const response = page.locator("#response-200-application-json");
+    await expect(request).toContainText(
+      "Not sent in requests (read-only): id, createdAt",
+    );
+    await expect(request).toContainText("password");
+    await expect(
+      request.locator(".row__name", { hasText: /^id$/ }),
+    ).toHaveCount(0);
+    await expect(response).toContainText(
+      "Not returned in responses (write-only): password, recoveryEmail",
+    );
+    await expect(
+      response.locator(".row__name", { hasText: /^password$/ }),
+    ).toHaveCount(0);
+    await expect(
+      response.locator(".row__name", { hasText: /^id$/ }),
+    ).toHaveCount(1);
+  });
+
+  test("bounds hostile and oversized schemas and keeps every string inert", async ({
+    page,
+    request,
+  }) => {
+    const raw = await request.get(`${EDGE_URL}/api/operations/schema-shapes`);
+    const html = await raw.text();
+    // Complex-page HTML budget: the largest fixture page (250-property object,
+    // 300-value enum, 25 variants, deep chain, 2,000-character name) stays
+    // under 512 KiB uncompressed; the TestInbox pages stay under 200 KiB.
+    expect(Buffer.byteLength(html, "utf8")).toBeLessThan(512 * 1_024);
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("dialog", (dialog) => void dialog.dismiss());
+    await page.goto(`${EDGE_URL}/api/operations/schema-shapes`);
+    const body = page.locator("#response-200-application-json");
+    await expect(body).toContainText("<img src=x onerror=alert(1)>");
+    expect(await body.locator("img").count()).toBe(0);
+    await expect(
+      body.locator(".row__name", { hasText: "__proto__" }),
+    ).toHaveCount(1);
+    await expect(
+      body.locator(".row__name", { hasText: "x".repeat(200) }),
+    ).toHaveCount(1);
+    expect(await horizontalOverflow(page)).toBe(0);
+    // Large enum: preview, disclosure, dropped count.
+    const largeEnum = body.locator(".schema-row", { hasText: "largeEnum" });
+    await expect(largeEnum.locator(".schema-enum__value:visible")).toHaveCount(
+      8,
+    );
+    await largeEnum
+      .locator("summary", { hasText: "Show 192 more values" })
+      .click();
+    await expect(largeEnum.locator(".schema-enum__value:visible")).toHaveCount(
+      200,
+    );
+    await expect(
+      largeEnum.getByText("100 further values not listed here."),
+    ).toBeVisible();
+    // 250 properties: 30 shown, 170 behind a disclosure, 50 via the focused view.
+    const big = body.locator(".schema-row", { hasText: /^bigObject/ }).first();
+    await big.locator("summary", { hasText: "250 properties" }).click();
+    await expect(big.getByText("Show 170 more properties")).toBeVisible();
+    await expect(
+      big.getByText("50 further properties not shown here."),
+    ).toBeVisible();
+    await big.getByRole("link", { name: "Open all 250 properties" }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "bigObject",
+    );
+    await expect(
+      page.locator(".schema > .schema-rows > .schema-row"),
+    ).toHaveCount(30);
+    await expect(page.getByText("Show 170 more properties")).toBeVisible();
+    expect(
+      await page.evaluate(() => document.querySelectorAll("*").length),
+    ).toBeLessThan(6_000);
+    // Twenty-five variants render bounded, deep nesting stops with a link.
+    await page.goto(`${EDGE_URL}/api/operations/schema-shapes`);
+    await expect(
+      body.locator(".schema-row", { hasText: /^manyVariants/ }).first(),
+    ).toContainText("5 further variants not shown here");
+    const deep = body.locator(".schema-row", { hasText: /^deepTree/ }).first();
+    // Open every nested disclosure: the chain stops at the depth budget with a
+    // link rather than growing without end.
+    for (let level = 0; level < 12; level += 1) {
+      const closed = deep.locator("details:not([open]) > summary").first();
+      if ((await closed.count()) === 0) break;
+      await closed.click();
+    }
+    await expect(
+      deep.getByText("nested deeper than shown").first(),
+    ).toBeVisible();
+    expect(await deep.locator("details").count()).toBeLessThanOrEqual(7);
+    expect(errors).toEqual([]);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  });
+
+  test("keeps disclosure controls visible in forced colors and instant under reduced motion", async ({
+    page,
+  }) => {
+    await page.emulateMedia({
+      forcedColors: "active",
+      reducedMotion: "reduce",
+    });
+    await page.goto("/api/messages/get-message");
+    const summary = page.locator("#response-200-application-json summary", {
+      hasText: "3 variants",
+    });
+    await summary.focus();
+    expect(
+      await summary.evaluate((node) => getComputedStyle(node).outlineStyle),
+    ).toBe("solid");
+    await summary.click();
+    const guide = page
+      .locator("#response-200-application-json .schema-children")
+      .first();
+    expect(
+      await guide.evaluate((node) => getComputedStyle(node).borderLeftStyle),
+    ).toBe("solid");
+    expect(
+      Number.parseFloat(
+        await summary.evaluate(
+          (node) => getComputedStyle(node, "::before").transitionDuration,
+        ),
+      ),
+    ).toBeLessThan(0.001);
+  });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("expands schemas and opens focused views as plain HTML", async ({
+      page,
+    }) => {
+      await page.goto("/api/messages/get-message");
+      const response = page.locator("#response-200-application-json");
+      await response.locator("summary", { hasText: "3 variants" }).click();
+      await expect(
+        response.getByText("Exactly one of the following:"),
+      ).toBeVisible();
+      await response
+        .getByRole("link", { name: "Open MessageContent" })
+        .first()
+        .click();
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+        "content",
+      );
+      await expect(page.locator(".schema-variant__details")).toHaveCount(3);
+    });
+  });
+});

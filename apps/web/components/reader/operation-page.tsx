@@ -1,17 +1,13 @@
-import type {
-  PropertySummary,
-  SchemaSummary,
-} from "../../lib/reader/schema-summary";
-import type {
-  ExampleView,
-  MediaTypeView,
-  OperationView,
-  ParameterGroupView,
-  ResponseView,
-  SecurityAlternativeView,
+import {
+  schemaFocusHref,
+  type ExampleView,
+  type MediaTypeView,
+  type OperationView,
+  type ParameterGroupView,
+  type ResponseView,
+  type SecurityAlternativeView,
 } from "../../lib/reader/operation-view";
 import { API_ROOT } from "../../lib/reader/projection";
-import { slugify } from "../../lib/reader/slug";
 import { CopyButton } from "./copy-button";
 import {
   Badge,
@@ -24,9 +20,11 @@ import {
   SectionHeader,
   StatusLabel,
 } from "./primitives";
-
-/** Property rows shown before the remainder is summarized as a count. */
-const MAX_PROPERTY_ROWS = 200;
+import {
+  contextLabel,
+  SchemaBlock,
+  SchemaDisclosure,
+} from "./schema/schema-block";
 
 /** The operation page: the highest-priority SPEC-004 surface. */
 export function OperationPage({ view }: Readonly<{ view: OperationView }>) {
@@ -91,7 +89,11 @@ export function OperationPage({ view }: Readonly<{ view: OperationView }>) {
             title="Parameters"
           />
           {view.parameterGroups.map((group) => (
-            <ParameterGroup group={group} key={group.location} />
+            <ParameterGroup
+              group={group}
+              key={group.location}
+              operationHref={view.summary.href}
+            />
           ))}
         </section>
       )}
@@ -113,7 +115,10 @@ export function OperationPage({ view }: Readonly<{ view: OperationView }>) {
               text={view.requestBody.description}
             />
           )}
-          <MediaBlocks media={view.requestBody.media} />
+          <MediaBlocks
+            media={view.requestBody.media}
+            operationHref={view.summary.href}
+          />
         </section>
       )}
 
@@ -128,7 +133,11 @@ export function OperationPage({ view }: Readonly<{ view: OperationView }>) {
           title="Responses"
         />
         {view.responses.map((response) => (
-          <Response key={response.anchor} response={response} />
+          <Response
+            key={response.anchor}
+            operationHref={view.summary.href}
+            response={response}
+          />
         ))}
       </section>
 
@@ -225,17 +234,16 @@ function Authentication({
   );
 }
 
-function ParameterGroup({ group }: Readonly<{ group: ParameterGroupView }>) {
+function ParameterGroup({
+  group,
+  operationHref,
+}: Readonly<{ group: ParameterGroupView; operationHref: string }>) {
   return (
     <div className="subsection" id={group.anchor}>
       <h3 className="subsection__title">{group.label}</h3>
       <ul className="rows">
         {group.rows.map((row) => (
-          <li
-            className="row"
-            id={`${group.anchor}-${slugify(row.name, "parameter")}`}
-            key={row.name}
-          >
+          <li className="row row--schema" id={row.anchor} key={row.name}>
             <div className="row__key">
               <code
                 className={`row__name${row.deprecated ? " row__name--deprecated" : ""}`}
@@ -264,6 +272,17 @@ function ParameterGroup({ group }: Readonly<{ group: ParameterGroupView }>) {
               {row.constraints === undefined ? null : (
                 <span className="row__constraints">{row.constraints}</span>
               )}
+              {row.schema === undefined ? null : (
+                <SchemaDisclosure
+                  context="request"
+                  focusHref={(locator) =>
+                    schemaFocusHref(operationHref, row.anchor, locator)
+                  }
+                  idPrefix={row.anchor}
+                  label={row.name}
+                  view={row.schema}
+                />
+              )}
             </div>
           </li>
         ))}
@@ -277,7 +296,10 @@ function ParameterGroup({ group }: Readonly<{ group: ParameterGroupView }>) {
  * every media type, so a JSON and form body of the same shape are not
  * documented twice.
  */
-function MediaBlocks({ media }: Readonly<{ media: readonly MediaTypeView[] }>) {
+function MediaBlocks({
+  media,
+  operationHref,
+}: Readonly<{ media: readonly MediaTypeView[]; operationHref: string }>) {
   const groups: { readonly key: string; readonly members: MediaTypeView[] }[] =
     [];
   for (const entry of media) {
@@ -293,7 +315,11 @@ function MediaBlocks({ media }: Readonly<{ media: readonly MediaTypeView[] }>) {
   return (
     <>
       {groups.map((group) => (
-        <MediaBlock key={group.key} members={group.members} />
+        <MediaBlock
+          key={group.key}
+          members={group.members}
+          operationHref={operationHref}
+        />
       ))}
     </>
   );
@@ -301,7 +327,8 @@ function MediaBlocks({ media }: Readonly<{ media: readonly MediaTypeView[] }>) {
 
 function MediaBlock({
   members,
-}: Readonly<{ members: readonly MediaTypeView[] }>) {
+  operationHref,
+}: Readonly<{ members: readonly MediaTypeView[]; operationHref: string }>) {
   const primary = members[0];
   if (primary === undefined) return null;
   return (
@@ -317,13 +344,23 @@ function MediaBlock({
             </code>
           ))}
         </span>
+        <span className="media-block__context">
+          {contextLabel(primary.context)}
+        </span>
       </div>
       {primary.schema === undefined ? (
-        <p className="schema-line">
+        <p className="schema-note">
           No schema is declared for this media type.
         </p>
       ) : (
-        <Schema schema={primary.schema} />
+        <SchemaBlock
+          context={primary.context}
+          focusHref={(locator) =>
+            schemaFocusHref(operationHref, primary.anchor, locator)
+          }
+          idPrefix={primary.anchor}
+          view={primary.schema}
+        />
       )}
       {primary.encodings.length === 0 ? null : (
         <ul className="rows" aria-label="Encodings">
@@ -378,95 +415,10 @@ function Example({ example }: Readonly<{ example: ExampleView }>) {
   );
 }
 
-function Schema({ schema }: Readonly<{ schema: SchemaSummary }>) {
-  return (
-    <>
-      <p className="schema-line">
-        <code>{schema.type}</code>
-        {schema.constraints === undefined ? null : (
-          <span className="row__constraints">{schema.constraints}</span>
-        )}
-        {schema.deprecated ? <Badge tone="deprecated">Deprecated</Badge> : null}
-        {schema.truncated ? (
-          <span className="row__constraints">
-            nested structure not expanded in this version
-          </span>
-        ) : null}
-      </p>
-      {schema.description === undefined ? null : (
-        <SafeText className="body-small" text={schema.description} />
-      )}
-      {schema.properties === undefined ? null : (
-        <PropertyRows properties={schema.properties} />
-      )}
-    </>
-  );
-}
-
-function PropertyRows({
-  properties,
-}: Readonly<{ properties: readonly PropertySummary[] }>) {
-  if (properties.length === 0) {
-    return <p className="section__note">This object declares no properties.</p>;
-  }
-  const shown = properties.slice(0, MAX_PROPERTY_ROWS);
-  const rest = properties.length - shown.length;
-  return (
-    <>
-      <ul className="rows">
-        {shown.map((property) => (
-          <li className="row" key={property.name}>
-            <div className="row__key">
-              <code
-                className={`row__name${property.deprecated ? " row__name--deprecated" : ""}`}
-              >
-                {property.name}
-              </code>
-              <span className="row__type">
-                {property.type}
-                {property.nested ? " · not expanded" : ""}
-              </span>
-              <span
-                className={`row__flag${property.required ? " row__flag--required" : ""}`}
-              >
-                {property.required ? "required" : "optional"}
-              </span>
-              {property.deprecated ? (
-                <span className="row__flag row__flag--deprecated">
-                  deprecated
-                </span>
-              ) : null}
-              {property.readOnly ? (
-                <span className="row__flag">read-only</span>
-              ) : null}
-              {property.writeOnly ? (
-                <span className="row__flag">write-only</span>
-              ) : null}
-            </div>
-            <div className="row__value">
-              {property.description === undefined ? null : (
-                <SafeText
-                  className="row__description"
-                  text={property.description}
-                />
-              )}
-              {property.constraints === undefined ? null : (
-                <span className="row__constraints">{property.constraints}</span>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-      {rest > 0 ? (
-        <p className="section__note">
-          {countLabel(rest, "more property")} not shown.
-        </p>
-      ) : null}
-    </>
-  );
-}
-
-function Response({ response }: Readonly<{ response: ResponseView }>) {
+function Response({
+  operationHref,
+  response,
+}: Readonly<{ operationHref: string; response: ResponseView }>) {
   return (
     <div className="response" id={response.anchor}>
       <div className="response__header">
@@ -488,7 +440,11 @@ function Response({ response }: Readonly<{ response: ResponseView }>) {
       {response.headers.length === 0 ? null : (
         <ul aria-label="Response headers" className="rows">
           {response.headers.map((header) => (
-            <li className="row" key={header.name}>
+            <li
+              className="row row--schema"
+              id={header.anchor}
+              key={header.name}
+            >
               <div className="row__key">
                 <code
                   className={`row__name${header.deprecated ? " row__name--deprecated" : ""}`}
@@ -496,12 +452,31 @@ function Response({ response }: Readonly<{ response: ResponseView }>) {
                   {header.name}
                 </code>
                 <span className="row__type">{header.type} · header</span>
+                {header.deprecated ? (
+                  <span className="row__flag row__flag--deprecated">
+                    deprecated
+                  </span>
+                ) : null}
               </div>
               <div className="row__value">
                 {header.description === undefined ? null : (
                   <SafeText
                     className="row__description"
                     text={header.description}
+                  />
+                )}
+                {header.constraints === undefined ? null : (
+                  <span className="row__constraints">{header.constraints}</span>
+                )}
+                {header.schema === undefined ? null : (
+                  <SchemaDisclosure
+                    context="response"
+                    focusHref={(locator) =>
+                      schemaFocusHref(operationHref, header.anchor, locator)
+                    }
+                    idPrefix={header.anchor}
+                    label={header.name}
+                    view={header.schema}
                   />
                 )}
               </div>
@@ -512,7 +487,7 @@ function Response({ response }: Readonly<{ response: ResponseView }>) {
       {response.media.length === 0 ? (
         <p className="response__empty">No response body</p>
       ) : (
-        <MediaBlocks media={response.media} />
+        <MediaBlocks media={response.media} operationHref={operationHref} />
       )}
     </div>
   );

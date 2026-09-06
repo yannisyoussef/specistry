@@ -119,6 +119,12 @@ vocabulary wholesale:
 - `unknown` represents semantics that cannot be projected faithfully and must link
   at least one diagnostic.
 
+Registry nodes may carry an optional `name`: the source-independent display identity
+of a reusable definition (a component key, a `$defs`/`definitions` key, or the file name
+of a whole-document reference). It is presentation data added in SPEC-005 (ADR-011):
+identity remains the `SchemaId`, names need not be unique, inline sub-schemas stay
+unnamed, and readers fall back to `title` or the node's shape when it is absent.
+
 Every schema can link diagnostics and retain bounded JSON annotations/extensions.
 An extension is inert data: it cannot change model behavior unless a future accepted
 canonical capability defines that behavior.
@@ -232,7 +238,10 @@ adapter responsibilities.
 
 ## Compatibility and public API
 
-Model version 1 is frozen by SPEC-001. Additive optional fields may remain compatible.
+Model version 1 is frozen by SPEC-001. Additive optional fields may remain compatible;
+the optional schema `name` (SPEC-005) is the first such addition. An artifact without
+it stays valid, and an artifact carrying it is rejected only by validators older than
+that change, so consumers upgrade `@specra/model` before adopting a newer CLI.
 Removing/renaming fields, changing identity/ordering/semantic meaning, or widening a
 closed union incompatibly requires a new model version and either deterministic
 migration or artifact rebuild. Readers reject unknown future versions.

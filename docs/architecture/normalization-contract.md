@@ -24,6 +24,10 @@ JSON Schema validation-engine equivalence.
 - The globally addressable operation key is `(versionId, serviceId, operationId)`. `operationId` uniqueness is required only within a versioned service so retained API versions can reuse it.
 - Schema IDs derive from canonical source identity plus escaped resolved JSON Pointer,
   not parser object identity. Renames/moves are breaking links and surfaced by diffing.
+- Registry schemas carry the source definition key as an optional display `name`
+  (components key, `$defs`/`definitions` key, top-level key of a definitions document,
+  or the file stem of a whole-document reference). The name never participates in
+  identity, ordering, or collision detection.
 - Diagnostic IDs hash stable code plus canonical source/model location; messages and unsafe values do not affect identity.
 
 ## Ordering
