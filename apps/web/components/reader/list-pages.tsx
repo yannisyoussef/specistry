@@ -186,6 +186,9 @@ export function GroupPage({
           ]}
         />
         <h1 className="page-title">{group.name}</h1>
+        {group.description === undefined ? null : (
+          <SafeText className="lede" text={group.description} />
+        )}
       </div>
       <section aria-labelledby="operations-heading" className="section">
         <div className="section__header">
@@ -223,6 +226,12 @@ function GroupCards({
             <h3>
               <a href={group.href}>{group.name}</a>
             </h3>
+            {group.description === undefined ? null : (
+              <SafeText
+                className="group-card__description"
+                text={group.description}
+              />
+            )}
             <OperationList operations={shown} />
             {rest > 0 ? (
               <a className="group-card__more" href={group.href}>

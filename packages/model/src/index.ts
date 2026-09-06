@@ -32,6 +32,7 @@ export {
   type Operation,
   type OperationId,
   type PageId,
+  type TagDefinition,
   type Parameter,
   type ParameterId,
   type ParameterSerialization,

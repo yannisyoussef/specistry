@@ -107,6 +107,18 @@ export interface ApiService {
   /** Schema IDs are keys in this service-owned registry. */
   readonly schemas: Readonly<Record<string, SchemaNode>>;
   readonly extensions: JsonObject;
+  /**
+   * Contract-declared operation groups in declaration order, with their
+   * descriptions. Presentation data added in SPEC-006 (additive in model v1):
+   * readers order groups by it and fall back to canonical order for tags that
+   * operations use without declaring.
+   */
+  readonly tags?: readonly TagDefinition[];
+}
+
+export interface TagDefinition {
+  readonly name: string;
+  readonly description?: string;
 }
 
 export interface ServerDefinition {

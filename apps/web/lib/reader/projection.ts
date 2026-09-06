@@ -4,6 +4,7 @@ import type {
   DocumentationVersion,
   HttpMethod,
   Operation,
+  TagDefinition,
 } from "@specra/model";
 
 import { identifierSlug, methodPathSlug, slugify, uniqueSlugs } from "./slug";
@@ -47,6 +48,8 @@ export interface ReaderService {
 export interface ReaderGroup {
   readonly slug: string;
   readonly name: string;
+  /** Contract-declared tag description, when the source provided one. */
+  readonly description?: string;
   readonly href: string;
   /** Operations whose canonical route lives in this group. */
   readonly operations: readonly ReaderOperationSummary[];
@@ -190,7 +193,7 @@ function projectService(
   singleService: boolean,
 ): ReaderService {
   const serviceHref = singleService ? API_ROOT : `${API_ROOT}/${slug}`;
-  const identities = collectGroups(service.operations);
+  const identities = collectGroups(service.operations, service.tags ?? []);
   const groupSlugs = uniqueSlugs(
     identities.map((identity) =>
       identity.untagged ? UNTAGGED_GROUP_SLUG : slugify(identity.name, "group"),
@@ -243,6 +246,9 @@ function projectService(
       },
     );
     return {
+      ...(identity.description === undefined
+        ? {}
+        : { description: identity.description }),
       href,
       listed: [],
       name: identity.name,
@@ -270,27 +276,44 @@ function projectService(
   };
 }
 
+interface GroupIdentity {
+  readonly name: string;
+  readonly untagged: boolean;
+  readonly description?: string;
+}
+
 /**
- * Group identities: every tag in case-insensitive canonical order, then the
- * untagged group when needed. A real tag named like the untagged group keeps
- * its own identity; only its slug gains a collision suffix.
+ * Group identities: contract-declared tags in declaration order (only those an
+ * operation uses), then undeclared tags in case-insensitive canonical order,
+ * then the untagged group when needed. A real tag named like the untagged
+ * group keeps its own identity; only its slug gains a collision suffix.
  */
 function collectGroups(
   operations: readonly Operation[],
-): readonly { readonly name: string; readonly untagged: boolean }[] {
-  const names: string[] = [];
+  declared: readonly TagDefinition[],
+): readonly GroupIdentity[] {
+  const used = new Set<string>();
   let untagged = false;
-  for (const operation of sortOperations(operations)) {
-    if (operation.tags.length === 0) {
-      untagged = true;
-      continue;
-    }
-    for (const tag of operation.tags) {
-      if (!names.includes(tag)) names.push(tag);
-    }
+  for (const operation of operations) {
+    if (operation.tags.length === 0) untagged = true;
+    for (const tag of operation.tags) used.add(tag);
   }
-  names.sort(compareText);
-  const groups = names.map((name) => ({ name, untagged: false }));
+  const groups: GroupIdentity[] = [];
+  const placed = new Set<string>();
+  for (const tag of declared) {
+    if (!used.has(tag.name) || placed.has(tag.name)) continue;
+    placed.add(tag.name);
+    groups.push({
+      name: tag.name,
+      untagged: false,
+      ...(tag.description === undefined
+        ? {}
+        : { description: tag.description }),
+    });
+  }
+  const undeclared = [...used].filter((name) => !placed.has(name));
+  undeclared.sort(compareText);
+  for (const name of undeclared) groups.push({ name, untagged: false });
   if (untagged) groups.push({ name: UNTAGGED_GROUP_NAME, untagged: true });
   return groups;
 }

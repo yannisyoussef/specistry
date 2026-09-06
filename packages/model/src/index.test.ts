@@ -16,6 +16,7 @@ import {
   validateDocumentationArtifact,
   validateDocumentationModel,
   type DiagnosticId,
+  type ApiService,
   type DocumentationArtifact,
   type DocumentationVersionId,
   type ExampleId,
@@ -474,6 +475,39 @@ describe("canonical model contract", () => {
       constValue: { mode: "strict" },
       enumValues: [{ mode: "strict" }, ["fallback"]],
     });
+  });
+
+  it("carries declared tag definitions in declaration order (additive)", () => {
+    const artifact = artifactFixture();
+    const service = artifact.model.versions[0]?.services[0];
+    if (service === undefined) throw new Error("service");
+    const tagged = withService(artifact, {
+      ...service,
+      tags: [
+        { description: "Second in source order.", name: "beta" },
+        { name: "alpha" },
+      ],
+    });
+    expect(validateDocumentationModel(tagged.model)).toEqual([]);
+    const roundTrip = parseDocumentationArtifact(
+      serializeDocumentationArtifact(tagged),
+    );
+    expect(roundTrip.model.versions[0]?.services[0]?.tags).toEqual([
+      { description: "Second in source order.", name: "beta" },
+      { name: "alpha" },
+    ]);
+    const duplicate = withService(artifact, {
+      ...service,
+      tags: [{ name: "alpha" }, { name: "alpha" }],
+    });
+    expect(
+      validateDocumentationModel(duplicate.model).map((issue) => issue.code),
+    ).toEqual(["DUPLICATE_ID"]);
+    const empty = withService(artifact, {
+      ...service,
+      tags: [{ name: "" }],
+    });
+    expect(validateDocumentationModel(empty.model)).toHaveLength(1);
   });
 
   it("carries an optional, non-unique display name on registry schemas", () => {
@@ -1307,6 +1341,22 @@ describe("validation and diagnostics", () => {
 });
 
 void (null as unknown as DiagnosticId);
+
+/** Returns a copy of the fixture with the first service replaced. */
+function withService(
+  artifact: DocumentationArtifact,
+  service: ApiService,
+): DocumentationArtifact {
+  const version = artifact.model.versions[0];
+  if (version === undefined) throw new Error("fixture");
+  return {
+    ...artifact,
+    model: {
+      ...artifact.model,
+      versions: [{ ...version, services: [service] }],
+    },
+  };
+}
 
 /** Returns a copy of the fixture with one registry schema replaced. */
 function withSchema(
