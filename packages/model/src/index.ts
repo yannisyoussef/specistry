@@ -96,6 +96,7 @@ export {
   serializeArtifactManifest,
   type ArtifactAssetRecord,
   type ArtifactBranding,
+  type ArtifactSearchRecord,
   type ArtifactManifest,
   type ArtifactSourceRecord,
   type ArtifactStatistics,

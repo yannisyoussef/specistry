@@ -34,13 +34,20 @@
   "files": {
     "content": "content.json",
     "documentation": "documentation.json",
-    "navigation": "navigation.json"
+    "navigation": "navigation.json",
+    "search": "search.json"
   },
   "generator": "specra",
   "modelVersion": 1,
   "project": {
     "id": "TestInbox",
     "name": "TestInbox"
+  },
+  "search": {
+    "bytes": 53520,
+    "documents": 63,
+    "sha256": "e968c0a6776b00053323638d137295a87c3742bed0e1edf9d7c5b9bd3fbe068c",
+    "version": 1
   },
   "sources": [
     {

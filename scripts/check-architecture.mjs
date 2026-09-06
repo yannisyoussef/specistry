@@ -28,6 +28,15 @@ const boundaries = new Map([
     "@specra/content",
     { allowed: new Set(["@specra/model"]), constrained: true },
   ],
+  // Search projects canonical, content, and navigation data (SPEC-007); it
+  // never sees a parser, and its browser entry depends on the engine only.
+  [
+    "@specra/search",
+    {
+      allowed: new Set(["@specra/content", "@specra/model"]),
+      constrained: true,
+    },
+  ],
   [
     "@specra/cli",
     {
@@ -36,6 +45,7 @@ const boundaries = new Map([
         "@specra/content",
         "@specra/model",
         "@specra/openapi",
+        "@specra/search",
       ]),
       constrained: true,
     },
@@ -43,7 +53,12 @@ const boundaries = new Map([
   [
     "@specra/web",
     {
-      allowed: new Set(["@specra/config", "@specra/content", "@specra/model"]),
+      allowed: new Set([
+        "@specra/config",
+        "@specra/content",
+        "@specra/model",
+        "@specra/search",
+      ]),
       constrained: false,
     },
   ],

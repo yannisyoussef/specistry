@@ -24,6 +24,8 @@ const messages: Readonly<Record<DiagnosticCode, string>> = {
     "The canonical artifact did not satisfy the model contract; report this reproducible failure without secrets.",
   ARTIFACT_WRITE_FAILED:
     "The artifact directory could not be written or replaced atomically.",
+  SEARCH_BUILD_FAILED:
+    "The search index could not be generated from the build artifacts.",
   CANCELLED: "The command was cancelled.",
   CONFIG_INVALID: "The configuration does not match schema version 1.",
   CONFIG_LOAD_FAILED: "The trusted configuration could not be evaluated.",

@@ -15,6 +15,7 @@
     "@specra/content",
     "@specra/model",
     "@specra/openapi",
+    "@specra/search",
     "zod"
   ],
   "exports": {
@@ -37,6 +38,7 @@
     "@specra/content": "workspace:*",
     "@specra/model": "workspace:*",
     "@specra/openapi": "workspace:*",
+    "@specra/search": "workspace:*",
     "zod": "4.5.4"
   },
   "devDependencies": {

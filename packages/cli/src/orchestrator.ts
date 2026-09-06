@@ -7,6 +7,7 @@ import { DEFAULT_INGESTION_LIMITS } from "@specra/openapi";
 import { toDocumentId } from "./acquisition.js";
 import { removeStaleArtifacts, writeArtifacts } from "./artifacts.js";
 import { buildContent } from "./content.js";
+import { buildSearchArtifact, countSearchDocuments } from "./search.js";
 import { loadConfigIsolated } from "./config-loader.js";
 import {
   ARTIFACT_DIRECTORY,
@@ -87,6 +88,7 @@ export async function validateProject(
     ingestion: ingested.ingestion,
     ok: true,
     outcome: "success",
+    search: { documents: countSearchDocuments(content) },
   };
 }
 
@@ -121,6 +123,18 @@ export async function buildProject(
     await removeStaleArtifacts(context.projectRoot, context.paths.artifactRoot);
     return { diagnostics, ok: false, outcome: "validation-failure" };
   }
+  if (context.signal.aborted) return cancelled();
+  // Search is part of the complete build: it is generated from the exact
+  // artifacts about to be written and fails the build if it cannot be.
+  let search;
+  try {
+    search = buildSearchArtifact(content);
+  } catch {
+    await removeStaleArtifacts(context.projectRoot, context.paths.artifactRoot);
+    return failure("internal-failure", [
+      createDiagnostic("SEARCH_BUILD_FAILED", artifactPath("")),
+    ]);
+  }
   const written = await writeArtifacts({
     artifactRoot: context.paths.artifactRoot,
     assets: content.assets,
@@ -140,6 +154,7 @@ export async function buildProject(
       name: context.config.name,
     },
     projectRoot: context.projectRoot,
+    search: { documents: search.documents, json: search.json },
     warnings: diagnostics.length,
   });
   if (!written.ok) {
@@ -155,6 +170,7 @@ export async function buildProject(
     ingestion: ingested.ingestion,
     ok: true,
     outcome: "success",
+    search: { documents: search.documents },
   };
 }
 

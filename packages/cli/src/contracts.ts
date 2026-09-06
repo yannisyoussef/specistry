@@ -43,6 +43,7 @@ export type DiagnosticCode =
   | ContentDiagnosticCode
   | "ARTIFACT_INVALID"
   | "ARTIFACT_WRITE_FAILED"
+  | "SEARCH_BUILD_FAILED"
   | "CANCELLED"
   | "CONFIG_INVALID"
   | "CONFIG_LOAD_FAILED"
@@ -159,6 +160,8 @@ export interface ValidationSuccess {
   readonly ingestion: IngestionSummary;
   /** Authored content counts (SPEC-006); zero pages means API-only. */
   readonly content: { readonly pages: number; readonly assets: number };
+  /** Search documents the project produces (SPEC-007). */
+  readonly search: { readonly documents: number };
   readonly ok: true;
   readonly outcome: "success";
 }

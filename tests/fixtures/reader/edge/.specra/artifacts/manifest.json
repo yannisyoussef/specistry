@@ -5,13 +5,20 @@
     "warnings": 2
   },
   "files": {
-    "documentation": "documentation.json"
+    "documentation": "documentation.json",
+    "search": "search.json"
   },
   "generator": "specra",
   "modelVersion": 1,
   "project": {
     "id": "project_a3922714c2d7065a",
     "name": "Edge cases"
+  },
+  "search": {
+    "bytes": 11745,
+    "documents": 18,
+    "sha256": "856efb9bf33c45e1c4e27c751a0c34f254d34f489ee273f02cab54e1e7bb3cc0",
+    "version": 1
   },
   "sources": [
     {

@@ -126,6 +126,7 @@ describe("packaged specra executable", () => {
     expect(JSON.parse(success.stdout)).toEqual({
       artifacts: { directory: ".specra/artifacts" },
       content: { assets: 0, pages: 0 },
+      search: { documents: expect.any(Number) as number },
       diagnostics: [],
       ok: true,
       sources: [
@@ -243,7 +244,7 @@ describe("packaged specra executable", () => {
     expect(JSON.parse(json.stdout)).toEqual(
       expect.objectContaining({
         artifacts: expect.objectContaining({
-          files: ["documentation.json", "manifest.json"],
+          files: ["documentation.json", "manifest.json", "search.json"],
         }),
         ok: true,
       }),
