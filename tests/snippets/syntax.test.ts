@@ -118,7 +118,10 @@ describe("generated code is syntactically valid", () => {
   it.skipIf(!has("javac"))(
     "Java: javac compiles every example inside a method",
     () => {
-      for (const name of byLanguage("java")) {
+      // One javac invocation for every golden: each becomes its own class.
+      const directory = path.join(scratch, "java");
+      execFileSync("mkdir", ["-p", directory]);
+      const files = byLanguage("java").map((name) => {
         const source = readFileSync(path.join(goldenRoot, name), "utf8");
         const imports = source
           .split("\n")
@@ -127,25 +130,20 @@ describe("generated code is syntactically valid", () => {
           .split("\n")
           .filter((line) => !line.startsWith("import "))
           .join("\n");
-        const directory = path.join(
-          scratch,
-          name.replace(/[^A-Za-z0-9]/g, "_"),
-        );
-        execFileSync("mkdir", ["-p", directory]);
+        const className = `Example_${name.replace(/[^A-Za-z0-9]/g, "_")}`;
+        const file = path.join(directory, `${className}.java`);
         writeFileSync(
-          path.join(directory, "Example.java"),
-          `${imports.join("\n")}\n\npublic class Example {\n  public static void main(String[] args) throws Exception {\n${body}\n  }\n}\n`,
+          file,
+          `${imports.join("\n")}\n\npublic class ${className} {\n  public static void main(String[] args) throws Exception {\n${body}\n  }\n}\n`,
         );
-        expect(
-          () =>
-            execFileSync(
-              "javac",
-              ["-d", directory, path.join(directory, "Example.java")],
-              { stdio: "pipe" },
-            ),
-          name,
-        ).not.toThrow();
-      }
+        return file;
+      });
+      expect(
+        () =>
+          execFileSync("javac", ["-d", directory, ...files], { stdio: "pipe" }),
+        files.join(", "),
+      ).not.toThrow();
     },
+    120_000,
   );
 });
