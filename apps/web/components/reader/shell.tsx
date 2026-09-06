@@ -11,6 +11,7 @@ import { API_ROOT, type ReaderIndex } from "../../lib/reader/projection";
 import { THEME_LABELS, THEME_MODES, type ThemeMode } from "../../lib/theme";
 import { MobileNav } from "./mobile-nav";
 import { MethodLabel } from "./primitives";
+import { SearchTrigger } from "./search/search-trigger";
 import { SidebarScroll } from "./sidebar-scroll";
 
 /**
@@ -24,6 +25,8 @@ import { SidebarScroll } from "./sidebar-scroll";
 export interface ShellProps {
   readonly index: ReaderIndex;
   readonly content?: ReaderContent | undefined;
+  /** Content-addressed path of the search artifact; absent when the build made none. */
+  readonly searchPath?: string | undefined;
   readonly currentPath: string;
   readonly mode: ThemeMode;
   readonly children: ReactNode;
@@ -45,6 +48,7 @@ export function Shell({
   currentPath,
   index,
   mode,
+  searchPath,
 }: ShellProps) {
   const docs = hasDocs(content);
   const inApi =
@@ -103,6 +107,11 @@ export function Shell({
             </ul>
           </nav>
         </div>
+        {searchPath === undefined ? null : (
+          <div className="header__end">
+            <SearchTrigger path={searchPath} />
+          </div>
+        )}
       </header>
       <aside
         aria-label={docs ? "Documentation navigation" : "API navigation"}
