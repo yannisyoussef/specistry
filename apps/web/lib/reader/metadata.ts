@@ -1,3 +1,4 @@
+import type { ContentPage } from "@specra/content";
 import type { ReaderIndex, ReaderOperationSummary } from "./projection";
 
 /**
@@ -130,9 +131,25 @@ export function siteUrl(
   }
 }
 
-/** Every indexable path in deterministic order. */
-export function indexablePaths(index: ReaderIndex): readonly string[] {
-  const paths = ["/", "/api"];
+/** Metadata for an authored page: its own title and description. */
+export function pageMetadata(
+  index: ReaderIndex,
+  page: ContentPage,
+): PageMetadata {
+  const summary = page.description ?? summarize(page.text);
+  return {
+    description: summary.length === 0 ? page.title : summary,
+    path: page.route,
+    title: `${page.title} | ${siteName(index)}`,
+  };
+}
+
+/** Every indexable path in deterministic order; authored routes first. */
+export function indexablePaths(
+  index: ReaderIndex,
+  authored: readonly string[] = [],
+): readonly string[] {
+  const paths = [...(authored.includes("/") ? [] : ["/"]), ...authored, "/api"];
   for (const service of index.services) {
     if (!index.singleService) paths.push(service.href);
     for (const group of service.groups) {

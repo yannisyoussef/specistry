@@ -109,14 +109,19 @@ describe("reader index", () => {
         group.name,
         group.operations.length,
       ]),
+      // Declared tag order (SPEC-006), not alphabetical.
     ).toEqual([
-      ["attachments", "Attachments", 2],
-      ["domains", "Domains", 4],
       ["inboxes", "Inboxes", 7],
       ["messages", "Messages", 6],
-      ["team", "Team", 2],
+      ["attachments", "Attachments", 2],
       ["webhooks", "Webhooks", 4],
+      ["domains", "Domains", 4],
+      ["team", "Team", 2],
     ]);
+    expect(service?.groups[0]?.description).toBe(
+      "Disposable inboxes that receive email.",
+    );
+    expect(service?.groups[2]?.description).toBeUndefined();
   });
 
   it("orders operations by path then method and derives slugs from operationId or method/path", () => {
@@ -197,9 +202,9 @@ describe("reader index", () => {
     expect(indexablePaths(index).slice(0, 5)).toEqual([
       "/",
       "/api",
-      "/api/attachments",
-      "/api/attachments/list-attachments",
-      "/api/attachments/download-attachment",
+      "/api/inboxes",
+      "/api/inboxes/list-inboxes",
+      "/api/inboxes/create-inbox",
     ]);
     expect(indexablePaths(index)).toHaveLength(2 + 6 + 25);
   });
@@ -440,8 +445,8 @@ describe("multi-service artifact", () => {
       ),
     ).toEqual([
       [
-        "/api/accounts-api/keys",
         "/api/accounts-api/users",
+        "/api/accounts-api/keys",
         "/api/accounts-api/operations",
       ],
       [

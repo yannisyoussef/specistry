@@ -1,0 +1,73 @@
+---
+title: Quickstart
+description: Receive your first test email in under five minutes. You need an API key from the dashboard and a project that sends email.
+sidebarTitle: Quickstart
+---
+
+<Callout type="note" title="Before you start">
+Create an API key in the dashboard and export it as `TESTINBOX_API_KEY`. Sandbox and production keys are separate; see [Authentication](./authentication#api-keys).
+</Callout>
+
+<Steps>
+<Step title="Create an inbox">
+Every test gets its own address. A short `ttl` keeps the sandbox clean; the inbox is deleted when it expires.
+
+```typescript title="signup.test.ts"
+const inbox = await client.inboxes.create({ ttl: 600 });
+```
+
+Returns an [Inbox](/api/inboxes/create-inbox#response-201) with `address` and `expiresAt`.
+</Step>
+<Step title="Trigger your application">
+Use the inbox address wherever your application would send email: a sign-up form, a password reset, an invoice.
+
+```typescript
+await app.signUp({ email: inbox.address });
+```
+</Step>
+<Step title="Wait for an email">
+`wait()` blocks until a message matching your criteria arrives or the timeout passes. Match by subject, sender, or body.
+
+```typescript
+const message = await inbox.messages.wait({ subject: /verify/i, timeout: 30_000 });
+```
+</Step>
+<Step title="Assert its contents">
+```typescript
+expect(message.links[0]).toContain("/verify?token=");
+```
+</Step>
+</Steps>
+
+## Choose your client
+
+<Tabs>
+<Tab label="TypeScript">
+```typescript
+import { TestInbox } from "@testinbox/client";
+
+const client = new TestInbox({ apiKey: process.env.TESTINBOX_API_KEY });
+```
+</Tab>
+<Tab label="Python">
+```python
+from testinbox import TestInbox
+
+client = TestInbox(api_key=os.environ["TESTINBOX_API_KEY"])
+```
+</Tab>
+<Tab label="cURL">
+```bash
+curl -X POST https://api.testinbox.email/v1/inboxes \
+  -H "X-Api-Key: $TESTINBOX_API_KEY" \
+  -d '{"ttl": 600}'
+```
+</Tab>
+</Tabs>
+
+## Where next
+
+<Cards>
+<Card title="Waiting for email" href="./guides/waiting-for-email" description="Matchers, timeouts, and polling strategies." />
+<Card title="CI integration" href="./guides/ci-integration" description="Run against the sandbox from GitHub Actions." />
+</Cards>

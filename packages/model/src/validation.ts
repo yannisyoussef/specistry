@@ -275,6 +275,7 @@ function validateServices(
         "schemas",
         "securitySchemes",
         "servers",
+        "tags",
       ],
       path,
       diagnostics,
@@ -288,6 +289,9 @@ function validateServices(
       `${path}/description`,
       diagnostics,
     );
+    if (serviceValue.tags !== undefined) {
+      validateTagDefinitions(serviceValue.tags, `${path}/tags`, diagnostics);
+    }
     if (
       !isArray(serviceValue.servers) ||
       !isArray(serviceValue.operations) ||
@@ -332,6 +336,37 @@ function validateServices(
       diagnosticLinks,
     );
     artifactLinks?.push(...diagnosticLinks);
+  });
+}
+
+/** Declared groups: unique non-empty names in declaration order. */
+function validateTagDefinitions(
+  value: unknown,
+  path: string,
+  diagnostics: Map<string, CanonicalDiagnostic>,
+): void {
+  if (!isArray(value)) {
+    add(diagnostics, "INVALID_MODEL", path);
+    return;
+  }
+  const names = new Set<string>();
+  value.forEach((tag, index) => {
+    const tagPath = `${path}/${index}`;
+    if (!isRecord(tag)) {
+      add(diagnostics, "INVALID_MODEL", tagPath);
+      return;
+    }
+    validateKeys(tag, ["description", "name"], tagPath, diagnostics);
+    if (typeof tag.name !== "string" || tag.name.length === 0) {
+      add(diagnostics, "INVALID_MODEL", `${tagPath}/name`);
+    } else {
+      checkDuplicate(names, tag.name, `${tagPath}/name`, diagnostics);
+    }
+    validateOptionalString(
+      tag.description,
+      `${tagPath}/description`,
+      diagnostics,
+    );
   });
 }
 

@@ -5,5 +5,15 @@
     "MD033": false,
     "MD041": false,
   },
-  "ignores": ["**/node_modules/**", "**/.next/**", ".agent/**", "prompts/**"],
+  "ignores": [
+    "**/node_modules/**",
+    "**/.next/**",
+    ".agent/**",
+    "prompts/**",
+    // Authored fixture pages contain deliberate authoring mistakes.
+    "tests/fixtures/content/**",
+    // Playwright output.
+    "test-results/**",
+    "playwright-report/**",
+  ],
 }

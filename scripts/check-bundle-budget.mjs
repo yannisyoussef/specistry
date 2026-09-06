@@ -1,5 +1,5 @@
 // Reader JavaScript budget. Reads the production build output of `next build`
-// and fails when the client JavaScript an operation page ships (framework
+// and fails when the client JavaScript an operation page or an authored page ships (framework
 // bootstrap, polyfills, and the client-component chunks referenced by the
 // route) grows past the budget. Lazily loaded chunks of later slices (search,
 // playground, highlighter) are excluded by construction because they are not
@@ -14,6 +14,7 @@ import { gzipSync } from "node:zlib";
 const root = path.resolve(new URL("..", import.meta.url).pathname);
 const buildRoot = path.join(root, "apps/web/.next");
 const OPERATION_ROUTE = "/api/[...segments]/page";
+const DOCS_ROUTE = "/docs/[[...slug]]/page";
 /** Gzip bytes of every client script an operation page loads. */
 export const BUDGET_GZIP_BYTES = 150 * 1_024;
 /** Gzip bytes of route-specific chunks beyond the framework bootstrap. */
@@ -89,25 +90,38 @@ export function measure(route = OPERATION_ROUTE) {
   };
 }
 
-function main() {
-  const report = measure();
+function check(report, label) {
   const failures = [];
   if (report.totalGzipBytes > report.budgetGzipBytes) {
     failures.push(
-      `operation page client JavaScript ${report.totalGzipBytes} B gzip exceeds the ${report.budgetGzipBytes} B budget`,
+      `${label} client JavaScript ${report.totalGzipBytes} B gzip exceeds the ${report.budgetGzipBytes} B budget`,
     );
   }
   if (report.route.gzipBytes > report.routeBudgetGzipBytes) {
     failures.push(
-      `operation route chunks ${report.route.gzipBytes} B gzip exceed the ${report.routeBudgetGzipBytes} B budget`,
+      `${label} route chunks ${report.route.gzipBytes} B gzip exceed the ${report.routeBudgetGzipBytes} B budget`,
     );
   }
+  return failures;
+}
+
+function main() {
+  const reports = {
+    docs: measure(DOCS_ROUTE),
+    operation: measure(OPERATION_ROUTE),
+  };
+  const failures = [
+    ...check(reports.operation, "operation page"),
+    ...check(reports.docs, "authored page"),
+  ];
   if (process.argv.includes("--json")) {
-    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify(reports, null, 2)}\n`);
   } else {
-    process.stdout.write(
-      `[bundle] operation page: ${report.totalGzipBytes} B gzip (${report.totalRawBytes} B raw) client JavaScript; bootstrap ${report.bootstrap.gzipBytes} B in ${report.bootstrap.chunks.length} chunks, route ${report.route.gzipBytes} B in ${report.route.chunks.length} chunks; budget ${report.budgetGzipBytes} B\n`,
-    );
+    for (const [label, report] of Object.entries(reports)) {
+      process.stdout.write(
+        `[bundle] ${label} page: ${report.totalGzipBytes} B gzip (${report.totalRawBytes} B raw) client JavaScript; bootstrap ${report.bootstrap.gzipBytes} B in ${report.bootstrap.chunks.length} chunks, route ${report.route.gzipBytes} B in ${report.route.chunks.length} chunks; budget ${report.budgetGzipBytes} B\n`,
+      );
+    }
   }
   if (failures.length > 0) {
     for (const failure of failures) process.stderr.write(`${failure}\n`);

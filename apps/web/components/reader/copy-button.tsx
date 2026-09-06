@@ -13,8 +13,14 @@ type CopyState = "failed" | "copied" | "idle";
  */
 export function CopyButton({
   label,
+  name,
   value,
-}: Readonly<{ label: string; value: string }>) {
+}: Readonly<{
+  label: string;
+  /** Accessible name; defaults to "Copy <value>" for short values. */
+  name?: string;
+  value: string;
+}>) {
   const [state, setState] = useState<CopyState>("idle");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -23,7 +29,7 @@ export function CopyButton({
   return (
     <>
       <button
-        aria-label={`Copy ${value}`}
+        aria-label={name ?? `Copy ${value}`}
         className={`button button--ghost${state === "copied" ? " button--success" : ""}`}
         onClick={async () => {
           clearTimeout(timer.current);
@@ -49,7 +55,7 @@ export function CopyButton({
       </button>
       <span className="visually-hidden" role="status">
         {state === "copied"
-          ? `Copied ${value}`
+          ? `Copied ${name === undefined ? value : "to the clipboard"}`
           : state === "failed"
             ? "Copy failed; select the text to copy it."
             : ""}

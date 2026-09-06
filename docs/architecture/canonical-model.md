@@ -119,6 +119,10 @@ vocabulary wholesale:
 - `unknown` represents semantics that cannot be projected faithfully and must link
   at least one diagnostic.
 
+A service may carry optional `tags`: the contract's declared operation groups in
+declaration order with their descriptions (SPEC-006, additive). Readers order groups
+by it and fall back to canonical order for tags operations use without declaring.
+
 Registry nodes may carry an optional `name`: the source-independent display identity
 of a reusable definition (a component key, a `$defs`/`definitions` key, or the file name
 of a whole-document reference). It is presentation data added in SPEC-005 (ADR-011):

@@ -22,17 +22,28 @@ const boundaries = new Map([
     { allowed: new Set(["@specra/model"]), constrained: true },
   ],
   ["@specra/config", { allowed: new Set(), constrained: true }],
+  // The content package owns Markdown parsing and highlighting; its parser
+  // dependencies never appear in the CLI, config, model, or reader manifests.
+  [
+    "@specra/content",
+    { allowed: new Set(["@specra/model"]), constrained: true },
+  ],
   [
     "@specra/cli",
     {
-      allowed: new Set(["@specra/config", "@specra/model", "@specra/openapi"]),
+      allowed: new Set([
+        "@specra/config",
+        "@specra/content",
+        "@specra/model",
+        "@specra/openapi",
+      ]),
       constrained: true,
     },
   ],
   [
     "@specra/web",
     {
-      allowed: new Set(["@specra/config", "@specra/model"]),
+      allowed: new Set(["@specra/config", "@specra/content", "@specra/model"]),
       constrained: false,
     },
   ],

@@ -170,7 +170,7 @@ OpenAPI-specific features such as callbacks are normalized into future canonical
 - Read local sources within the configured project root; enforce byte, depth, node, string, document, reference, operation, example, and diagnostic budgets. Implemented in SPEC-003.
 - Resolve local references with cycle-aware graph traversal; remote retrieval stays disabled (an opt-in hardened mode would require explicit host and scheme policy plus the ADR-002 controls). Implemented in SPEC-003.
 - Validate OpenAPI 3.0/3.1 and normalize deterministically to a versioned canonical artifact plus diagnostics; `specra build` writes `documentation.json` and `manifest.json` atomically. Implemented in SPEC-003.
-- Compile reviewed content with a component allowlist and no arbitrary imports.
+- Compile reviewed content with a component allowlist and no arbitrary imports. Implemented in SPEC-006 (`@specra/content`, ADR-012): Markdown/MDX parsed to an AST, validated against the Callout/Steps/Cards/Tabs/CodeGroup vocabulary, highlighted at build time, and serialized to `content.json`, `navigation.json`, and content-addressed `assets/`.
 - Build route manifests, navigation, protocol samples, search documents, metadata, sitemap, redirects, and immutable version artifacts.
 - Pre-highlight code and partition large model payloads by route/schema where practical.
 
@@ -190,6 +190,21 @@ flowchart LR
 ```
 
 Build time: `specra build` produces the artifact; `next build` compiles the reader and fails when `SPECRA_PROJECT_ROOT` holds no valid artifact. Runtime: every documentation route renders on demand from the one validated artifact under a per-request nonce CSP; the theme choice is a cookie set by a form-post handler. Trust: the artifact is validated through `parseDocumentationArtifact` and `parseArtifactManifest` before any render, and every canonical string is rendered as text. Client boundary: navigation, endpoint content, and metadata are server HTML; only the drawer control and the copy button hydrate. See the [reader reference](../reader.md), the [design contract](../design/reader-v1.md), and ADR-010.
+
+## Authored content (SPEC-006)
+
+```mermaid
+flowchart LR
+  docs["docs/**/*.md|mdx"] --> content["@specra/content compile\n(parse → validate → highlight → model)"]
+  config["specra.config.ts navigation + branding"] --> nav["buildNavigation"]
+  content --> nav
+  content --> cli["CLI buildContent\n(assets by signature, confinement, budgets)"]
+  nav --> cli
+  cli --> artifacts["content.json · navigation.json · assets/ · manifest"]
+  artifacts --> reader["Reader: /docs routes, composed sidebar,\nbreadcrumbs, prev/next, tabs island"]
+```
+
+`@specra/content` is a build-time package that depends on `@specra/model` only; the CLI and the reader may depend on it (the reader uses its artifact parsers and types). Authored text never becomes code: expressions, ESM, raw HTML, unknown components, and non-string props are diagnostics with a source line and column. The reader composes one sidebar from the navigation artifact and the API projection, keeps the nonce CSP unchanged, and serves assets only by manifest name.
 
 ## Runtime responsibilities
 

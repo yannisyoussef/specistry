@@ -26,7 +26,7 @@ test.describe("mobile reader", () => {
     await page.goto(OPERATION);
     expect(await horizontalOverflow(page)).toBe(0);
     await expect(
-      page.getByRole("complementary", { name: "API navigation" }),
+      page.getByRole("complementary", { name: "Documentation navigation" }),
     ).toBeHidden();
     const menu = page.getByRole("link", { name: "Navigation" });
     await menu.click();
@@ -73,7 +73,7 @@ test.describe("mobile reader", () => {
     }) => {
       await page.goto(OPERATION);
       const sidebar = page.getByRole("complementary", {
-        name: "API navigation",
+        name: "Documentation navigation",
       });
       await expect(sidebar).toBeHidden();
       const menu = page.getByRole("link", { name: "Navigation" });
@@ -86,6 +86,48 @@ test.describe("mobile reader", () => {
       ).toBeVisible();
       expect(await horizontalOverflow(page)).toBe(0);
     });
+  });
+
+  test("opens the drawer on an authored page with sections, the current item, and touch-sized tabs", async ({
+    page,
+  }) => {
+    await page.goto("/docs/quickstart");
+    expect(await horizontalOverflow(page)).toBe(0);
+    await page.getByRole("link", { name: "Navigation" }).click();
+    const drawer = page.getByRole("dialog", { name: "Navigation" });
+    await expect(drawer).toBeVisible();
+    await expect(drawer.locator('[aria-current="page"]')).toHaveText(
+      "Quickstart",
+    );
+    await expect(drawer.getByText("Getting started")).toBeVisible();
+    await expect(
+      drawer.getByRole("link", { name: /Create inbox/ }),
+    ).toBeVisible();
+    await drawer.getByRole("link", { name: "CI integration" }).click();
+    await expect(page).toHaveURL(/\/docs\/guides\/ci-integration$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "CI integration",
+    );
+    // Tabs are touch targets; cards stack; code scrolls inside its block.
+    await page.goto("/docs/quickstart");
+    const tab = page.getByRole("tab", { name: "Python" });
+    const box = await tab.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await tab.tap();
+    await expect(page.getByRole("tabpanel")).toContainText(
+      "from testinbox import",
+    );
+    const cards = page.locator(".cards__item");
+    const first = await cards.first().boundingBox();
+    const second = await cards.nth(1).boundingBox();
+    expect(first?.x).toBe(second?.x);
+    expect(await horizontalOverflow(page)).toBe(0);
+    await page.setViewportSize({ height: 640, width: 320 });
+    await page.goto("/docs/troubleshooting");
+    expect(await horizontalOverflow(page)).toBe(0);
+    await page.goto("/");
+    expect(await horizontalOverflow(page)).toBe(0);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });
 
   test("reflows the longest paths and parameter lists at 320 CSS px", async ({

@@ -954,3 +954,10 @@
 .sidebar {
   contain: paint;
 }
+
+.group-card__description {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: var(--space-2);
+}

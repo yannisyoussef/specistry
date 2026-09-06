@@ -1,4 +1,5 @@
 import type { SpecraConfig } from "@specra/config";
+import type { ContentDiagnosticCode } from "@specra/content";
 import {
   ARTIFACT_DOCUMENTATION_FILENAME,
   ARTIFACT_MANIFEST_FILENAME,
@@ -39,6 +40,7 @@ export const EXIT_CODES = {
 
 export type DiagnosticCode =
   | SourceDiagnosticCode
+  | ContentDiagnosticCode
   | "ARTIFACT_INVALID"
   | "ARTIFACT_WRITE_FAILED"
   | "CANCELLED"
@@ -69,6 +71,9 @@ export interface Diagnostic {
   readonly message: string;
   readonly path?: string;
   readonly severity: DiagnosticSeverity;
+  /** 1-based source position inside an authored document, when known. */
+  readonly line?: number;
+  readonly column?: number;
 }
 
 export interface BuildPaths {
@@ -152,6 +157,8 @@ export interface ValidationSuccess {
   /** Warnings only; a successful result never carries an error. */
   readonly diagnostics: readonly Diagnostic[];
   readonly ingestion: IngestionSummary;
+  /** Authored content counts (SPEC-006); zero pages means API-only. */
+  readonly content: { readonly pages: number; readonly assets: number };
   readonly ok: true;
   readonly outcome: "success";
 }

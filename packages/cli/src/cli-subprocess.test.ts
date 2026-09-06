@@ -125,6 +125,7 @@ describe("packaged specra executable", () => {
     expect(success.stderr).toBe("");
     expect(JSON.parse(success.stdout)).toEqual({
       artifacts: { directory: ".specra/artifacts" },
+      content: { assets: 0, pages: 0 },
       diagnostics: [],
       ok: true,
       sources: [

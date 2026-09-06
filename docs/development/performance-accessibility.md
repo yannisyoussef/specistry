@@ -66,4 +66,27 @@ Every UI slice records applicable rows. “Not applicable” requires a reason; 
 | Reduced motion           | Chevron transition removed under `prefers-reduced-motion`; disclosures have no height animation by design                                                                                                              | OS preference enabled: no motion on expand                                                                                         |
 | Request/response context | Playwright: the same `Profile` schema omits and states read-only fields in the request and write-only fields in the response                                                                                           | Confirm the omission sentence reads before the rows with a screen reader                                                           |
 
+### SPEC-006 authored content evidence
+
+Measured on the TestInbox fixture (nine authored pages) and the synthetic 1,000-page site (`tests/performance/content.test.ts`, `content-measurements.json`):
+
+| Measure                                        | Value                                                                   |
+| ---------------------------------------------- | ----------------------------------------------------------------------- |
+| Authored page client JavaScript                | 136,120 B gzip (operation page 135,586 B); the tabs island adds ~0.5 KB |
+| Quickstart guide HTML                          | ~60 KB uncompressed (budget 200 KiB)                                    |
+| 1,000-page build (fresh process, highlighting) | ~5.8 s wall, ~690 MiB peak RSS, `content.json` 38.6 MiB                 |
+| Largest synthetic page                         | 13 KB HTML rendered in ~10 ms; navigation with 1,001 entries per page   |
+| Clean-room offline build with docs and assets  | passes (`tests/cli/clean-room.test.ts`)                                 |
+
+| Check                                    | Automated evidence                                                                                                                                                  | Manual expectation before release                                                                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Landmarks and headings                   | One `<h1>` per page; step and static tab headings continue the outline (jest-axe `heading-order` passes); breadcrumb, outline, and pager are named `<nav>` elements | VoiceOver rotor: headings list reads title → sections → steps in order                                                |
+| Tabs                                     | Playwright: tablist with roving tabindex, Arrow/Home/End, `aria-selected`, one panel visible; without JavaScript every panel renders under a heading                | NVDA + Firefox: "tab, 1 of 3, selected" and panel content announced after activation                                  |
+| Copy control                             | `Copy code` name, polite status ("Copied to the clipboard"), 3 px focus ring                                                                                        | Screen reader hears the status once per activation                                                                    |
+| Code and tables                          | Scrollable regions are focusable (`tabindex="0"`) with a visible ring; no horizontal page overflow at 375 and 320 px                                                | Keyboard: Tab reaches the block, arrow keys scroll it                                                                 |
+| Callouts and external links              | Kind is text ("Warning"), glyph hidden; external links carry "(external link)" visually hidden text                                                                 | Confirm callout kind is read before its body                                                                          |
+| Mobile drawer with docs                  | Playwright (Pixel 5): sections, current item, and API groups in the drawer; tabs ≥ 44 px; cards stack                                                               | TalkBack: drawer announced as dialog, sections as headings                                                            |
+| Forced colours / reduced motion          | `content.css` forced-colours block keeps callout, card, tab, pager, and table borders; no animation is required anywhere                                            | Windows High Contrast spot check of the tabs and callouts                                                             |
+| SPEC-005 carry-over (schema disclosures) | Unchanged automated evidence above                                                                                                                                  | VoiceOver + Safari and NVDA + Firefox pass over a 30-row object and a 3-variant `content` is still due before release |
+
 Visual regression will use deterministic local fonts/assets and a small browser matrix. Baselines cover home, guide, endpoint, large schema, light/dark, mobile navigation, search, playground, code, errors, and empty states. Masks and thresholds require documented reasons; semantic assertions remain primary.

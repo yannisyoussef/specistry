@@ -13,6 +13,7 @@ export default defineConfig({
         // suites against the production server, not by in-process rendering.
         "apps/web/components/reader/copy-button.tsx",
         "apps/web/components/reader/mobile-nav.tsx",
+        "apps/web/components/reader/content/tabs.tsx",
       ],
       include: [
         "packages/*/src/**/*.ts",

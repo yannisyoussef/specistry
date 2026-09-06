@@ -1,4 +1,10 @@
 import {
+  CONTENT_DIAGNOSTIC_MESSAGES,
+  contentSeverity,
+  type ContentDiagnostic,
+  type ContentDiagnosticCode,
+} from "@specra/content";
+import {
   SOURCE_DIAGNOSTIC_MESSAGES,
   SOURCE_DIAGNOSTIC_SEVERITY,
   comparePointers,
@@ -13,6 +19,7 @@ import type {
 
 const messages: Readonly<Record<DiagnosticCode, string>> = {
   ...SOURCE_DIAGNOSTIC_MESSAGES,
+  ...CONTENT_DIAGNOSTIC_MESSAGES,
   ARTIFACT_INVALID:
     "The canonical artifact did not satisfy the model contract; report this reproducible failure without secrets.",
   ARTIFACT_WRITE_FAILED:
@@ -46,21 +53,52 @@ const SEVERITY_RANK: Readonly<Record<DiagnosticSeverity, number>> = {
 
 /** Severity is a property of the code; source codes defer to the adapter table. */
 export function severityOf(code: DiagnosticCode): DiagnosticSeverity {
-  return Object.hasOwn(SOURCE_DIAGNOSTIC_SEVERITY, code)
-    ? SOURCE_DIAGNOSTIC_SEVERITY[
-        code as keyof typeof SOURCE_DIAGNOSTIC_SEVERITY
-      ]
-    : "error";
+  if (Object.hasOwn(SOURCE_DIAGNOSTIC_SEVERITY, code)) {
+    return SOURCE_DIAGNOSTIC_SEVERITY[
+      code as keyof typeof SOURCE_DIAGNOSTIC_SEVERITY
+    ];
+  }
+  if (Object.hasOwn(CONTENT_DIAGNOSTIC_MESSAGES, code)) {
+    return contentSeverity(code as ContentDiagnosticCode);
+  }
+  return "error";
 }
 
 export function createDiagnostic(
   code: DiagnosticCode,
   path?: string,
+  location?: { readonly line: number; readonly column: number },
 ): Diagnostic {
   const severity = severityOf(code);
-  return path === undefined
-    ? { code, message: messages[code], severity }
-    : { code, message: messages[code], path, severity };
+  return {
+    code,
+    message: messages[code],
+    ...(path === undefined ? {} : { path }),
+    severity,
+    ...(location === undefined
+      ? {}
+      : { column: location.column, line: location.line }),
+  };
+}
+
+/**
+ * Projects a content diagnostic onto the CLI grammar: authored files become
+ * `source/<path>` scopes with line and column; navigation entries already
+ * carry `config#/…` pointers.
+ */
+export function fromContentDiagnostic(
+  diagnostic: ContentDiagnostic,
+): Diagnostic {
+  const path = diagnostic.path.startsWith("config")
+    ? diagnostic.path
+    : `source/${diagnostic.path}`;
+  return createDiagnostic(
+    diagnostic.code,
+    path,
+    diagnostic.line === undefined || diagnostic.column === undefined
+      ? undefined
+      : { column: diagnostic.column, line: diagnostic.line },
+  );
 }
 
 /** Converts the schema authority's dotted label (with `*` for user keys) to `config#/...`. */
@@ -99,6 +137,8 @@ export function sortDiagnostics(
       SEVERITY_RANK[left.severity] - SEVERITY_RANK[right.severity] ||
       compareCodeUnits(left.code, right.code) ||
       comparePaths(left.path ?? "", right.path ?? "") ||
+      (left.line ?? 0) - (right.line ?? 0) ||
+      (left.column ?? 0) - (right.column ?? 0) ||
       compareCodeUnits(left.message, right.message),
   );
 }

@@ -28,7 +28,25 @@ describe("CLI clean-room package", () => {
       const staged = path.join(cleanRoom, "staged-cli");
       const project = path.join(cleanRoom, "project");
       await mkdir(packages);
-      await mkdir(path.join(project, "docs"), { recursive: true });
+      await mkdir(path.join(project, "docs", "images"), { recursive: true });
+      // An authored site next to the contract: two pages, one image, and a
+      // configured navigation that inserts the generated API reference.
+      await writeFile(
+        path.join(project, "docs", "index.mdx"),
+        '---\ntitle: Clean room docs\ndescription: Built offline from the packed CLI.\n---\n\n<Callout type="tip">\n\nRead the [quickstart](./quickstart).\n\n</Callout>\n\n![Diagram](./images/diagram.png)\n',
+      );
+      await writeFile(
+        path.join(project, "docs", "quickstart.mdx"),
+        "---\ntitle: Quickstart\n---\n\n## Ping\n\nCall [ping](/api/operations/ping).\n\n```bash\ncurl https://example.test/ping\n```\n",
+      );
+      await writeFile(
+        path.join(project, "docs", "images", "diagram.png"),
+        Buffer.from([
+          0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00,
+          0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
+          0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xde,
+        ]),
+      );
       await writeFile(
         path.join(project, "openapi.yaml"),
         "openapi: 3.1.0\ninfo:\n  title: Clean room\n  version: 1.0.0\npaths:\n  /ping:\n    get:\n      operationId: ping\n      responses:\n        '200':\n          description: ok\n",
@@ -36,7 +54,7 @@ describe("CLI clean-room package", () => {
       await writeFile(
         path.join(project, "specra.config.ts"),
         `import { defineConfig } from "@specra/config";
-         export default defineConfig({ schemaVersion: 1, name: "Clean room", openapi: "./openapi.yaml" });`,
+         export default defineConfig({ schemaVersion: 1, name: "Clean room", openapi: "./openapi.yaml", navigation: ["quickstart", { api: true }] });`,
       );
       await writeFile(
         path.join(project, "package.json"),
@@ -95,9 +113,14 @@ describe("CLI clean-room package", () => {
       ).toEqual(["node_modules/zod/package.json"]);
       const stagedManifest = JSON.parse(
         await readFile(path.join(staged, "package.json"), "utf8"),
-      ) as { readonly dependencies: Readonly<Record<string, string>> };
-      // npm bundles the declared dependencies plus their own dependencies that
-      // live in the staged tree (yaml under @specra/openapi).
+      ) as {
+        readonly bundleDependencies: readonly string[];
+        readonly dependencies: Readonly<Record<string, string>>;
+      };
+      // npm bundles exactly the staged closure: the declared dependencies,
+      // the workspace packages' own dependencies (yaml under @specra/openapi,
+      // the parser and highlighter trees under @specra/content), and every
+      // transitive package those need, all resolved offline from the tree.
       const expectedBundled = new Set(Object.keys(stagedManifest.dependencies));
       for (const name of Object.keys(stagedManifest.dependencies)) {
         if (!name.startsWith("@specra/")) continue;
@@ -111,8 +134,16 @@ describe("CLI clean-room package", () => {
           expectedBundled.add(dependency);
         }
       }
-      expect([...packResult[0].bundled].sort()).toEqual(
-        [...expectedBundled].sort(),
+      const bundled = [...packResult[0].bundled].sort();
+      expect(bundled).toEqual([...stagedManifest.bundleDependencies].sort());
+      for (const name of expectedBundled) expect(bundled).toContain(name);
+      expect(bundled).toEqual(
+        expect.arrayContaining([
+          "mdast-util-from-markdown",
+          "micromark",
+          "@shikijs/core",
+          "@shikijs/engine-javascript",
+        ]),
       );
       const tarball = path.join(packages, packResult[0].filename);
 
@@ -148,10 +179,16 @@ describe("CLI clean-room package", () => {
         process.platform === "win32" ? "specra.cmd" : "specra",
       );
       const validated = command(executable, ["validate", "--json"], project);
-      expect(validated.status, validated.stderr).toBe(0);
+      if (validated.status !== 0) {
+        // Surface the CLI's own report; the exit code alone says nothing.
+        throw new Error(
+          `validate failed (${validated.status}):\n${validated.stdout}\n${validated.stderr}`,
+        );
+      }
       expect(JSON.parse(validated.stdout)).toEqual(
         expect.objectContaining({
           artifacts: { directory: ".specra/artifacts" },
+          content: { assets: 1, pages: 2 },
           diagnostics: [],
           ok: true,
           statistics: {
@@ -169,11 +206,27 @@ describe("CLI clean-room package", () => {
         expect.objectContaining({
           artifacts: expect.objectContaining({
             directory: ".specra/artifacts",
-            files: ["documentation.json", "manifest.json"],
+            files: [
+              "documentation.json",
+              "manifest.json",
+              "content.json",
+              "navigation.json",
+              expect.stringMatching(/^assets\/[a-f0-9]{16}\.png$/),
+            ],
           }),
           ok: true,
         }),
       );
+      const content = JSON.parse(
+        await readFile(
+          path.join(project, ".specra", "artifacts", "content.json"),
+          "utf8",
+        ),
+      ) as { readonly pages: readonly { readonly route: string }[] };
+      expect(content.pages.map((page) => page.route)).toEqual([
+        "/",
+        "/docs/quickstart",
+      ]);
       const manifest = JSON.parse(
         await readFile(
           path.join(project, ".specra", "artifacts", "manifest.json"),

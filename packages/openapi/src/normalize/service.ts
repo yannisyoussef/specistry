@@ -1,4 +1,9 @@
-import type { ApiService, SchemaNode, ServiceId } from "@specra/model";
+import type {
+  ApiService,
+  SchemaNode,
+  ServiceId,
+  TagDefinition,
+} from "@specra/model";
 
 import type { DiagnosticSink, SourceLocation } from "../diagnostics.js";
 import type { DocumentGraph } from "../documents.js";
@@ -103,6 +108,7 @@ export function normalizeService(
     }
   }
 
+  const tags = normalizeTagDefinitions(ctx, root.tags, child(source, "tags"));
   const operations = normalizePaths(ctx, root.paths, child(source, "paths"), {
     catalog,
     rootSecurity: root.security,
@@ -125,8 +131,59 @@ export function normalizeService(
     schemas,
     securitySchemes: catalog.schemes,
     servers: ctx.serverList(),
+    ...(tags.length === 0 ? {} : { tags }),
   };
   return { context: ctx, service };
+}
+
+/**
+ * Root `tags`: declaration order and descriptions become the service's tag
+ * definitions. Entries without a valid name are invalid; a repeated name is
+ * partially represented (the first declaration wins) so grouping stays stable.
+ */
+function normalizeTagDefinitions(
+  ctx: NormalizeContext,
+  raw: unknown,
+  source: SourceLocation,
+): readonly TagDefinition[] {
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw)) {
+    ctx.invalid(source);
+    return [];
+  }
+  const tags: TagDefinition[] = [];
+  const seen = new Set<string>();
+  raw.forEach((entry, index) => {
+    const entrySource = child(source, String(index));
+    if (
+      !isRecord(entry) ||
+      typeof entry.name !== "string" ||
+      entry.name.length === 0
+    ) {
+      ctx.invalid(entrySource);
+      return;
+    }
+    if (seen.has(entry.name)) {
+      ctx.partial(entrySource);
+      return;
+    }
+    seen.add(entry.name);
+    const description =
+      typeof entry.description === "string" && entry.description.length > 0
+        ? entry.description
+        : undefined;
+    if (
+      entry.description !== undefined &&
+      typeof entry.description !== "string"
+    ) {
+      ctx.invalid(child(entrySource, "description"));
+    }
+    tags.push({
+      name: entry.name,
+      ...(description === undefined ? {} : { description }),
+    });
+  });
+  return tags;
 }
 
 /** Projects every registered schema location exactly once, iteratively. */

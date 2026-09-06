@@ -53,7 +53,7 @@ describe("validateProject", () => {
         name: "Frozen",
         openapi: ["./openapi.yaml"],
         docs: "./docs",
-        branding: { logo: "./openapi.yaml" },
+        branding: { logo: "./logo.png" },
         environments: { production: { baseUrl: "https://api.example.com" } },
       };`,
     );
@@ -491,6 +491,16 @@ async function createProject(
 ): Promise<string> {
   const project = await makeTemporaryDirectory();
   await mkdir(path.join(project, "docs"));
+  // A minimal PNG (signature plus an IHDR header) for branding tests; the
+  // build identifies image types by content, never by extension.
+  await writeFile(
+    path.join(project, "logo.png"),
+    Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+      0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xde,
+    ]),
+  );
   if (options.createOpenapi !== false) {
     await writeFile(
       path.join(project, "openapi.yaml"),

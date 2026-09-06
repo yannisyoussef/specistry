@@ -2,7 +2,7 @@
 
 ## Status
 
-ACCEPTED — 2026-09-05
+ACCEPTED — 2026-09-05. Implemented by SPEC-006; [ADR-012](012-authored-content-pipeline.md) records the pipeline, artifact, route, and navigation shapes that realize this decision.
 
 ## Context
 

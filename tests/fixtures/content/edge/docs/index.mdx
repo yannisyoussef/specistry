@@ -1,0 +1,35 @@
+---
+title: Edge index
+description: Every authoring mistake Specra must report with a location.
+unknownField: true
+---
+
+# A body H1 is not allowed
+
+Text with an expression {1 + 1} inside.
+
+<script>alert("no")</script>
+
+<Marquee>Unknown component</Marquee>
+
+<Callout type="loud">
+
+Invalid callout type.
+
+</Callout>
+
+<Step title="Orphan step">
+
+Steps require a Steps parent.
+
+</Step>
+
+[Broken page](./does-not-exist) and [broken anchor](./nested/valid#nowhere) and [bad scheme](<javascript:alert(1)>).
+
+![Missing image](./images/missing.png)
+
+![Not an image](./images/not-an-image.png)
+
+![Outside root](../specra.config.ts)
+
+Text `inline` and <em>inline html</em> here.

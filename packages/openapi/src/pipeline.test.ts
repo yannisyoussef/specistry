@@ -223,6 +223,8 @@ describe("ingestOpenApi", () => {
       getPet?.responses[0]?.bodies.map((media) => media.mediaType),
     ).toEqual(["application/json", "application/octet-stream", "text/plain"]);
 
+    // Root `tags` become declared groups in declaration order (SPEC-006).
+    expect(service(result).tags).toEqual([{ name: "pets" }]);
     const pet = schema(result, "basic-3.1.yaml", "/components/schemas/Pet");
     expect(pet.kind).toBe("object");
     if (pet.kind !== "object") return;
