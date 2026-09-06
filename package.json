@@ -40,6 +40,7 @@
     "@specra/content": "workspace:*",
     "@specra/model": "workspace:*",
     "@specra/playground": "workspace:*",
+    "@specra/release": "workspace:*",
     "@specra/search": "workspace:*",
     "@specra/snippets": "workspace:*",
     "@testing-library/dom": "10.4.1",

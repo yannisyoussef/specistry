@@ -147,9 +147,16 @@ export function selectVersion(
 }
 
 /** Builds the route tree: services, groups, and operations with slugs and hrefs. */
+export interface ApiRouteOptions {
+  /** Root of the reference routes; `/api` or a versioned `/api/<version>` (SPEC-010). */
+  readonly apiRoot?: string;
+}
+
 export function buildApiRouteTree(
   artifact: DocumentationArtifact,
+  options: ApiRouteOptions = {},
 ): ApiRouteTree {
+  const apiRoot = options.apiRoot ?? API_ROOT;
   const version = selectVersion(artifact);
   const services = version.services;
   const singleService = services.length === 1;
@@ -159,7 +166,7 @@ export function buildApiRouteTree(
   return {
     services: services.map((service, index) => {
       const slug = serviceSlugs[index] ?? "service";
-      const href = singleService ? API_ROOT : `${API_ROOT}/${slug}`;
+      const href = singleService ? apiRoot : `${apiRoot}/${slug}`;
       return {
         groups: buildGroups(service.operations, service.tags ?? [], href),
         href,
@@ -173,9 +180,12 @@ export function buildApiRouteTree(
 }
 
 /** Every route of the API reference, in reading order. */
-export function apiRoutes(artifact: DocumentationArtifact): readonly string[] {
-  const tree = buildApiRouteTree(artifact);
-  const routes = [API_ROOT];
+export function apiRoutes(
+  artifact: DocumentationArtifact,
+  options: ApiRouteOptions = {},
+): readonly string[] {
+  const tree = buildApiRouteTree(artifact, options);
+  const routes = [options.apiRoot ?? API_ROOT];
   for (const service of tree.services) {
     if (!tree.singleService) routes.push(service.href);
     for (const group of service.groups) {

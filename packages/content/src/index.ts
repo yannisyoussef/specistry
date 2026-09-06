@@ -15,6 +15,7 @@ export {
   uniqueSlugs,
   type ApiGroupRoute,
   type ApiOperationRoute,
+  type ApiRouteOptions,
   type ApiRouteTree,
   type ApiServiceRoute,
 } from "./api-routes.js";
