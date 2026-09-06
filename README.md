@@ -42,23 +42,24 @@ The future published executable name is `specra`. See the [CLI reference](docs/c
 
 ## Commands
 
-| Command                   | Purpose                                                          |
-| ------------------------- | ---------------------------------------------------------------- |
-| `pnpm dev`                | Run the reader shell in development                              |
-| `pnpm build`              | Build all packages and applications in dependency order          |
-| `pnpm format`             | Apply repository formatting                                      |
-| `pnpm lint`               | Lint TypeScript, React, and Markdown                             |
-| `pnpm typecheck`          | Type-check every workspace project                               |
-| `pnpm test`               | Run deterministic unit, security, accessibility, and smoke tests |
-| `pnpm test:coverage`      | Run tests and emit coverage summaries                            |
-| `pnpm test:e2e`           | Run Chromium browser and accessibility smoke tests               |
-| `pnpm test:security`      | Run the malicious-input foundation tests                         |
-| `pnpm test:performance`   | Run fresh-process ingestion and model performance evidence       |
-| `pnpm check:architecture` | Enforce dependency directions, manifest edges, and opaque loads  |
-| `pnpm check:dependencies` | Enforce exact dependency and private-package manifest policy     |
-| `pnpm check:licenses`     | Reject denied production dependency licenses                     |
-| `pnpm check:secrets`      | Reject likely committed secrets without printing their values    |
-| `pnpm check`              | Run the local fast quality gate                                  |
+| Command                   | Purpose                                                           |
+| ------------------------- | ----------------------------------------------------------------- |
+| `pnpm dev`                | Run the reader shell in development                               |
+| `pnpm build`              | Build all packages and applications in dependency order           |
+| `pnpm format`             | Apply repository formatting                                       |
+| `pnpm lint`               | Lint TypeScript, React, and Markdown                              |
+| `pnpm typecheck`          | Type-check every workspace project                                |
+| `pnpm test`               | Run deterministic unit, security, accessibility, and smoke tests  |
+| `pnpm test:coverage`      | Run tests and emit coverage summaries                             |
+| `pnpm test:e2e`           | Run Chromium browser and accessibility smoke tests                |
+| `pnpm test:security`      | Run the malicious-input foundation tests                          |
+| `pnpm test:performance`   | Run fresh-process ingestion and model performance evidence        |
+| `pnpm check:architecture` | Enforce dependency directions, manifest edges, and opaque loads   |
+| `pnpm check:dependencies` | Enforce exact dependency and private-package manifest policy      |
+| `pnpm check:licenses`     | Reject denied production dependency licenses                      |
+| `pnpm check:quality`      | Dogfood `specra check` on a real fixture and prove the gate fails |
+| `pnpm check:secrets`      | Reject likely committed secrets without printing their values     |
+| `pnpm check`              | Run the local fast quality gate                                   |
 
 ## Repository map
 
@@ -70,6 +71,7 @@ specra/
 ├── packages/content/         Authored Markdown/MDX compiler: bounded AST, components, highlighting
 ├── packages/search/          Build-time search projection and index, browser-safe query engine
 ├── packages/snippets/        Pure request projection and cURL/HTTP/JS/TS/Java/Python generators
+├── packages/quality/         Documentation quality facts, rule registry, policy evaluation
 ├── packages/release/         Release manifests, catalog, route tables, redirects, structured diff, changelog
 ├── packages/model/           Framework-neutral canonical documentation model
 ├── packages/openapi/         OpenAPI 3.0/3.1 ingestion: bounded parse, confined refs, normalization
@@ -78,7 +80,7 @@ specra/
 └── docs/                     Product, architecture, security, ADRs, and roadmap
 ```
 
-Start with the [architecture entry point](docs/architecture/README.md), [product definition](docs/product-definition.md), [CLI reference](docs/cli.md), [OpenAPI ingestion reference](docs/openapi.md), [configuration reference](docs/configuration.md), [content authoring reference](docs/content-authoring.md), [search reference](docs/search.md), [code samples reference](docs/code-samples.md), [playground reference](docs/playground.md), [versioning reference](docs/versioning.md), [threat model](docs/security/threat-model.md), [deployment requirements](docs/deployment.md), and [roadmap](docs/roadmap.md). Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+Start with the [architecture entry point](docs/architecture/README.md), [product definition](docs/product-definition.md), [CLI reference](docs/cli.md), [OpenAPI ingestion reference](docs/openapi.md), [configuration reference](docs/configuration.md), [content authoring reference](docs/content-authoring.md), [search reference](docs/search.md), [code samples reference](docs/code-samples.md), [playground reference](docs/playground.md), [versioning reference](docs/versioning.md), [quality reference](docs/quality.md), [threat model](docs/security/threat-model.md), [deployment requirements](docs/deployment.md), and [roadmap](docs/roadmap.md). Contributors should read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 Development integrates through `develop`; reviewed, green promotion pull requests move releases to the production branch, `master`. The complete branch and hotfix workflow is documented in [CONTRIBUTING.md](CONTRIBUTING.md#branch-workflow).
 
@@ -94,6 +96,7 @@ Development integrates through `develop`; reviewed, green promotion pull request
 - Search is generated at build time and answered in the browser from a digest-checked, content-addressed artifact; queries never leave the reader and no search service or telemetry exists.
 - Code examples in six protocol languages are projected from the canonical operation by a pure, deterministic generator with hardened escaping and placeholder credentials; SDK examples are rendered only when the project author mapped them explicitly. Nothing in the reader sends a request or accepts a destination the build did not validate.
 - Documentation versions (SPEC-010) are immutable release sets promoted explicitly from a verified candidate; `/docs/{version}` and `/api/{version}` are self-canonical and never fall back to newer content, `/docs` is a non-permanent alias to the explicit current release, redirects are validated internal data, and changelogs are human-reviewed from value-free structured diff candidates; see the [versioning reference](docs/versioning.md).
+- Documentation quality (SPEC-011) is a deterministic gate, not a score: a static rule catalogue produces findings from normalized facts, project policy assigns severities, thresholds, and governed suppressions, and `specra check` maps the result to an exit code. `specra diff` exposes the SPEC-010 structured diff as a read-only public command. Neither runs user code, reaches the network, or writes anything; see the [quality reference](docs/quality.md).
 - Critical dependency boundaries, accessibility smoke coverage, malicious-input controls, and production-license policy run in CI.
 
 A project license, release process, and independently published packages are deliberately deferred until repository ownership and distribution policy are decided.

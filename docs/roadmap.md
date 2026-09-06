@@ -121,6 +121,7 @@ Each slice is a deployable or author-visible vertical increment. Its work item m
 - **Tests/security:** rule unit/goldens, threshold math, config compatibility, huge diagnostic sets, terminal-control/secret redaction, CLI subprocess and example-project CI.
 - **Docs/DoD:** rule catalog, scoring formula if used, CI recipes, suppression governance, and migration policy are complete.
 - **Dependencies/risks/reviewers:** SPEC-003, SPEC-006, SPEC-008, SPEC-010; risks are vanity metrics and noisy gates; Product/DX, QA, OpenAPI, security.
+- **Outcome:** implemented ([ADR-017](adr/017-documentation-quality-facts-rules-policy.md), [quality reference](quality.md)): the pure `@specra/quality` engine with a static 25-rule registry across operations, schemas, examples, authentication, SDK mappings, authored content, compatibility, and suppression governance; `specra check` (exit 3 on a failed gate, 2 on a policy error) and public `specra diff` over the SPEC-010 port; severity overrides, `failOn`, `maxWarnings`, and governed suppressions with expiry and stale detection. **No percentage score**, by decision. The public commands are dogfooded in CI with self-tests that prove the gate can fail.
 
 ## SPEC-012 — TestInbox dogfooding and release readiness
 

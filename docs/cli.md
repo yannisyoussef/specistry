@@ -32,6 +32,28 @@ Options (both commands):
 
 Use `specra --help` for top-level help and `specra <command> --help` for the exact command contract.
 
+## Quality and diff commands
+
+```bash
+specra check
+specra check --version v2 --from v1
+specra diff --from v1 --to v2
+```
+
+`specra check` (SPEC-011) evaluates the candidate build — or a retained
+release with `--version <id>` — against the project's quality policy. It is
+read-only: it writes nothing, rebuilds nothing, and applies no fix. With
+`--from <candidate|current|id>` it also runs the compatibility rules against
+that base. `specra diff --from <source> [--to <source>]` prints the SPEC-010
+structured diff between two documentation sets (`--to` defaults to the
+candidate) and never fails because something changed. The rule catalogue,
+policy model, suppression governance, and machine format are in the
+[quality reference](quality.md).
+
+Exit codes for `check`: `0` the gate passed, `3` the gate failed, `2` the
+project or policy could not be read. A failed gate is deliberately a
+different code from a configuration error.
+
 ## Release commands
 
 Once a project has authors ready to publish, three catalog commands (SPEC-010) turn a candidate build into an immutable documentation release and manage the mutable `current` pointer. The full workflow, version grammar, redirect and changelog rules are in the [versioning reference](versioning.md).
@@ -106,13 +128,14 @@ Success JSON has this stable shape (`artifacts.files` and `artifacts.bytes` appe
 }
 ```
 
-`candidates` (`build` only, when the project has released versions) reports the comparison base, the number of structured diff candidates written to `.specra/candidates/diff.json`, and whether the bounded output was truncated (SPEC-010); `release` returns `release` (`version`, `digest`, `current`, `unchanged`, `components`, `bytes`, `directory`, `changelog`, `from`, `candidates`) and `current`/`deprecate` return `catalog` (`current` and every retained release with its digest, state, and changelog flag). `search.documents` counts the search documents the project produces (SPEC-007); `snippets.operations` and `snippets.sdkExamples` count the code-sample projections and authored SDK examples (SPEC-008); `build` also lists `search.json` and `snippets.json` among the artifact files. `diagnostics` on a successful result contains warnings only. Failure JSON contains `ok: false` and ordered diagnostics with `code`, fixed value-safe `message`, optional safe `path`, and `severity` (`error` or `warning`). It contains no timestamps, process IDs, absolute machine paths, config or source values, exception messages, or stack traces.
+`specra check --json` writes `{ diagnostics, ok, quality }` where `quality` is the versioned evaluation envelope (`qualityFormat: 1`); `ok: false` with a `quality` block is a failed gate, without one it is a project or policy error. `specra diff --json` writes `{ diagnostics, diff, ok }` where `diff` is the SPEC-010 `diffFormat: 1` record, reused rather than re-invented. `candidates` (`build` only, when the project has released versions) reports the comparison base, the number of structured diff candidates written to `.specra/candidates/diff.json`, and whether the bounded output was truncated (SPEC-010); `release` returns `release` (`version`, `digest`, `current`, `unchanged`, `components`, `bytes`, `directory`, `changelog`, `from`, `candidates`) and `current`/`deprecate` return `catalog` (`current` and every retained release with its digest, state, and changelog flag). `search.documents` counts the search documents the project produces (SPEC-007); `snippets.operations` and `snippets.sdkExamples` count the code-sample projections and authored SDK examples (SPEC-008); `build` also lists `search.json` and `snippets.json` among the artifact files. `diagnostics` on a successful result contains warnings only. Failure JSON contains `ok: false` and ordered diagnostics with `code`, fixed value-safe `message`, optional safe `path`, and `severity` (`error` or `warning`). It contains no timestamps, process IDs, absolute machine paths, config or source values, exception messages, or stack traces.
 
 Content diagnostics additionally carry `line` and `column` (1-based) for the offending node; the human report prints them as `[source/docs/guides/attachments.md:42:7]`. `path` uses one grammar for every diagnostic: `scope[#pointer]` where the pointer is an RFC 6901 JSON pointer. Scopes are `config` (`specra.config.ts` data, with `*` for user-chosen record keys and numeric indices for list positions, for example `config#/environments/*/baseUrl` or `config#/openapi/1`), `cli` (command options, `cli#/root`), `source/<project-relative path>` (a source document and pointer, for example `source/schemas/user.yaml#/properties/id`), and `artifact` (the artifact directory or a canonical model pointer). Errors sort before warnings, then by code, then by path with numeric pointer segments compared numerically, then by line and column.
 
 | Exit | Meaning                                                           |
 | ---: | ----------------------------------------------------------------- |
-|    0 | Validation or build succeeded (possibly with warnings)            |
+|    0 | Validation, build, check, or diff succeeded                       |
+|    3 | `specra check` ran and the quality gate failed                    |
 |    2 | Project, config, path, source, or normalization validation failed |
 |   64 | Command usage was invalid                                         |
 |   70 | Specra encountered an internal orchestration or write failure     |
@@ -175,6 +198,10 @@ Configuration and orchestration codes are stable within this contract; source co
 | `CHANGELOG_CANDIDATE_UNKNOWN`           | Fix: an item names a candidate id that the comparison did not produce                                                                                                                                            |
 | `CHANGELOG_CANDIDATE_UNREVIEWED`        | Fix: a diff candidate is neither described by an item nor listed under `omitted` (or the changelog file is missing while candidates exist)                                                                       |
 | `CHANGELOG_OPERATION_NOT_FOUND`         | Fix: an item's `operation` matches no operation of the release (or of the compared release for removals)                                                                                                         |
+| `QUALITY_RULE_UNKNOWN`                  | Fix: the policy names a rule that does not exist; see the catalogue in docs/quality.md                                                                                                                           |
+| `QUALITY_SEVERITY_INVALID`              | Fix: a rule severity must be off, info, warning, or error                                                                                                                                                        |
+| `QUALITY_SUPPRESSION_INVALID`           | Fix: a suppression needs a known rule, an exact target, a plain-text reason of at most 200 characters, and an optional YYYY-MM-DD expiry                                                                         |
+| `QUALITY_THRESHOLD_INVALID`             | Fix: `failOn` must be error, warning, info, or never, and `maxWarnings` a non-negative integer                                                                                                                   |
 | `CANCELLED`                             | Re-run when ready                                                                                                                                                                                                |
 | `INTERNAL_ERROR`                        | Re-run and report a reproducible failure without secrets                                                                                                                                                         |
 
@@ -220,7 +247,13 @@ Authored content and navigation codes (SPEC-006) are reported at `source/docs/<f
 Consumers can validate or build without spawning a process:
 
 ```typescript
-import { buildProject, releaseProject, validateProject } from "@specra/cli";
+import {
+  buildProject,
+  checkProject,
+  diffDocumentation,
+  releaseProject,
+  validateProject,
+} from "@specra/cli";
 
 const controller = new AbortController();
 const result = await validateProject({
@@ -234,6 +267,9 @@ if (result.ok) {
   console.log(result.diagnostics); // warnings only
 }
 
+const checked = await checkProject({ root: "./documentation" });
+if ("quality" in checked) console.log(checked.quality.summary);
+
 const built = await buildProject({ root: "./documentation" });
 if (built.ok) console.log(built.artifacts.files);
 
@@ -245,7 +281,7 @@ const released = await releaseProject({
 if (released.ok) console.log(released.release.digest);
 ```
 
-`releaseProject`, `selectCurrentRelease`, and `deprecateRelease` mirror the three catalog commands with the same options and results as their `--json` output.
+`releaseProject`, `selectCurrentRelease`, and `deprecateRelease` mirror the three catalog commands with the same options and results as their `--json` output. `checkProject` and `diffDocumentation` do the same for the quality and diff commands; the rule engine itself is `@specra/quality`, which is pure and usable on its own.
 
 `createBuildContext` exposes the configuration and path stage alone for future command composition; it performs no ingestion and returns a `ContextResult` that carries only the context. A successful `BuildContext` contains the canonical project/config paths, validated config v1, resolved source paths, fixed artifact root, and caller cancellation signal. It deliberately contains no parser, renderer, content compiler, terminal, or process-exit object. Successful `validateProject` and `buildProject` results add an `ingestion` summary (project-relative source paths with byte sizes and SHA-256 digests, plus statistics) and warning diagnostics; `buildProject` adds the artifact summary.
 

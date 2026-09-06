@@ -237,6 +237,36 @@ flowchart LR
 
 `@specra/snippets` depends on `@specra/model` only and is pure: projection and the six generators (cURL, HTTP, JavaScript, TypeScript, Java, Python) read nothing but their input. The artifact stores projections, so it is linear in operations and independent of environments; the reader generates the texts on render, memoized per artifact digest, and ships no generator to the browser (the architecture gate forbids build-only imports from client islands and the bundle gate scans client chunks). SDK examples are consumer data declared in the config and resolved to canonical identity at build time; Specra never infers an SDK call. ADR-014 records the decisions; the [code samples reference](../code-samples.md) documents the contracts.
 
+## Documentation quality and the public diff (SPEC-011)
+
+```mermaid
+flowchart LR
+  artifacts["documentation.json + content.json + navigation.json + snippets.json\n(+ a base release)"] --> facts["@specra/quality facts\n(services, operations, schemas, auth, examples, SDK, pages, diff)"]
+  facts --> rules["static rule registry\n25 rules, explicit imports, no plugin hook"]
+  rules --> findings["findings: rule + entity identity + message"]
+  policy["specra.config.ts quality\nseverities · failOn · maxWarnings · suppressions"] --> evaluation
+  findings --> evaluation["policy evaluation\neffective severity, suppression, counts, truncation, gate"]
+  evaluation --> cli["@specra/cli\nhuman report · JSON · exit code"]
+```
+
+`@specra/quality` is pure and depends only on `@specra/model`,
+`@specra/content`, `@specra/snippets`, and `@specra/release`. It performs no
+I/O, loads nothing at runtime, and the reader may not depend on it; the
+architecture gate enforces all three. Facts are an index over the canonical
+artifacts, so no parser object, Markdown AST, or React element can reach a
+rule. Policy is separate from rules, and the CLI owns no quality semantics:
+it resolves the artifact sets, calls the engine, formats the result, and maps
+the outcome to an exit code (`3` for a failed gate, distinct from `2` for a
+project or policy error).
+
+Compatibility rules read the SPEC-010 structured diff _and_ both fact sets
+and never mutate a diff record; uncertain schema changes stay "changed,
+review required". `specra diff` is the public, read-only view of the same
+port and reuses its `diffFormat: 1` envelope. There is no quality score, no
+rule plugin mechanism, and no reader surface: quality is author and CI
+tooling. See [ADR-017](../adr/017-documentation-quality-facts-rules-policy.md)
+and the [quality reference](../quality.md).
+
 ## Runtime responsibilities
 
 The default deployment serves pre-rendered or server-rendered reader routes, small route-specific payloads, a lazy search worker/index, and opt-in client islands for navigation, tabs, schema expansion, search, and playground forms. It holds no credential database and performs no generic upstream fetch. Static export is supported when selected features are static-compatible; Node deployment adds controlled runtime features.
