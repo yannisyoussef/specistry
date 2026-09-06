@@ -16,19 +16,42 @@ import { Tabs } from "./tabs";
  * artifact, which the build already bounded and classified.
  */
 
+/**
+ * Renders blocks in order while tracking the current heading depth, so
+ * component titles (steps, static tab headings) continue the outline
+ * rather than skipping levels. `level` is the depth of the nearest heading
+ * above this list of blocks; the page title is level 1.
+ */
 export function ContentBlocks({
   blocks,
-}: Readonly<{ blocks: readonly BlockNode[] }>) {
+  level = 1,
+}: Readonly<{ blocks: readonly BlockNode[]; level?: HeadingLevel }>) {
+  const levels: HeadingLevel[] = [];
+  let current = level;
+  for (const block of blocks) {
+    if (block.kind === "heading") current = block.depth;
+    levels.push(current);
+  }
   return (
     <>
       {blocks.map((block, index) => (
-        <Block block={block} key={index} />
+        <Block block={block} key={index} level={levels[index] ?? level} />
       ))}
     </>
   );
 }
 
-function Block({ block }: Readonly<{ block: BlockNode }>) {
+type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+type SubheadingLevel = Exclude<HeadingLevel, 1>;
+
+function deeper(level: HeadingLevel): SubheadingLevel {
+  return level >= 6 ? 6 : ((level + 1) as SubheadingLevel);
+}
+
+function Block({
+  block,
+  level,
+}: Readonly<{ block: BlockNode; level: HeadingLevel }>) {
   switch (block.kind) {
     case "paragraph":
       return (
@@ -68,7 +91,7 @@ function Block({ block }: Readonly<{ block: BlockNode }>) {
                   {item.checked ? "Done: " : "To do: "}
                 </span>
               )}
-              <ContentBlocks blocks={item.children} />
+              <ContentBlocks blocks={item.children} level={level} />
             </li>
           ))}
         </Tag>
@@ -77,14 +100,19 @@ function Block({ block }: Readonly<{ block: BlockNode }>) {
     case "blockquote":
       return (
         <blockquote className="prose__quote">
-          <ContentBlocks blocks={block.children} />
+          <ContentBlocks blocks={block.children} level={level} />
         </blockquote>
       );
     case "code":
       return <Code block={block} />;
     case "table":
       return (
-        <div className="prose__table-scroll" tabIndex={0}>
+        <div
+          aria-label="Table"
+          className="prose__table-scroll"
+          role="group"
+          tabIndex={0}
+        >
           <table className="prose__table">
             <thead>
               <tr>
@@ -130,23 +158,25 @@ function Block({ block }: Readonly<{ block: BlockNode }>) {
         </figure>
       );
     case "callout":
-      return <Callout block={block} />;
-    case "steps":
+      return <Callout block={block} level={level} />;
+    case "steps": {
+      const Title = `h${deeper(level)}` as const;
       return (
         <ol className="steps">
           {block.steps.map((step, index) => (
             <li className="steps__step" key={index}>
-              <div className="steps__number" aria-hidden="true">
+              <div aria-hidden="true" className="steps__number">
                 {String(index + 1).padStart(2, "0")}
               </div>
               <div className="steps__body">
-                <h3 className="steps__title">{step.title}</h3>
-                <ContentBlocks blocks={step.children} />
+                <Title className="steps__title">{step.title}</Title>
+                <ContentBlocks blocks={step.children} level={deeper(level)} />
               </div>
             </li>
           ))}
         </ol>
       );
+    }
     case "cards":
       return (
         <ul className="cards">
@@ -174,16 +204,22 @@ function Block({ block }: Readonly<{ block: BlockNode }>) {
     case "tabs":
       return (
         <Tabs
+          headingLevel={deeper(level)}
           label="Options"
           labels={block.tabs.map((tab) => tab.label)}
           panels={block.tabs.map((tab, index) => (
-            <ContentBlocks blocks={tab.children} key={index} />
+            <ContentBlocks
+              blocks={tab.children}
+              key={index}
+              level={deeper(level)}
+            />
           ))}
         />
       );
     case "codeGroup":
       return (
         <Tabs
+          headingLevel={deeper(level)}
           label="Code examples"
           labels={block.blocks.map(codeLabel)}
           panels={block.blocks.map((code, index) => (
@@ -220,9 +256,21 @@ const CALLOUT_WORD: Readonly<Record<CalloutType, string>> = {
 
 function Callout({
   block,
-}: Readonly<{ block: Extract<BlockNode, { kind: "callout" }> }>) {
+  level,
+}: Readonly<{
+  block: Extract<BlockNode, { kind: "callout" }>;
+  level: HeadingLevel;
+}>) {
   return (
-    <aside className={`callout callout--${block.type}`}>
+    <div
+      aria-label={
+        block.title === undefined
+          ? CALLOUT_WORD[block.type]
+          : `${CALLOUT_WORD[block.type]}: ${block.title}`
+      }
+      className={`callout callout--${block.type}`}
+      role="note"
+    >
       <span aria-hidden="true" className="callout__glyph">
         {CALLOUT_GLYPH[block.type]}
       </span>
@@ -236,9 +284,9 @@ function Callout({
             </>
           )}
         </p>
-        <ContentBlocks blocks={block.children} />
+        <ContentBlocks blocks={block.children} level={level} />
       </div>
-    </aside>
+    </div>
   );
 }
 
@@ -256,7 +304,14 @@ function Code({
         </span>
         <CopyButton label="Copy" name="Copy code" value={block.value} />
       </figcaption>
-      <pre className="code-surface code-block__pre" data-language={language}>
+      {/* Long lines scroll inside the block, so keyboard users can reach it. */}
+      <pre
+        aria-label={`${block.title ?? language} code`}
+        className="code-surface code-block__pre"
+        data-language={language}
+        role="group"
+        tabIndex={0}
+      >
         <code className="code-block__code">
           {block.lines.map((line, index) => (
             <span className="code-block__line" key={index}>

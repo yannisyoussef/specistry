@@ -20,10 +20,13 @@ function subscribeNever(): () => void {
 }
 
 export function Tabs({
+  headingLevel = 4,
   label,
   labels,
   panels,
 }: Readonly<{
+  /** Heading level of the static per-panel headings (no-JavaScript shape). */
+  headingLevel?: 2 | 3 | 4 | 5 | 6;
   /** Accessible name of the tab list, e.g. "Choose your client". */
   label: string;
   labels: readonly string[];
@@ -39,6 +42,7 @@ export function Tabs({
     () => false,
   );
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const Heading = `h${headingLevel}` as const;
 
   const move = (from: number, delta: number): void => {
     const count = labels.length;
@@ -117,7 +121,7 @@ export function Tabs({
           tabIndex={enhanced ? 0 : undefined}
         >
           {enhanced ? null : (
-            <h4 className="tabs-block__heading">{labels[index]}</h4>
+            <Heading className="tabs-block__heading">{labels[index]}</Heading>
           )}
           {panel}
         </section>

@@ -38,7 +38,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
           request: { headers: requestHeaders },
           status: 404,
         });
-  response.headers.set("Content-Security-Policy", policy);
+  // Documentation assets are opaque files served with their own restrictive
+  // policy by the route handler; every page gets the nonce policy.
+  if (!pathname.startsWith("/assets/")) {
+    response.headers.set("Content-Security-Policy", policy);
+  }
   return response;
 }
 

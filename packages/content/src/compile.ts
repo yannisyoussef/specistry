@@ -55,6 +55,19 @@ import type {
  * ESM, raw HTML, and unknown components are diagnostics, never code.
  */
 
+/**
+ * A tag that is not a Specra component: lowercase names are HTML elements
+ * (`<div>`, `<em>`), which authored content never passes through; anything
+ * else is an unknown component name.
+ */
+function tagDiagnostic(
+  name: string | null,
+): "CONTENT_COMPONENT_UNKNOWN" | "CONTENT_HTML_FORBIDDEN" {
+  return name === null || /^[a-z]/.test(name)
+    ? "CONTENT_HTML_FORBIDDEN"
+    : "CONTENT_COMPONENT_UNKNOWN";
+}
+
 export interface ContentSource {
   /** Project-relative POSIX path, e.g. `docs/getting-started/quickstart.mdx`. */
   readonly path: string;
@@ -609,12 +622,12 @@ class Walker {
       case "mdxTextExpression":
         return this.report("CONTENT_EXPRESSION_FORBIDDEN", node);
       case "mdxJsxTextElement":
-        // Components are block-level; an inline tag is either a lowercase
-        // HTML-like element (unknown) or a misplaced Specra component.
+        // Components are block-level; an inline tag is either an HTML-like
+        // element (forbidden), an unknown name, or a misplaced component.
         return this.report(
           node.name !== null && COMPONENTS.has(node.name)
             ? "CONTENT_COMPONENT_NESTING_INVALID"
-            : "CONTENT_COMPONENT_UNKNOWN",
+            : tagDiagnostic(node.name),
           node,
         );
       case "footnoteReference":
@@ -731,7 +744,7 @@ class Walker {
     container: Container,
   ): Promise<BlockNode | undefined> {
     if (node.name === null || !COMPONENTS.has(node.name)) {
-      return this.report("CONTENT_COMPONENT_UNKNOWN", node);
+      return this.report(tagDiagnostic(node.name), node);
     }
     if (depth >= this.budgets.maxComponentDepth) {
       this.budget(locationOf(node));

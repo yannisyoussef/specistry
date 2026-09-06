@@ -36,9 +36,16 @@ export function createReaderContent(
 ): ReaderContent {
   const byRoute = new Map(pages.map((page) => [page.route, page]));
   const home = byRoute.get("/");
+  const listed = flattenNavigation(navigation.items);
+  // The homepage opens the reading order even when the configured
+  // navigation does not list it, so previous/next never skips it.
+  const entries: readonly NavigationEntry[] =
+    home === undefined || listed.some((entry) => entry.route === "/")
+      ? listed
+      : [{ kind: "page", label: home.title, route: "/", trail: [] }, ...listed];
   return {
     ...(branding === undefined ? {} : { branding }),
-    entries: flattenNavigation(navigation.items),
+    entries,
     ...(home === undefined ? {} : { home }),
     navigation,
     pages: byRoute,
@@ -182,9 +189,9 @@ export function authoredPaths(
     .filter((entry) => entry.kind === "page")
     .map((entry) => entry.route);
   const orphans = [...content.pages.keys()]
-    .filter((route) => route !== "/" && !listed.includes(route))
+    .filter((route) => !listed.includes(route))
     .sort();
-  return [...(content.home === undefined ? [] : ["/"]), ...listed, ...orphans];
+  return [...listed, ...orphans];
 }
 
 /** The API index label used in the primary navigation. */
