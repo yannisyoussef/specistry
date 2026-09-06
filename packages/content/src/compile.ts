@@ -34,6 +34,7 @@ import {
   uniqueAnchors,
 } from "./slug.js";
 import type {
+  ActionNode,
   BlockNode,
   CalloutType,
   CardNode,
@@ -42,7 +43,11 @@ import type {
   ContentLocation,
   ContentPage,
   InlineNode,
+  InstallOption,
+  LinkTarget,
   ListItem,
+  MediaNode,
+  StartEntry,
   StepNode,
   TabNode,
 } from "./types.js";
@@ -427,15 +432,24 @@ interface Positioned {
 }
 
 const COMPONENTS = new Set([
+  "Action",
   "Callout",
   "Card",
   "Cards",
   "CodeGroup",
+  "Entry",
+  "Hero",
+  "Install",
+  "Media",
+  "StartHere",
   "Step",
   "Steps",
   "Tab",
   "Tabs",
 ]);
+const MAX_ACTIONS = 3;
+const MAX_ENTRIES = 12;
+const DURATION = /^\d{1,2}:\d{2}$/;
 const CALLOUT_TYPES = new Set<CalloutType>([
   "danger",
   "note",
@@ -459,6 +473,7 @@ class Walker {
   private linkCount = 0;
   private highlighted = 0;
   private lastHeadingDepth = 1;
+  private rootBlocks = 0;
   private budgetReported = false;
 
   public constructor(
@@ -482,9 +497,89 @@ class Walker {
     const result: BlockNode[] = [];
     for (const node of nodes) {
       const block = await this.block(node, depth, container);
-      if (block !== undefined) result.push(block);
+      if (block !== undefined) {
+        result.push(block);
+        if (container === "root" && depth === 0) this.rootBlocks += 1;
+      }
     }
     return result;
+  }
+
+  /** The hero may only open the homepage; anything else is misplaced. */
+  private heroAllowed(depth: number, container: Container): boolean {
+    return (
+      container === "root" &&
+      depth === 0 &&
+      this.slug === "" &&
+      this.rootBlocks === 0
+    );
+  }
+
+  private async media(node: MdxJsxFlowElement): Promise<MediaNode | undefined> {
+    const props = this.props(node);
+    if (props === undefined) return undefined;
+    const poster = props.get("poster");
+    const alt = props.get("alt");
+    const caption = props.get("caption");
+    const duration = props.get("duration");
+    const linkLabel = props.get("linkLabel");
+    const linkHref = props.get("linkHref");
+    if (
+      poster === undefined ||
+      alt === undefined ||
+      !allowed(props, [
+        "alt",
+        "caption",
+        "duration",
+        "linkHref",
+        "linkLabel",
+        "poster",
+      ]) ||
+      (duration !== undefined && !DURATION.test(duration)) ||
+      (linkLabel === undefined) !== (linkHref === undefined) ||
+      node.children.some((child) => !isBlank(child))
+    ) {
+      return this.report("CONTENT_COMPONENT_PROP_INVALID", node);
+    }
+    const reference = assetPath(poster);
+    if (reference === undefined) {
+      return this.report("CONTENT_ASSET_INVALID", node);
+    }
+    this.assets.push({ location: locationOf(node), path: reference });
+    let link: MediaNode["link"];
+    if (linkLabel !== undefined && linkHref !== undefined) {
+      const resolved = this.componentLink(linkHref, node);
+      if (resolved === undefined) return undefined;
+      link = { href: resolved.href, label: linkLabel, target: resolved.target };
+    }
+    this.text += `${alt}\n${caption ?? ""}\n`;
+    return {
+      alt,
+      ...(caption === undefined ? {} : { caption }),
+      ...(duration === undefined ? {} : { duration }),
+      kind: "media",
+      ...(link === undefined ? {} : { link }),
+      poster: reference,
+    };
+  }
+
+  /** Validates a component link like an inline link and records the target. */
+  private componentLink(
+    href: string,
+    node: Positioned,
+  ): { readonly href: string; readonly target: LinkTarget } | undefined {
+    const resolved = resolveLink(href, this.slug);
+    if (resolved === undefined) {
+      return this.report("CONTENT_LINK_SCHEME_FORBIDDEN", node);
+    }
+    if (resolved.target === "page" || resolved.target === "api") {
+      this.links.push({
+        ...(resolved.anchor === undefined ? {} : { anchor: resolved.anchor }),
+        location: locationOf(node),
+        ...(resolved.route === undefined ? {} : { route: resolved.route }),
+      });
+    }
+    return { href: resolved.href, target: resolved.target };
   }
 
   private count(node: Positioned): boolean {
@@ -789,8 +884,15 @@ class Walker {
         };
       }
       case "Steps": {
-        if (!allowed(props, []))
+        const variant = props.get("variant");
+        const stepsTitle = props.get("title");
+        if (
+          !allowed(props, ["title", "variant"]) ||
+          (variant !== undefined && variant !== "strip")
+        ) {
           return this.report("CONTENT_COMPONENT_PROP_INVALID", node);
+        }
+        if (stepsTitle !== undefined) this.text += `${stepsTitle}\n`;
         const steps: StepNode[] = [];
         for (const child of node.children) {
           if (!isElement(child, "Step")) {
@@ -811,7 +913,172 @@ class Walker {
         }
         if (steps.length === 0)
           return this.report("CONTENT_COMPONENT_NESTING_INVALID", node);
-        return { kind: "steps", steps };
+        return {
+          kind: "steps",
+          steps,
+          ...(stepsTitle === undefined ? {} : { title: stepsTitle }),
+          ...(variant === undefined ? {} : { variant: "strip" }),
+        };
+      }
+      case "Hero": {
+        if (!this.heroAllowed(depth, container)) {
+          return this.report("CONTENT_COMPONENT_NESTING_INVALID", node);
+        }
+        const eyebrow = props.get("eyebrow");
+        if (!allowed(props, ["eyebrow"]))
+          return this.report("CONTENT_COMPONENT_PROP_INVALID", node);
+        const actions: ActionNode[] = [];
+        let media: MediaNode | undefined;
+        for (const child of node.children) {
+          const name =
+            child.type === "mdxJsxFlowElement" ? child.name : undefined;
+          if (name === "Media" && child.type === "mdxJsxFlowElement") {
+            if (media !== undefined)
+              return this.report("CONTENT_COMPONENT_NESTING_INVALID", child);
+            if (!this.count(child)) return undefined;
+            media = await this.media(child);
+            if (media === undefined) return undefined;
+            continue;
+          }
+          if (name !== "Action" || child.type !== "mdxJsxFlowElement") {
+            if (isBlank(child)) continue;
+            return this.report("CONTENT_COMPONENT_NESTING_INVALID", child);
+          }
+          const actionProps = this.props(child);
+          if (actionProps === undefined) return undefined;
+          const label = actionProps.get("label");
+          const href = actionProps.get("href");
+          const variant = actionProps.get("variant");
+          if (
+            label === undefined ||
+            href === undefined ||
+            !allowed(actionProps, ["href", "label", "variant"]) ||
+            (variant !== undefined &&
+              variant !== "primary" &&
+              variant !== "secondary") ||
+            actions.length >= MAX_ACTIONS ||
+            child.children.some((grandchild) => !isBlank(grandchild))
+          ) {
+            return this.report("CONTENT_COMPONENT_PROP_INVALID", child);
+          }
+          const resolved = this.componentLink(href, child);
+          if (resolved === undefined) return undefined;
+          this.text += `${label}\n`;
+          actions.push({
+            href: resolved.href,
+            label,
+            target: resolved.target,
+            variant:
+              variant === undefined
+                ? actions.length === 0
+                  ? "primary"
+                  : "secondary"
+                : variant,
+          });
+        }
+        if (eyebrow !== undefined) this.text += `${eyebrow}\n`;
+        return {
+          actions,
+          ...(eyebrow === undefined ? {} : { eyebrow }),
+          kind: "hero",
+          ...(media === undefined ? {} : { media }),
+        };
+      }
+      case "Media":
+        return this.media(node);
+      case "Install": {
+        if (!allowed(props, []))
+          return this.report("CONTENT_COMPONENT_PROP_INVALID", node);
+        const options: InstallOption[] = [];
+        const labels = new Set<string>();
+        for (const child of node.children) {
+          if (!isElement(child, "Tab")) {
+            if (isBlank(child)) continue;
+            return this.report("CONTENT_COMPONENT_NESTING_INVALID", child);
+          }
+          const tabProps = this.props(child);
+          if (tabProps === undefined) return undefined;
+          const label = tabProps.get("label");
+          if (
+            label === undefined ||
+            !allowed(tabProps, ["label"]) ||
+            labels.has(label) ||
+            options.length >= MAX_TABS
+          ) {
+            return this.report("CONTENT_COMPONENT_PROP_INVALID", child);
+          }
+          labels.add(label);
+          const fences: CodeBlock[] = [];
+          for (const grandchild of child.children) {
+            if (grandchild.type !== "code") {
+              if (isBlank(grandchild)) continue;
+              return this.report(
+                "CONTENT_COMPONENT_NESTING_INVALID",
+                grandchild,
+              );
+            }
+            if (fences.length >= 2)
+              return this.report(
+                "CONTENT_COMPONENT_NESTING_INVALID",
+                grandchild,
+              );
+            if (!this.count(grandchild)) return undefined;
+            const block = await this.code(grandchild);
+            if (block === undefined || block.kind !== "code") return undefined;
+            fences.push(block);
+          }
+          const command = fences[0];
+          if (command === undefined)
+            return this.report("CONTENT_COMPONENT_NESTING_INVALID", child);
+          const sample = fences[1];
+          options.push({
+            command,
+            label,
+            ...(sample === undefined ? {} : { sample }),
+          });
+        }
+        if (options.length === 0)
+          return this.report("CONTENT_COMPONENT_NESTING_INVALID", node);
+        return { kind: "install", options };
+      }
+      case "StartHere": {
+        if (!allowed(props, []))
+          return this.report("CONTENT_COMPONENT_PROP_INVALID", node);
+        const entries: StartEntry[] = [];
+        for (const child of node.children) {
+          if (!isElement(child, "Entry")) {
+            if (isBlank(child)) continue;
+            return this.report("CONTENT_COMPONENT_NESTING_INVALID", child);
+          }
+          const entryProps = this.props(child);
+          if (entryProps === undefined) return undefined;
+          const title = entryProps.get("title");
+          const href = entryProps.get("href");
+          const description = entryProps.get("description");
+          const meta = entryProps.get("meta");
+          if (
+            title === undefined ||
+            href === undefined ||
+            !allowed(entryProps, ["description", "href", "meta", "title"]) ||
+            entries.length >= MAX_ENTRIES ||
+            child.children.some((grandchild) => !isBlank(grandchild))
+          ) {
+            return this.report("CONTENT_COMPONENT_PROP_INVALID", child);
+          }
+          const resolved = this.componentLink(href, child);
+          if (resolved === undefined) return undefined;
+          this.text += `${title}\n${description ?? ""}\n`;
+          entries.push({
+            ...(description === undefined ? {} : { description }),
+            href: resolved.href,
+            ...(meta === undefined ? {} : { meta }),
+            target: resolved.target,
+            title,
+          });
+        }
+        if (entries.length === 0)
+          return this.report("CONTENT_COMPONENT_NESTING_INVALID", node);
+        return { entries, kind: "startHere" };
       }
       case "Cards": {
         if (!allowed(props, []))
@@ -919,6 +1186,8 @@ class Walker {
           return this.report("CONTENT_COMPONENT_NESTING_INVALID", node);
         return { blocks, kind: "codeGroup" };
       }
+      case "Action":
+      case "Entry":
       case "Step":
       case "Card":
       case "Tab":

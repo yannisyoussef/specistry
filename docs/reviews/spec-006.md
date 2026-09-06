@@ -53,7 +53,7 @@ applied on the branch before the final gates.
 | Review                   | P0  | P1  | P2  | P3  | Disposition                                      |
 | ------------------------ | --- | --- | --- | --- | ------------------------------------------------ |
 | Content / Markdown / MDX | 0   | 1   | 2   | 2   | P1 fixed; P2 fixed; P3 one fixed, one tracked    |
-| Product / DX             | 0   | 1   | 3   | 2   | P1 fixed; P2 fixed; P3 tracked                   |
+| Product / DX             | 0   | 2   | 3   | 2   | P1 fixed; P2 fixed; P3 tracked                   |
 | Frontend                 | 0   | 1   | 2   | 2   | P1 fixed; P2 fixed; P3 one fixed, one tracked    |
 | Security                 | 0   | 1   | 3   | 2   | P1 fixed; P2 fixed; P3 one accepted, one tracked |
 | Accessibility            | 0   | 2   | 3   | 2   | P1 fixed; P2 fixed; P3 tracked                   |
@@ -132,6 +132,8 @@ P0 open: 0. P1 unresolved: 0.
 - **P3 — No Open Graph tags.** Tracked (owner: SEO/frontend; condition: social previews requested); titles, descriptions, and canonicals are complete.
 
 ## Design review
+
+**Second pass (post-PR review by the product owner).** The first pass over-reported the homepage row as done: the authored home was a generic page (cards, vertical steps, a code group) rather than the approved composition of screens 6a/8c, and the primary tab read "Docs" instead of "Guides". Disposition: P1, fixed on the branch. The content model gained `Hero` (title and lede from frontmatter, up to three actions, optional media), `Media` (poster asset, decorative chrome, caption with a written alternative), `Install` (chips over a command line and a sample), `StartHere` rows, and `Steps variant="strip"`; the reader renders the widened home column, the 8c two-column hero, the Install/Start-here row, and the workflow strip; the tab and breadcrumb root read "Guides"; the fixture homepage, unit, browser, and visual coverage were rebuilt against the screens. The endpoint context rail (screen 5e: Code / Try it) stays deferred because its content is SPEC-008 (snippets, SDK mapping) and SPEC-009 (playground); the deviations table records this explicitly, and the rail is expected to land with SPEC-008's Code mode.
 
 The authored page, guide, tabs, cards, table, image, drawer, and 404 states were reviewed against the Glass reference: the document column, panel surfaces, type scale, code surface, eyebrows, and method chips are unchanged; authored components use the same tokens and radii. New rules (frame, rhythm, components, composed sidebar, branding) are recorded in `docs/design/reader-v1.md` under "Authored pages", and the deviations table marks logo/brand colour and the homepage hero as done.
 

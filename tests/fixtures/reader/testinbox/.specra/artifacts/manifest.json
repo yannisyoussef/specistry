@@ -15,6 +15,11 @@
       "bytes": 157,
       "path": "assets/8a8489932558b153.png",
       "sha256": "8a8489932558b153cc3c27fa379c138de9a9025ec748680a0ae99a52e006945b"
+    },
+    {
+      "bytes": 31477,
+      "path": "assets/977b85582ab05e38.png",
+      "sha256": "977b85582ab05e383b6af910466ce60c89e5e2feac60c2a7f5e1abf7482b9ba5"
     }
   ],
   "branding": {
@@ -64,9 +69,9 @@
       "sha256": "3fd7102ecb3e556b48613b854a05f0e4f2d4fe94aa78e3124410edef902d9120"
     },
     {
-      "bytes": 1293,
+      "bytes": 2005,
       "path": "docs/index.mdx",
-      "sha256": "f6b051ceb15d6709ec8002c1231ea04cf2102191f8969cf7f94571eae1861ca8"
+      "sha256": "574392590766d9930e0397b6f1087c73955bd589536e7c41a6445952ab6a9c82"
     },
     {
       "bytes": 912,

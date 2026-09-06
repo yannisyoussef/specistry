@@ -69,6 +69,49 @@ export interface TabNode {
   readonly children: readonly BlockNode[];
 }
 
+/** A homepage call to action: ink (primary) or outline (secondary) button. */
+export interface ActionNode {
+  readonly label: string;
+  readonly href: string;
+  readonly target: LinkTarget;
+  readonly variant: "primary" | "secondary";
+}
+
+/**
+ * A media placeholder (poster plus play chrome). The reader never embeds a
+ * video source; the poster is an asset and the chrome is decorative.
+ */
+export interface MediaNode {
+  readonly kind: "media";
+  /** Artifact asset reference (`assets/<name>`) after the build resolved it. */
+  readonly poster: string;
+  readonly alt: string;
+  readonly caption?: string;
+  /** `m:ss` shown in the chrome. */
+  readonly duration?: string;
+  readonly link?: {
+    readonly label: string;
+    readonly href: string;
+    readonly target: LinkTarget;
+  };
+}
+
+/** One SDK option of the Install block: a command line and a sample. */
+export interface InstallOption {
+  readonly label: string;
+  readonly command: CodeBlock;
+  readonly sample?: CodeBlock;
+}
+
+/** One row of the "Start here" list. */
+export interface StartEntry {
+  readonly title: string;
+  readonly href: string;
+  readonly target: LinkTarget;
+  readonly description?: string;
+  readonly meta?: string;
+}
+
 export type BlockNode =
   | { readonly kind: "paragraph"; readonly children: readonly InlineNode[] }
   | {
@@ -104,10 +147,26 @@ export type BlockNode =
       readonly title?: string;
       readonly children: readonly BlockNode[];
     }
-  | { readonly kind: "steps"; readonly steps: readonly StepNode[] }
+  | {
+      readonly kind: "steps";
+      readonly steps: readonly StepNode[];
+      /** `strip` renders the homepage workflow strip (columns). */
+      readonly variant?: "strip";
+      readonly title?: string;
+    }
   | { readonly kind: "cards"; readonly cards: readonly CardNode[] }
   | { readonly kind: "tabs"; readonly tabs: readonly TabNode[] }
-  | { readonly kind: "codeGroup"; readonly blocks: readonly CodeBlock[] };
+  | { readonly kind: "codeGroup"; readonly blocks: readonly CodeBlock[] }
+  | {
+      /** Homepage hero: only the first block of `/`; title and lede come from frontmatter. */
+      readonly kind: "hero";
+      readonly eyebrow?: string;
+      readonly actions: readonly ActionNode[];
+      readonly media?: MediaNode;
+    }
+  | MediaNode
+  | { readonly kind: "install"; readonly options: readonly InstallOption[] }
+  | { readonly kind: "startHere"; readonly entries: readonly StartEntry[] };
 
 export type CalloutType = "danger" | "note" | "tip" | "warning";
 

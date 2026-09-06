@@ -24,6 +24,7 @@ export function Tabs({
   label,
   labels,
   panels,
+  variant = "tabs",
 }: Readonly<{
   /** Heading level of the static per-panel headings (no-JavaScript shape). */
   headingLevel?: 2 | 3 | 4 | 5 | 6;
@@ -31,6 +32,8 @@ export function Tabs({
   label: string;
   labels: readonly string[];
   panels: readonly ReactNode[];
+  /** `chips` is the homepage Install block: pill chips, borderless panels. */
+  variant?: "chips" | "tabs";
 }>) {
   const id = useId();
   const [selected, setSelected] = useState(0);
@@ -52,7 +55,10 @@ export function Tabs({
   };
 
   return (
-    <div className="tabs-block" data-enhanced={enhanced ? "true" : "false"}>
+    <div
+      className={`tabs-block${variant === "chips" ? " tabs-block--chips" : ""}`}
+      data-enhanced={enhanced ? "true" : "false"}
+    >
       <div
         aria-label={label}
         className="tabs-block__list"

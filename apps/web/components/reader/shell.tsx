@@ -87,7 +87,7 @@ export function Shell({
                     className="tab"
                     href="/"
                   >
-                    Docs
+                    Guides
                   </a>
                 </li>
               ) : null}

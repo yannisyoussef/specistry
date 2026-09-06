@@ -1,39 +1,62 @@
 ---
-title: Email testing built for automation
+title: Email testing built for automation.
 description: Create disposable inboxes and receive real application emails directly from your automated tests. One API, no mail server.
 ---
 
-<Cards>
-<Card title="Quickstart" href="./quickstart" description="First test email in five minutes." />
-<Card title="Authentication" href="./authentication" description="API keys, sandbox versus production." />
-<Card title="Waiting for email" href="./guides/waiting-for-email" description="Polling, timeouts, and matchers." />
-<Card title="API reference" href="/api" description="Inboxes, messages, attachments, webhooks." />
-</Cards>
+<Hero eyebrow="TestInbox · v1">
+<Action label="Get started" href="./quickstart" />
+<Action label="API reference" href="/api" />
+<Media poster="./images/see-it-work.png" alt="A test creating an inbox, the sign-up email arriving, and the verification link opening." caption="See it work: from create() to a passing test." duration="0:42" linkLabel="Show as steps" linkHref="./quickstart" />
+</Hero>
 
-## The workflow
-
-<Steps>
-<Step title="Create an inbox">
-Every test gets its own address. A short `ttl` keeps the sandbox clean.
-</Step>
-<Step title="Trigger your application">
-Use the inbox address wherever your application would send email.
-</Step>
-<Step title="Wait for an email">
-[Wait for message](/api/inboxes/wait-for-message) blocks until a matching message arrives.
-</Step>
-<Step title="Assert its contents">
-Read the parsed body, links, and attachments from the [message](/api/messages/get-message).
-</Step>
-</Steps>
-
-## Install
-
-<CodeGroup>
-```bash title="npm"
+<Install>
+<Tab label="TypeScript">
+```bash
 npm install @testinbox/client
 ```
-```bash title="pnpm"
-pnpm add @testinbox/client
+```typescript
+import { TestInbox } from "@testinbox/client";
+
+const client = new TestInbox({ apiKey: process.env.TESTINBOX_API_KEY });
+const inbox = await client.inboxes.create({ ttl: 3600 });
 ```
-</CodeGroup>
+</Tab>
+<Tab label="Python">
+```bash
+pip install testinbox
+```
+```python
+from testinbox import TestInbox
+
+client = TestInbox(api_key=os.environ["TESTINBOX_API_KEY"])
+inbox = client.inboxes.create(ttl=3600)
+```
+</Tab>
+<Tab label="cURL">
+```bash
+curl -X POST https://api.testinbox.email/v1/inboxes -H "X-Api-Key: $TESTINBOX_API_KEY"
+```
+</Tab>
+</Install>
+
+<StartHere>
+<Entry title="Quickstart" href="./quickstart" description="First test email in five minutes" meta="5 min" />
+<Entry title="Authentication" href="./authentication" description="API keys, sandbox vs production" meta="2 min" />
+<Entry title="Waiting for email" href="./guides/waiting-for-email" description="Polling, timeouts and matchers" meta="Guide" />
+<Entry title="API reference" href="/api" description="Inboxes, messages, attachments" meta="25 endpoints" />
+</StartHere>
+
+<Steps variant="strip" title="The workflow">
+<Step title="Create an inbox">
+`inboxes.create()`
+</Step>
+<Step title="Trigger your app">
+`app.signUp(address)`
+</Step>
+<Step title="Wait for an email">
+`messages.wait()`
+</Step>
+<Step title="Assert its contents">
+`expect(message.links[0])`
+</Step>
+</Steps>

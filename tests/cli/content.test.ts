@@ -141,7 +141,7 @@ describe("specra validate with authored content", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(summary(result.diagnostics)).toEqual([
-      "e CONTENT_ASSET_OUTSIDE_ROOT source/docs/index.md:8:1",
+      "e CONTENT_ASSET_OUTSIDE_ROOT source/docs/index.md:13:1",
       "e CONTENT_SOURCE_OUTSIDE_ROOT source/docs/linked.md",
       "w NAVIGATION_PAGE_ORPHANED source/docs/orphan.md:1:1",
     ]);
@@ -165,7 +165,7 @@ describe("specra validate with authored content", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(summary(result.diagnostics)).toEqual([
-      "e CONTENT_ASSET_TOO_LARGE source/docs/index.md:8:1",
+      "e CONTENT_ASSET_TOO_LARGE source/docs/index.md:13:1",
       "e CONTENT_ASSET_UNSUPPORTED config#/branding/logo",
     ]);
   });

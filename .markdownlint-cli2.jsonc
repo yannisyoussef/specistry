@@ -12,5 +12,8 @@
     "prompts/**",
     // Authored fixture pages contain deliberate authoring mistakes.
     "tests/fixtures/content/**",
+    // Playwright output.
+    "test-results/**",
+    "playwright-report/**",
   ],
 }

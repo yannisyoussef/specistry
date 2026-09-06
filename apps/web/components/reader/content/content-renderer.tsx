@@ -3,6 +3,7 @@ import type {
   CalloutType,
   CodeBlock,
   InlineNode,
+  MediaNode,
 } from "@specra/content";
 import type { ReactNode } from "react";
 
@@ -160,9 +161,13 @@ function Block({
     case "callout":
       return <Callout block={block} level={level} />;
     case "steps": {
-      const Title = `h${deeper(level)}` as const;
-      return (
-        <ol className="steps">
+      // A titled block owns a heading of its own; its steps sit below it.
+      const stepLevel =
+        block.title === undefined ? deeper(level) : deeper(deeper(level));
+      const Title = `h${stepLevel}` as const;
+      const strip = block.variant === "strip";
+      const list = (
+        <ol className={`steps${strip ? " steps--strip" : ""}`}>
           {block.steps.map((step, index) => (
             <li className="steps__step" key={index}>
               <div aria-hidden="true" className="steps__number">
@@ -170,11 +175,22 @@ function Block({
               </div>
               <div className="steps__body">
                 <Title className="steps__title">{step.title}</Title>
-                <ContentBlocks blocks={step.children} level={deeper(level)} />
+                <ContentBlocks blocks={step.children} level={stepLevel} />
               </div>
             </li>
           ))}
         </ol>
+      );
+      if (block.title === undefined) return list;
+      // A titled block is a section of its own; the eyebrow is its heading.
+      const Heading = `h${deeper(level)}` as const;
+      return (
+        <section className="steps-section">
+          <Heading className="eyebrow steps-section__title">
+            {block.title}
+          </Heading>
+          {list}
+        </section>
       );
     }
     case "cards":
@@ -227,7 +243,131 @@ function Block({
           ))}
         />
       );
+    case "hero":
+      // The page frame renders the hero (it owns the H1); a hero that is
+      // not the first block of the homepage never reaches the artifact.
+      return null;
+    case "media":
+      return <Media block={block} />;
+    case "install": {
+      const Heading = `h${deeper(level)}` as const;
+      return (
+        <section className="install">
+          <Heading className="eyebrow install__title">Install</Heading>
+          <Tabs
+            headingLevel={deeper(deeper(level))}
+            label="Install"
+            labels={block.options.map((option) => option.label)}
+            panels={block.options.map((option, index) => (
+              <div className="install__option" key={index}>
+                <CommandLine block={option.command} />
+                {option.sample === undefined ? null : (
+                  <Code bare block={option.sample} />
+                )}
+              </div>
+            ))}
+            variant="chips"
+          />
+        </section>
+      );
+    }
+    case "startHere": {
+      const Heading = `h${deeper(level)}` as const;
+      return (
+        <section className="start-here">
+          <Heading className="eyebrow start-here__title">Start here</Heading>
+          <ul className="start-here__list">
+            {block.entries.map((entry, index) => (
+              <li className="start-here__item" key={index}>
+                <a
+                  className="start-here__link"
+                  href={entry.href}
+                  {...(entry.target === "external"
+                    ? { rel: "noopener noreferrer" }
+                    : {})}
+                >
+                  <span className="start-here__text">
+                    <span className="start-here__name">{entry.title}</span>
+                    {entry.description === undefined ? null : (
+                      <span className="start-here__description">
+                        {entry.description}
+                      </span>
+                    )}
+                  </span>
+                  {entry.meta === undefined ? null : (
+                    <span className="start-here__meta">{entry.meta}</span>
+                  )}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      );
+    }
   }
+}
+
+/**
+ * Media placeholder: the poster is a real image, the play chrome and progress
+ * bar are decorative (the reader embeds no video), and the caption may link
+ * to a written alternative such as the quickstart steps.
+ */
+export function Media({ block }: Readonly<{ block: MediaNode }>) {
+  return (
+    <figure className="media">
+      <div className="media__frame">
+        {/* eslint-disable-next-line @next/next/no-img-element -- poster is a validated artifact asset */}
+        <img
+          alt={block.alt}
+          className="media__poster"
+          loading="lazy"
+          src={`/${block.poster}`}
+        />
+        <span aria-hidden="true" className="media__glow" />
+        <span aria-hidden="true" className="media__play">
+          <span className="media__play-glyph" />
+        </span>
+        <span aria-hidden="true" className="media__bar">
+          <span className="media__track" />
+          {block.duration === undefined ? null : (
+            <span className="media__duration">{block.duration}</span>
+          )}
+        </span>
+      </div>
+      {block.caption === undefined && block.link === undefined ? null : (
+        <figcaption className="media__caption">
+          <span>{block.caption}</span>
+          {block.link === undefined ? null : (
+            <a
+              className="media__link"
+              href={block.link.href}
+              {...(block.link.target === "external"
+                ? { rel: "noopener noreferrer" }
+                : {})}
+            >
+              {block.link.label}
+            </a>
+          )}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
+/** A one-line install command on the code surface with a prompt and copy. */
+function CommandLine({ block }: Readonly<{ block: CodeBlock }>) {
+  const command = block.value.trim();
+  return (
+    <div className="code-surface command-line">
+      <code className="command-line__code">
+        <span aria-hidden="true" className="command-line__prompt">
+          ${" "}
+        </span>
+        {command}
+      </code>
+      <CopyButton label="Copy" name="Copy install command" value={command} />
+    </div>
+  );
 }
 
 function codeLabel(block: CodeBlock): string {
@@ -291,13 +431,18 @@ function Callout({
 }
 
 function Code({
+  bare = false,
   block,
   inGroup = false,
-}: Readonly<{ block: CodeBlock; inGroup?: boolean }>) {
+}: Readonly<{ bare?: boolean; block: CodeBlock; inGroup?: boolean }>) {
   const language = block.language ?? "text";
   return (
-    <figure className={`code-block${inGroup ? " code-block--grouped" : ""}`}>
-      <figcaption className="code-block__header">
+    <figure
+      className={`code-block${inGroup ? " code-block--grouped" : ""}${bare ? " code-block--bare" : ""}`}
+    >
+      <figcaption
+        className={`code-block__header${bare ? " visually-hidden" : ""}`}
+      >
         <span className="code-block__title">
           {block.title ?? language}
           <span className="visually-hidden">, {language} code</span>

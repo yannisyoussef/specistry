@@ -144,7 +144,7 @@ export function pageBreadcrumbs(
   const entry = content.entries.find(
     (candidate) => candidate.route === page.route,
   );
-  const root: BreadcrumbItem = { href: "/", label: "Docs" };
+  const root: BreadcrumbItem = { href: "/", label: "Guides" };
   const trail = (entry?.trail ?? []).map((label): BreadcrumbItem => ({
     label,
   }));

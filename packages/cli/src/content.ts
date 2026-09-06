@@ -11,6 +11,7 @@ import {
   serializeNavigationArtifact,
   type BlockNode,
   type ContentPage,
+  type MediaNode,
   type NavigationConfigNode,
 } from "@specra/content";
 import {
@@ -467,6 +468,14 @@ function vectorOrIconExtension(
   return undefined;
 }
 
+function rewriteMedia(
+  node: MediaNode,
+  replacements: ReadonlyMap<string, string>,
+): MediaNode {
+  const poster = replacements.get(node.poster);
+  return poster === undefined ? node : { ...node, poster };
+}
+
 function rewriteImages(
   blocks: readonly BlockNode[],
   replacements: ReadonlyMap<string, string>,
@@ -478,6 +487,12 @@ function rewriteImages(
           const src = replacements.get(node.src);
           return src === undefined ? node : { ...node, src };
         }
+        case "media":
+          return rewriteMedia(node, replacements);
+        case "hero":
+          return node.media === undefined
+            ? node
+            : { ...node, media: rewriteMedia(node.media, replacements) };
         case "blockquote":
         case "callout":
           return { ...node, children: visit(node.children) };

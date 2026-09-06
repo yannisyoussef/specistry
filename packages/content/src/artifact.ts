@@ -10,6 +10,7 @@ import {
   type ContentArtifact,
   type ContentPage,
   type InlineNode,
+  type MediaNode,
   type NavigationArtifact,
   type NavigationNode,
 } from "./types.js";
@@ -327,11 +328,18 @@ function parseBlock(value: unknown, path: string, depth: number): BlockNode {
       };
     }
     case "steps": {
-      only(value, ["kind", "steps"], path);
+      only(value, ["kind", "steps", "title", "variant"], path);
       if (!Array.isArray(value.steps))
         throw new ContentArtifactError("Invalid steps.", path);
+      if (value.variant !== undefined && value.variant !== "strip") {
+        throw new ContentArtifactError("Invalid steps variant.", path);
+      }
       return {
         kind: "steps",
+        ...(value.title === undefined
+          ? {}
+          : { title: requireString(value.title, `${path}/title`) }),
+        ...(value.variant === undefined ? {} : { variant: "strip" as const }),
         steps: value.steps.map((step, index) => {
           const at = `${path}/steps/${index}`;
           if (!isRecord(step) || !hasOnlyKeys(step, ["children", "title"])) {
@@ -342,6 +350,101 @@ function parseBlock(value: unknown, path: string, depth: number): BlockNode {
             title: requireString(step.title, `${at}/title`),
           };
         }),
+      };
+    }
+    case "hero": {
+      only(value, ["actions", "eyebrow", "kind", "media"], path);
+      if (!Array.isArray(value.actions))
+        throw new ContentArtifactError("Invalid hero.", path);
+      return {
+        actions: value.actions.map((action, index) => {
+          const at = `${path}/actions/${index}`;
+          if (
+            !isRecord(action) ||
+            !hasOnlyKeys(action, ["href", "label", "target", "variant"]) ||
+            (action.variant !== "primary" && action.variant !== "secondary")
+          ) {
+            throw new ContentArtifactError("Invalid action.", at);
+          }
+          return {
+            href: requireString(action.href, `${at}/href`),
+            label: requireString(action.label, `${at}/label`),
+            target: parseTarget(action.target, `${at}/target`),
+            variant: action.variant,
+          };
+        }),
+        ...(value.eyebrow === undefined
+          ? {}
+          : { eyebrow: requireString(value.eyebrow, `${path}/eyebrow`) }),
+        kind: "hero",
+        ...(value.media === undefined
+          ? {}
+          : { media: parseMedia(value.media, `${path}/media`) }),
+      };
+    }
+    case "media":
+      return parseMedia(value, path);
+    case "install": {
+      only(value, ["kind", "options"], path);
+      if (!Array.isArray(value.options))
+        throw new ContentArtifactError("Invalid install block.", path);
+      return {
+        kind: "install",
+        options: value.options.map((option, index) => {
+          const at = `${path}/options/${index}`;
+          if (
+            !isRecord(option) ||
+            !hasOnlyKeys(option, ["command", "label", "sample"])
+          ) {
+            throw new ContentArtifactError("Invalid install option.", at);
+          }
+          return {
+            command: parseCode(option.command, `${at}/command`),
+            label: requireString(option.label, `${at}/label`),
+            ...(option.sample === undefined
+              ? {}
+              : { sample: parseCode(option.sample, `${at}/sample`) }),
+          };
+        }),
+      };
+    }
+    case "startHere": {
+      only(value, ["entries", "kind"], path);
+      if (!Array.isArray(value.entries))
+        throw new ContentArtifactError("Invalid start-here block.", path);
+      return {
+        entries: value.entries.map((entry, index) => {
+          const at = `${path}/entries/${index}`;
+          if (
+            !isRecord(entry) ||
+            !hasOnlyKeys(entry, [
+              "description",
+              "href",
+              "meta",
+              "target",
+              "title",
+            ])
+          ) {
+            throw new ContentArtifactError("Invalid start-here entry.", at);
+          }
+          return {
+            ...(entry.description === undefined
+              ? {}
+              : {
+                  description: requireString(
+                    entry.description,
+                    `${at}/description`,
+                  ),
+                }),
+            href: requireString(entry.href, `${at}/href`),
+            ...(entry.meta === undefined
+              ? {}
+              : { meta: requireString(entry.meta, `${at}/meta`) }),
+            target: parseTarget(entry.target, `${at}/target`),
+            title: requireString(entry.title, `${at}/title`),
+          };
+        }),
+        kind: "startHere",
       };
     }
     case "cards": {
@@ -406,6 +509,62 @@ function parseBlock(value: unknown, path: string, depth: number): BlockNode {
     default:
       throw new ContentArtifactError("Unknown block kind.", path);
   }
+}
+
+function parseMedia(value: unknown, path: string): MediaNode {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, [
+      "alt",
+      "caption",
+      "duration",
+      "kind",
+      "link",
+      "poster",
+    ]) ||
+    value.kind !== "media"
+  ) {
+    throw new ContentArtifactError("Invalid media block.", path);
+  }
+  const poster = requireString(value.poster, `${path}/poster`);
+  if (!/^assets\/[a-f0-9]{16}\.(?:png|jpg|webp|gif)$/.test(poster)) {
+    throw new ContentArtifactError(
+      "Invalid asset reference.",
+      `${path}/poster`,
+    );
+  }
+  const duration =
+    value.duration === undefined
+      ? undefined
+      : requireString(value.duration, `${path}/duration`);
+  if (duration !== undefined && !/^\d{1,2}:\d{2}$/.test(duration)) {
+    throw new ContentArtifactError("Invalid duration.", `${path}/duration`);
+  }
+  let link: MediaNode["link"];
+  if (value.link !== undefined) {
+    const at = `${path}/link`;
+    if (
+      !isRecord(value.link) ||
+      !hasOnlyKeys(value.link, ["href", "label", "target"])
+    ) {
+      throw new ContentArtifactError("Invalid media link.", at);
+    }
+    link = {
+      href: requireString(value.link.href, `${at}/href`),
+      label: requireString(value.link.label, `${at}/label`),
+      target: parseTarget(value.link.target, `${at}/target`),
+    };
+  }
+  return {
+    alt: requireString(value.alt, `${path}/alt`, true),
+    ...(value.caption === undefined
+      ? {}
+      : { caption: requireString(value.caption, `${path}/caption`) }),
+    ...(duration === undefined ? {} : { duration }),
+    kind: "media",
+    ...(link === undefined ? {} : { link }),
+    poster,
+  };
 }
 
 function parseCode(value: unknown, path: string): CodeBlock {

@@ -431,6 +431,187 @@ x
     expect(codes(many)).toEqual(["CONTENT_BUDGET_EXCEEDED"]);
   });
 
+  it("compiles the homepage hero, install, start-here, media, and workflow strip", async () => {
+    const home = `---
+title: Home.
+description: Lede.
+---
+
+<Hero eyebrow="Acme · v1">
+<Action label="Get started" href="./quickstart" />
+<Action label="Reference" href="/api" variant="secondary" />
+<Media poster="./images/demo.png" alt="Demo" caption="See it work." duration="0:42" linkLabel="Steps" linkHref="./quickstart" />
+</Hero>
+
+<Install>
+<Tab label="TypeScript">
+\`\`\`bash
+npm install acme
+\`\`\`
+\`\`\`typescript
+const x = 1;
+\`\`\`
+</Tab>
+<Tab label="cURL">
+\`\`\`bash
+curl https://acme.test
+\`\`\`
+</Tab>
+</Install>
+
+<StartHere>
+<Entry title="Quickstart" href="./quickstart" description="Five minutes" meta="5 min" />
+<Entry title="Reference" href="/api" />
+</StartHere>
+
+<Steps variant="strip" title="The workflow">
+<Step title="One">
+\`a()\`
+</Step>
+<Step title="Two">
+\`b()\`
+</Step>
+</Steps>
+`;
+    const result = await compile(
+      source("index.mdx", home),
+      source("quickstart.mdx", "---\ntitle: Quickstart\n---\n\nHi.\n"),
+    );
+    expect(codes(result)).toEqual([]);
+    const page = result.pages.find((entry) => entry.page.route === "/")?.page;
+    expect(page?.body.map((block) => block.kind)).toEqual([
+      "hero",
+      "install",
+      "startHere",
+      "steps",
+    ]);
+    const hero = page?.body[0];
+    expect(hero?.kind === "hero" && hero.eyebrow).toBe("Acme · v1");
+    expect(hero?.kind === "hero" && hero.actions).toEqual([
+      {
+        href: "/docs/quickstart",
+        label: "Get started",
+        target: "page",
+        variant: "primary",
+      },
+      { href: "/api", label: "Reference", target: "api", variant: "secondary" },
+    ]);
+    expect(hero?.kind === "hero" && hero.media).toMatchObject({
+      alt: "Demo",
+      caption: "See it work.",
+      duration: "0:42",
+      kind: "media",
+      link: { href: "/docs/quickstart", label: "Steps", target: "page" },
+      poster: "images/demo.png",
+    });
+    // The poster is collected as an asset like an image.
+    expect(
+      result.pages
+        .find((entry) => entry.page.route === "/")
+        ?.assets.map((asset) => asset.path),
+    ).toEqual(["images/demo.png"]);
+    const install = page?.body[1];
+    expect(
+      install?.kind === "install" &&
+        install.options.map((option) => option.label),
+    ).toEqual(["TypeScript", "cURL"]);
+    expect(
+      install?.kind === "install" && install.options[0]?.sample?.language,
+    ).toBe("typescript");
+    expect(
+      install?.kind === "install" && install.options[1]?.sample,
+    ).toBeUndefined();
+    const start = page?.body[2];
+    expect(start?.kind === "startHere" && start.entries[0]).toEqual({
+      description: "Five minutes",
+      href: "/docs/quickstart",
+      meta: "5 min",
+      target: "page",
+      title: "Quickstart",
+    });
+    const steps = page?.body[3];
+    expect(steps?.kind === "steps" && steps.variant).toBe("strip");
+    expect(steps?.kind === "steps" && steps.title).toBe("The workflow");
+    // Text for search carries the labels, captions, and entries.
+    expect(page?.text).toContain("Get started");
+    expect(page?.text).toContain("See it work.");
+    expect(page?.text).toContain("Five minutes");
+  });
+
+  it("rejects a misplaced hero, bad media props, and malformed install and start-here blocks", async () => {
+    const misplaced = `---
+title: Guide
+---
+
+Intro paragraph first.
+
+<Hero>
+<Action label="Go" href="./x" />
+</Hero>
+`;
+    const notHome = await compile(source("guide.mdx", misplaced));
+    expect(codes(notHome)).toEqual(["CONTENT_COMPONENT_NESTING_INVALID"]);
+    const secondBlock = `---
+title: Home
+---
+
+Paragraph before the hero.
+
+<Hero>
+<Action label="Go" href="/api" />
+</Hero>
+`;
+    expect(codes(await compile(source("index.mdx", secondBlock)))).toEqual([
+      "CONTENT_COMPONENT_NESTING_INVALID",
+    ]);
+    const badProps = `---
+title: Home
+---
+
+<Hero>
+<Action label="Go" href="/api" variant="huge" />
+</Hero>
+
+<Media poster="./p.png" alt="x" duration="forty" />
+
+<Media poster="./p.png" alt="x" linkLabel="only label" />
+
+<Install>
+<Tab label="One">
+Text is not a fence.
+</Tab>
+</Install>
+
+<StartHere>
+<Entry title="No href" />
+</StartHere>
+
+<Steps variant="grid">
+<Step title="x">
+y
+</Step>
+</Steps>
+
+<Media poster="./p.png" alt="x" linkLabel="Evil" linkHref="javascript:alert(1)" />
+`;
+    const result = await compile(source("index.mdx", badProps));
+    // Sorted by position: action variant, media duration, media link pair,
+    // install text, entry without href, steps variant, forbidden scheme.
+    expect(
+      result.diagnostics.map(
+        (diagnostic) => `${diagnostic.code}@${diagnostic.line}`,
+      ),
+    ).toEqual([
+      "CONTENT_COMPONENT_PROP_INVALID@6",
+      "CONTENT_COMPONENT_PROP_INVALID@9",
+      "CONTENT_COMPONENT_PROP_INVALID@11",
+      "CONTENT_COMPONENT_NESTING_INVALID@15",
+      "CONTENT_COMPONENT_PROP_INVALID@20",
+      "CONTENT_COMPONENT_PROP_INVALID@23",
+      "CONTENT_LINK_SCHEME_FORBIDDEN@29",
+    ]);
+  });
+
   it("produces byte-identical artifacts for equal input and round-trips them", async () => {
     const first = await compile(
       source("quickstart.mdx", QUICKSTART),

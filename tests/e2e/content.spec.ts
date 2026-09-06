@@ -33,14 +33,14 @@ test.describe("authored pages", () => {
     const response = await page.goto("/");
     expect(response?.status()).toBe(200);
     await expect(page).toHaveTitle(
-      "Email testing built for automation | TestInbox API",
+      "Email testing built for automation. | TestInbox API",
     );
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "Email testing built for automation",
+      "Email testing built for automation.",
     );
     // Primary tabs: Docs is current on authored routes.
     const primary = page.getByRole("navigation", { name: "Primary" });
-    await expect(primary.getByRole("link", { name: "Docs" })).toHaveAttribute(
+    await expect(primary.getByRole("link", { name: "Guides" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -66,19 +66,43 @@ test.describe("authored pages", () => {
       "href",
       /^\/assets\/[a-f0-9]{16}\.png$/,
     );
-    // Cards link to authored and generated routes.
-    await page
-      .getByRole("link", { name: /API reference/ })
-      .last()
-      .click();
+    // Hero (design 8c): eyebrow, display title, lede, ink + outline actions,
+    // media placeholder beside the copy with its caption link.
+    const hero = page.locator("header.hero");
+    await expect(hero.locator(".hero__eyebrow")).toHaveText("TestInbox · v1");
+    await expect(hero.getByRole("link", { name: "Get started" })).toHaveCSS(
+      "height",
+      "40px",
+    );
+    await expect(hero.locator("img.media__poster")).toBeVisible();
+    await expect(
+      hero.getByRole("link", { name: "Show as steps" }),
+    ).toHaveAttribute("href", "/docs/quickstart");
+    expect(await hero.locator("video, button").count()).toBe(0);
+    await hero.getByRole("link", { name: "API reference" }).click();
     await expect(page).toHaveURL(/\/api$/);
     await page.goBack();
-    // Code group: switching tabs swaps the visible fence.
-    const group = page.getByRole("tablist", { name: "Code examples" });
-    await group.getByRole("tab", { name: "pnpm" }).click();
-    await expect(page.getByRole("tabpanel")).toContainText(
-      "pnpm add @testinbox/client",
+    // Install block: chips switch the command line and the sample.
+    const install = page.getByRole("tablist", { name: "Install" });
+    await install.getByRole("tab", { name: "Python" }).click();
+    await expect(
+      page
+        .getByRole("tabpanel", { name: "Python" })
+        .locator(".command-line__code"),
+    ).toHaveText("$ pip install testinbox");
+    await expect(page.getByRole("tabpanel", { name: "Python" })).toContainText(
+      "from testinbox import TestInbox",
     );
+    // Start here rows and the workflow strip.
+    await expect(page.locator(".start-here__link")).toHaveCount(4);
+    await expect(page.locator("ol.steps--strip > li")).toHaveCount(4);
+    // Install and Start here sit side by side at desktop width.
+    const columns = await page
+      .locator(".home-grid > *")
+      .evaluateAll((nodes) =>
+        nodes.map((node) => Math.round(node.getBoundingClientRect().top)),
+      );
+    expect(columns[0]).toBe(columns[1]);
     expect(violations).toEqual([]);
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });

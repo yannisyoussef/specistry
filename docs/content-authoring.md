@@ -11,7 +11,7 @@ Authored pages live under the configured `docs` directory (default `./docs`) as 
 | `docs/guides/index.md`              | `/docs/guides`             |
 | `docs/guides/attachments.md`        | `/docs/guides/attachments` |
 
-Every path segment must be a route slug: lowercase ASCII letters and digits separated by single hyphens, at most 80 characters, at most four segments deep. `index` names the folder route. A file whose name is not a slug fails with `ROUTE_SLUG_INVALID`; two files that resolve to the same route (`page.md` and `page.mdx`) fail with `ROUTE_COLLISION`. Files that are not `.md` or `.mdx`, dotfiles, `node_modules`, and symlinked directories are ignored; a symlinked file that resolves outside the docs directory is an error (`CONTENT_SOURCE_OUTSIDE_ROOT`). `/docs` itself redirects to the homepage. Without an authored `docs/index.*` the reader keeps the generated API-reference homepage.
+The reader's primary tabs are `Guides` (authored pages) and `API reference`; the breadcrumb root of every authored page is `Guides`. Every path segment must be a route slug: lowercase ASCII letters and digits separated by single hyphens, at most 80 characters, at most four segments deep. `index` names the folder route. A file whose name is not a slug fails with `ROUTE_SLUG_INVALID`; two files that resolve to the same route (`page.md` and `page.mdx`) fail with `ROUTE_COLLISION`. Files that are not `.md` or `.mdx`, dotfiles, `node_modules`, and symlinked directories are ignored; a symlinked file that resolves outside the docs directory is an error (`CONTENT_SOURCE_OUTSIDE_ROOT`). `/docs` itself redirects to the homepage. Without an authored `docs/index.*` the reader keeps the generated API-reference homepage.
 
 The frontmatter `slug` field overrides the file-derived slug with the same grammar (relative to the docs root), for example `slug: getting-started/install`.
 
@@ -168,6 +168,60 @@ pnpm add @testinbox/client
 ````
 
 `CodeGroup` contains only fenced code blocks; each fence's `title` (or language when there is no title) becomes the tab label. It behaves like `Tabs` with a code block per panel.
+
+### Homepage components
+
+The approved homepage (design contract screens 6a and 8c) is built from four block-level components that are only meaningful on `docs/index.*`. `Hero` must be the first block of the homepage; anywhere else it is `CONTENT_COMPONENT_NESTING_INVALID`. The other three work on any page but are designed for the home layout, where an `Install` block directly followed by a `StartHere` block (or the reverse) renders as one two-column row.
+
+````mdx
+---
+title: Email testing built for automation.
+description: Create disposable inboxes and receive real application emails from your tests.
+---
+
+<Hero eyebrow="TestInbox · v1">
+  <Action label="Get started" href="./quickstart" />
+  <Action label="API reference" href="/api" />
+  <Media
+    poster="./images/see-it-work.png"
+    alt="A test creating an inbox and the email arriving."
+    caption="See it work: from create() to a passing test."
+    duration="0:42"
+    linkLabel="Show as steps"
+    linkHref="./quickstart"
+  />
+</Hero>
+
+<Install>
+<Tab label="TypeScript">
+```bash
+npm install @testinbox/client
+````
+
+```typescript
+const client = new TestInbox({ apiKey: process.env.TESTINBOX_API_KEY });
+```
+
+</Tab>
+</Install>
+
+<StartHere>
+<Entry title="Quickstart" href="./quickstart" description="First test email in five minutes" meta="5 min" />
+<Entry title="API reference" href="/api" description="Inboxes, messages, attachments" meta="25 endpoints" />
+</StartHere>
+
+<Steps variant="strip" title="The workflow">
+<Step title="Create an inbox">
+`inboxes.create()`
+</Step>
+</Steps>
+```
+
+- **`Hero`** (`eyebrow?`): renders the frontmatter `title` as the 44 px display heading and the `description` as the lede, so the homepage keeps one source for its H1 and metadata. Children are up to three self-closing `Action` elements (`label`, `href`, `variant` `primary` or `secondary`; the first defaults to primary, the rest to secondary; hrefs follow the link rules) and at most one `Media`. Actions render as the ink and outline buttons; with a `Media` child the hero becomes the two-column layout of screen 8c.
+- **`Media`** (`poster`, `alt`, `caption?`, `duration?` as `m:ss`, `linkLabel?` + `linkHref?` together): a media placeholder. The poster is an image asset (same rules as images); the play chrome, progress bar, and duration are decorative because the reader embeds no video, so the caption should say what the media shows and the link should point at a written alternative. `alt` describes the poster for screen readers.
+- **`Install`**: contains `Tab` children (unique `label`s) that each hold one or two fenced code blocks: the first is the install command, rendered as a prompt line with a copy control; the optional second is a configuration sample. Labels render as chips; without JavaScript every option renders in order under a heading.
+- **`StartHere`**: contains self-closing `Entry` elements (`title`, `href`, `description?`, `meta?`); each renders as a row with the meta right-aligned in mono.
+- **`Steps variant="strip" title="…"`**: the workflow strip, a four-column row (stacked on mobile) with the step number in the accent, the title, and the step body in muted text; `title` renders as the eyebrow heading and the step titles sit one level below it. Without `variant`, `Steps` renders the numbered rail described above; `title` works for both.
 
 ## Navigation
 

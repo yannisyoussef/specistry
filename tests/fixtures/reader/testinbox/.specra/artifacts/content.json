@@ -4,44 +4,440 @@
     {
       "body": [
         {
-          "cards": [
+          "actions": [
             {
-              "description": "First test email in five minutes.",
               "href": "/docs/quickstart",
+              "label": "Get started",
+              "target": "page",
+              "variant": "primary"
+            },
+            {
+              "href": "/api",
+              "label": "API reference",
+              "target": "api",
+              "variant": "secondary"
+            }
+          ],
+          "eyebrow": "TestInbox · v1",
+          "kind": "hero",
+          "media": {
+            "alt": "A test creating an inbox, the sign-up email arriving, and the verification link opening.",
+            "caption": "See it work: from create() to a passing test.",
+            "duration": "0:42",
+            "kind": "media",
+            "link": {
+              "href": "/docs/quickstart",
+              "label": "Show as steps",
+              "target": "page"
+            },
+            "poster": "assets/977b85582ab05e38.png"
+          }
+        },
+        {
+          "kind": "install",
+          "options": [
+            {
+              "command": {
+                "kind": "code",
+                "language": "bash",
+                "lines": [
+                  [
+                    {
+                      "cls": "fn",
+                      "text": "npm"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "str",
+                      "text": "install"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "str",
+                      "text": "@testinbox/client"
+                    }
+                  ]
+                ],
+                "value": "npm install @testinbox/client"
+              },
+              "label": "TypeScript",
+              "sample": {
+                "kind": "code",
+                "language": "typescript",
+                "lines": [
+                  [
+                    {
+                      "cls": "kw",
+                      "text": "import"
+                    },
+                    {
+                      "text": " { "
+                    },
+                    {
+                      "cls": "var",
+                      "text": "TestInbox"
+                    },
+                    {
+                      "text": " } "
+                    },
+                    {
+                      "cls": "kw",
+                      "text": "from"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "str",
+                      "text": "\"@testinbox/client\""
+                    },
+                    {
+                      "text": ";"
+                    }
+                  ],
+                  [],
+                  [
+                    {
+                      "cls": "kw",
+                      "text": "const"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "var",
+                      "text": "client"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "kw",
+                      "text": "="
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "kw",
+                      "text": "new"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "fn",
+                      "text": "TestInbox"
+                    },
+                    {
+                      "text": "({ "
+                    },
+                    {
+                      "cls": "attr",
+                      "text": "apiKey:"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "var",
+                      "text": "process"
+                    },
+                    {
+                      "text": "."
+                    },
+                    {
+                      "cls": "var",
+                      "text": "env"
+                    },
+                    {
+                      "text": "."
+                    },
+                    {
+                      "cls": "var",
+                      "text": "TESTINBOX_API_KEY"
+                    },
+                    {
+                      "text": " });"
+                    }
+                  ],
+                  [
+                    {
+                      "cls": "kw",
+                      "text": "const"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "var",
+                      "text": "inbox"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "kw",
+                      "text": "="
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "kw",
+                      "text": "await"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "var",
+                      "text": "client"
+                    },
+                    {
+                      "text": "."
+                    },
+                    {
+                      "cls": "var",
+                      "text": "inboxes"
+                    },
+                    {
+                      "text": "."
+                    },
+                    {
+                      "cls": "fn",
+                      "text": "create"
+                    },
+                    {
+                      "text": "({ "
+                    },
+                    {
+                      "cls": "attr",
+                      "text": "ttl:"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "num",
+                      "text": "3600"
+                    },
+                    {
+                      "text": " });"
+                    }
+                  ]
+                ],
+                "value": "import { TestInbox } from \"@testinbox/client\";\n\nconst client = new TestInbox({ apiKey: process.env.TESTINBOX_API_KEY });\nconst inbox = await client.inboxes.create({ ttl: 3600 });"
+              }
+            },
+            {
+              "command": {
+                "kind": "code",
+                "language": "bash",
+                "lines": [
+                  [
+                    {
+                      "cls": "fn",
+                      "text": "pip"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "str",
+                      "text": "install"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "str",
+                      "text": "testinbox"
+                    }
+                  ]
+                ],
+                "value": "pip install testinbox"
+              },
+              "label": "Python",
+              "sample": {
+                "kind": "code",
+                "language": "python",
+                "lines": [
+                  [
+                    {
+                      "cls": "kw",
+                      "text": "from"
+                    },
+                    {
+                      "text": " testinbox "
+                    },
+                    {
+                      "cls": "kw",
+                      "text": "import"
+                    },
+                    {
+                      "text": " TestInbox"
+                    }
+                  ],
+                  [],
+                  [
+                    {
+                      "text": "client "
+                    },
+                    {
+                      "cls": "kw",
+                      "text": "="
+                    },
+                    {
+                      "text": " TestInbox("
+                    },
+                    {
+                      "cls": "var",
+                      "text": "api_key"
+                    },
+                    {
+                      "cls": "kw",
+                      "text": "="
+                    },
+                    {
+                      "text": "os.environ["
+                    },
+                    {
+                      "cls": "str",
+                      "text": "\"TESTINBOX_API_KEY\""
+                    },
+                    {
+                      "text": "])"
+                    }
+                  ],
+                  [
+                    {
+                      "text": "inbox "
+                    },
+                    {
+                      "cls": "kw",
+                      "text": "="
+                    },
+                    {
+                      "text": " client.inboxes.create("
+                    },
+                    {
+                      "cls": "var",
+                      "text": "ttl"
+                    },
+                    {
+                      "cls": "kw",
+                      "text": "="
+                    },
+                    {
+                      "cls": "num",
+                      "text": "3600"
+                    },
+                    {
+                      "text": ")"
+                    }
+                  ]
+                ],
+                "value": "from testinbox import TestInbox\n\nclient = TestInbox(api_key=os.environ[\"TESTINBOX_API_KEY\"])\ninbox = client.inboxes.create(ttl=3600)"
+              }
+            },
+            {
+              "command": {
+                "kind": "code",
+                "language": "bash",
+                "lines": [
+                  [
+                    {
+                      "cls": "fn",
+                      "text": "curl"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "str",
+                      "text": "-X"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "str",
+                      "text": "POST"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "str",
+                      "text": "https://api.testinbox.email/v1/inboxes"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "str",
+                      "text": "-H"
+                    },
+                    {
+                      "text": " "
+                    },
+                    {
+                      "cls": "str",
+                      "text": "\"X-Api-Key: "
+                    },
+                    {
+                      "cls": "var",
+                      "text": "$TESTINBOX_API_KEY"
+                    },
+                    {
+                      "cls": "str",
+                      "text": "\""
+                    }
+                  ]
+                ],
+                "value": "curl -X POST https://api.testinbox.email/v1/inboxes -H \"X-Api-Key: $TESTINBOX_API_KEY\""
+              },
+              "label": "cURL"
+            }
+          ]
+        },
+        {
+          "entries": [
+            {
+              "description": "First test email in five minutes",
+              "href": "/docs/quickstart",
+              "meta": "5 min",
               "target": "page",
               "title": "Quickstart"
             },
             {
-              "description": "API keys, sandbox versus production.",
+              "description": "API keys, sandbox vs production",
               "href": "/docs/authentication",
+              "meta": "2 min",
               "target": "page",
               "title": "Authentication"
             },
             {
-              "description": "Polling, timeouts, and matchers.",
+              "description": "Polling, timeouts and matchers",
               "href": "/docs/guides/waiting-for-email",
+              "meta": "Guide",
               "target": "page",
               "title": "Waiting for email"
             },
             {
-              "description": "Inboxes, messages, attachments, webhooks.",
+              "description": "Inboxes, messages, attachments",
               "href": "/api",
+              "meta": "25 endpoints",
               "target": "api",
               "title": "API reference"
             }
           ],
-          "kind": "cards"
-        },
-        {
-          "children": [
-            {
-              "kind": "text",
-              "value": "The workflow"
-            }
-          ],
-          "depth": 2,
-          "id": "the-workflow",
-          "kind": "heading"
+          "kind": "startHere"
         },
         {
           "kind": "steps",
@@ -51,16 +447,8 @@
                 {
                   "children": [
                     {
-                      "kind": "text",
-                      "value": "Every test gets its own address. A short "
-                    },
-                    {
                       "kind": "code",
-                      "value": "ttl"
-                    },
-                    {
-                      "kind": "text",
-                      "value": " keeps the sandbox clean."
+                      "value": "inboxes.create()"
                     }
                   ],
                   "kind": "paragraph"
@@ -73,33 +461,22 @@
                 {
                   "children": [
                     {
-                      "kind": "text",
-                      "value": "Use the inbox address wherever your application would send email."
+                      "kind": "code",
+                      "value": "app.signUp(address)"
                     }
                   ],
                   "kind": "paragraph"
                 }
               ],
-              "title": "Trigger your application"
+              "title": "Trigger your app"
             },
             {
               "children": [
                 {
                   "children": [
                     {
-                      "children": [
-                        {
-                          "kind": "text",
-                          "value": "Wait for message"
-                        }
-                      ],
-                      "href": "/api/inboxes/wait-for-message",
-                      "kind": "link",
-                      "target": "api"
-                    },
-                    {
-                      "kind": "text",
-                      "value": " blocks until a matching message arrives."
+                      "kind": "code",
+                      "value": "messages.wait()"
                     }
                   ],
                   "kind": "paragraph"
@@ -112,23 +489,8 @@
                 {
                   "children": [
                     {
-                      "kind": "text",
-                      "value": "Read the parsed body, links, and attachments from the "
-                    },
-                    {
-                      "children": [
-                        {
-                          "kind": "text",
-                          "value": "message"
-                        }
-                      ],
-                      "href": "/api/messages/get-message",
-                      "kind": "link",
-                      "target": "api"
-                    },
-                    {
-                      "kind": "text",
-                      "value": "."
+                      "kind": "code",
+                      "value": "expect(message.links[0])"
                     }
                   ],
                   "kind": "paragraph"
@@ -136,100 +498,19 @@
               ],
               "title": "Assert its contents"
             }
-          ]
-        },
-        {
-          "children": [
-            {
-              "kind": "text",
-              "value": "Install"
-            }
           ],
-          "depth": 2,
-          "id": "install",
-          "kind": "heading"
-        },
-        {
-          "blocks": [
-            {
-              "kind": "code",
-              "language": "bash",
-              "lines": [
-                [
-                  {
-                    "cls": "fn",
-                    "text": "npm"
-                  },
-                  {
-                    "text": " "
-                  },
-                  {
-                    "cls": "str",
-                    "text": "install"
-                  },
-                  {
-                    "text": " "
-                  },
-                  {
-                    "cls": "str",
-                    "text": "@testinbox/client"
-                  }
-                ]
-              ],
-              "title": "npm",
-              "value": "npm install @testinbox/client"
-            },
-            {
-              "kind": "code",
-              "language": "bash",
-              "lines": [
-                [
-                  {
-                    "cls": "fn",
-                    "text": "pnpm"
-                  },
-                  {
-                    "text": " "
-                  },
-                  {
-                    "cls": "str",
-                    "text": "add"
-                  },
-                  {
-                    "text": " "
-                  },
-                  {
-                    "cls": "str",
-                    "text": "@testinbox/client"
-                  }
-                ]
-              ],
-              "title": "pnpm",
-              "value": "pnpm add @testinbox/client"
-            }
-          ],
-          "kind": "codeGroup"
+          "title": "The workflow",
+          "variant": "strip"
         }
       ],
       "description": "Create disposable inboxes and receive real application emails directly from your automated tests. One API, no mail server.",
-      "headings": [
-        {
-          "depth": 2,
-          "id": "the-workflow",
-          "text": "The workflow"
-        },
-        {
-          "depth": 2,
-          "id": "install",
-          "text": "Install"
-        }
-      ],
+      "headings": [],
       "id": "",
       "route": "/",
       "slug": "",
       "sourcePath": "docs/index.mdx",
-      "text": "Quickstart\nFirst test email in five minutes.\nAuthentication\nAPI keys, sandbox versus production.\nWaiting for email\nPolling, timeouts, and matchers.\nAPI reference\nInboxes, messages, attachments, webhooks.\nThe workflowThe workflow\nCreate an inbox\nEvery test gets its own address. A short ttl keeps the sandbox clean.Trigger your application\nUse the inbox address wherever your application would send email.Wait for an email\nWait for message blocks until a matching message arrives.Assert its contents\nRead the parsed body, links, and attachments from the message.InstallInstall\nnpm install @testinbox/client\npnpm add @testinbox/client\n",
-      "title": "Email testing built for automation"
+      "text": "Get started\nAPI reference\nA test creating an inbox, the sign-up email arriving, and the verification link opening.\nSee it work: from create() to a passing test.\nTestInbox · v1\nnpm install @testinbox/client\nimport { TestInbox } from \"@testinbox/client\";\n\nconst client = new TestInbox({ apiKey: process.env.TESTINBOX_API_KEY });\nconst inbox = await client.inboxes.create({ ttl: 3600 });\npip install testinbox\nfrom testinbox import TestInbox\n\nclient = TestInbox(api_key=os.environ[\"TESTINBOX_API_KEY\"])\ninbox = client.inboxes.create(ttl=3600)\ncurl -X POST https://api.testinbox.email/v1/inboxes -H \"X-Api-Key: $TESTINBOX_API_KEY\"\nQuickstart\nFirst test email in five minutes\nAuthentication\nAPI keys, sandbox vs production\nWaiting for email\nPolling, timeouts and matchers\nAPI reference\nInboxes, messages, attachments\nThe workflow\nCreate an inbox\ninboxes.create()Trigger your app\napp.signUp(address)Wait for an email\nmessages.wait()Assert its contents\nexpect(message.links[0])",
+      "title": "Email testing built for automation."
     },
     {
       "body": [

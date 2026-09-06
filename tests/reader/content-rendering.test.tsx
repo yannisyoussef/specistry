@@ -74,44 +74,93 @@ function page(route: string): ContentPage {
 afterEach(cleanup);
 
 describe("authored page frame", () => {
-  it("renders the homepage with display heading, cards, steps, and a code group without breadcrumbs", async () => {
+  it("renders the homepage hero, install block, start-here list, and workflow strip", async () => {
     const home = page("/");
     const { container } = render(<DocsPage content={content} page={home} />);
     const heading = screen.getByRole("heading", { level: 1 });
-    expect(heading.textContent).toBe("Email testing built for automation");
+    expect(heading.textContent).toBe("Email testing built for automation.");
     expect(heading.className).toContain("display");
     expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
     expect(
       screen.queryByRole("navigation", { name: "On this page" }),
     ).toBeNull();
-    const cards = screen.getAllByRole("link", {
-      name: /Quickstart|Authentication|Waiting for email|API reference/,
+    // Hero: eyebrow, lede, ink + outline actions, media beside the copy.
+    const hero = container.querySelector("header.hero--media");
+    expect(hero?.querySelector(".hero__eyebrow")?.textContent).toBe(
+      "TestInbox · v1",
+    );
+    expect(hero?.querySelector(".hero__lede")?.textContent).toContain(
+      "Create disposable inboxes",
+    );
+    const primary = within(hero as HTMLElement).getByRole("link", {
+      name: "Get started",
     });
-    expect(cards.map((card) => card.getAttribute("href"))).toEqual([
+    expect(primary.getAttribute("href")).toBe("/docs/quickstart");
+    expect(primary.className).toContain("button--primary");
+    const secondary = within(hero as HTMLElement).getByRole("link", {
+      name: "API reference",
+    });
+    expect(secondary.getAttribute("href")).toBe("/api");
+    expect(secondary.className).toContain("button--secondary");
+    const media = hero?.querySelector("figure.media");
+    expect(
+      media?.querySelector("img.media__poster")?.getAttribute("src"),
+    ).toMatch(/^\/assets\/[a-f0-9]{16}\.png$/);
+    expect(media?.querySelector("img")?.getAttribute("alt")).toContain(
+      "sign-up email",
+    );
+    expect(media?.querySelector(".media__duration")?.textContent).toBe("0:42");
+    expect(
+      within(media as HTMLElement)
+        .getByRole("link", { name: "Show as steps" })
+        .getAttribute("href"),
+    ).toBe("/docs/quickstart");
+    // No fake video control: the play chrome is decorative.
+    expect(media?.querySelectorAll("button, video")).toHaveLength(0);
+    // Install: chips (hydrated tabs) over a command line and a sample.
+    const install = screen.getByRole("tablist", { name: "Install" });
+    expect(
+      within(install)
+        .getAllByRole("tab")
+        .map((tab) => tab.textContent),
+    ).toEqual(["TypeScript", "Python", "cURL"]);
+    expect(container.querySelector(".command-line__code")?.textContent).toBe(
+      "$ npm install @testinbox/client",
+    );
+    expect(
+      screen.getByRole("button", { name: "Copy install command" }),
+    ).toBeDefined();
+    expect(container.querySelector(".code-block--bare")).not.toBeNull();
+    fireEvent.click(within(install).getByRole("tab", { name: "Python" }));
+    expect(
+      within(screen.getByRole("tabpanel", { name: "Python" })).getByText(
+        /pip install testinbox/,
+      ),
+    ).toBeDefined();
+    // Start here: rows with title, description, and meta.
+    const start = container.querySelector(".start-here");
+    const rows = within(start as HTMLElement).getAllByRole("link");
+    expect(rows.map((row) => row.getAttribute("href"))).toEqual([
       "/docs/quickstart",
       "/docs/authentication",
       "/docs/guides/waiting-for-email",
       "/api",
     ]);
-    // Steps are an ordered list with one heading per step.
-    const steps = container.querySelector("ol.steps");
-    expect(steps?.querySelectorAll("li.steps__step")).toHaveLength(4);
+    expect(rows[3]?.textContent).toContain("25 endpoints");
+    // Workflow strip: eyebrow heading, four columns with step headings below it.
     expect(
-      within(steps as HTMLElement).getByRole("heading", {
+      screen.getByRole("heading", { level: 2, name: "The workflow" }),
+    ).toBeDefined();
+    const strip = container.querySelector("ol.steps--strip");
+    expect(strip?.querySelectorAll("li.steps__step")).toHaveLength(4);
+    expect(
+      within(strip as HTMLElement).getByRole("heading", {
         level: 3,
         name: "Wait for an email",
       }),
     ).toBeDefined();
-    // The code group renders both fences with their titles.
-    expect(
-      screen.getByText("npm", { selector: ".tabs-block__tab" }),
-    ).toBeDefined();
-    expect(
-      screen.getByText("pnpm", { selector: ".tabs-block__tab" }),
-    ).toBeDefined();
-    expect(
-      screen.getAllByRole("button", { name: "Copy code" }).length,
-    ).toBeGreaterThanOrEqual(1);
+    // Install and Start here share one two-column row.
+    expect(container.querySelectorAll(".home-grid")).toHaveLength(1);
     // Previous is absent on the first page; next follows the navigation.
     const pager = screen.getByRole("navigation", {
       name: "Previous and next pages",
@@ -129,11 +178,11 @@ describe("authored page frame", () => {
       <DocsPage content={content} page={quickstart} />,
     );
     const breadcrumb = screen.getByRole("navigation", { name: "Breadcrumb" });
-    expect(breadcrumb.textContent?.replace(/\s+/g, " ")).toContain("Docs");
+    expect(breadcrumb.textContent?.replace(/\s+/g, " ")).toContain("Guides");
     expect(breadcrumb.textContent).toContain("Getting started");
     expect(
       within(breadcrumb)
-        .getByRole("link", { name: "Docs" })
+        .getByRole("link", { name: "Guides" })
         .getAttribute("href"),
     ).toBe("/");
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
@@ -359,7 +408,7 @@ describe("composed navigation", () => {
     const primary = screen.getByRole("navigation", { name: "Primary" });
     expect(
       within(primary)
-        .getByRole("link", { name: "Docs" })
+        .getByRole("link", { name: "Guides" })
         .getAttribute("aria-current"),
     ).toBe("page");
     expect(
@@ -418,7 +467,7 @@ describe("composed navigation", () => {
     ).toBe("page");
     expect(
       within(primary)
-        .getByRole("link", { name: "Docs" })
+        .getByRole("link", { name: "Guides" })
         .getAttribute("aria-current"),
     ).toBeNull();
     const aside = screen.getByRole("complementary", {
@@ -467,7 +516,7 @@ describe("composed navigation", () => {
       route: "/",
     });
     expect(pageBreadcrumbs(content, page("/docs/guides/attachments"))).toEqual([
-      { href: "/", label: "Docs" },
+      { href: "/", label: "Guides" },
       { label: "Guides" },
       { label: "Attachments" },
     ]);
