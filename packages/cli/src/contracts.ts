@@ -1,5 +1,7 @@
 import type { SpecraConfig } from "@specra/config";
 import type { ContentDiagnosticCode } from "@specra/content";
+import type { QualityDiagnosticCode, QualityEvaluation } from "@specra/quality";
+import type { ContractDiff } from "@specra/release";
 import {
   ARTIFACT_DOCUMENTATION_FILENAME,
   ARTIFACT_MANIFEST_FILENAME,
@@ -33,6 +35,12 @@ export const MAX_INGESTION_ENTRIES = 64;
 export const EXIT_CODES = {
   success: 0,
   validationFailure: 2,
+  /**
+   * `specra check` ran and the quality gate failed (SPEC-011 §54, §180). It
+   * is deliberately distinct from `validationFailure`, which means the
+   * project or its policy could not be read.
+   */
+  qualityFailure: 3,
   usage: 64,
   internalFailure: 70,
   cancelled: 130,
@@ -41,6 +49,7 @@ export const EXIT_CODES = {
 export type DiagnosticCode =
   | SourceDiagnosticCode
   | ContentDiagnosticCode
+  | QualityDiagnosticCode
   | "ARTIFACT_INVALID"
   | "ARTIFACT_WRITE_FAILED"
   | "SEARCH_BUILD_FAILED"
@@ -177,7 +186,11 @@ export interface IngestionSummary {
 }
 
 export type ValidationOutcome =
-  "cancelled" | "internal-failure" | "success" | "validation-failure";
+  | "cancelled"
+  | "internal-failure"
+  | "quality-failure"
+  | "success"
+  | "validation-failure";
 
 export interface FailureResult {
   readonly diagnostics: readonly Diagnostic[];
@@ -290,6 +303,47 @@ export type CatalogResult =
       readonly ok: true;
       readonly outcome: "success";
       readonly catalog: CatalogSummary;
+    }
+  | FailureResult;
+
+export interface CheckOptions extends ValidationOptions {
+  /** Retained release to check; the candidate build when omitted. */
+  readonly version?: string;
+  /** Comparison base that enables the compatibility rules. */
+  readonly from?: string;
+}
+
+export type CheckResult =
+  | {
+      readonly context: BuildContext;
+      readonly diagnostics: readonly Diagnostic[];
+      readonly ok: false;
+      readonly outcome: "quality-failure";
+      readonly quality: QualityEvaluation;
+    }
+  | {
+      readonly context: BuildContext;
+      readonly diagnostics: readonly Diagnostic[];
+      readonly ok: true;
+      readonly outcome: "success";
+      readonly quality: QualityEvaluation;
+    }
+  | FailureResult;
+
+export interface DiffCommandOptions extends ValidationOptions {
+  /** `candidate`, `current`, or an exact retained version id. */
+  readonly from: string;
+  /** Same grammar; defaults to the candidate build. */
+  readonly to?: string;
+}
+
+export type DiffCommandResult =
+  | {
+      readonly context: BuildContext;
+      readonly diagnostics: readonly Diagnostic[];
+      readonly diff: ContractDiff;
+      readonly ok: true;
+      readonly outcome: "success";
     }
   | FailureResult;
 

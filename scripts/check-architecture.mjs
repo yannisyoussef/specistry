@@ -63,6 +63,22 @@ const boundaries = new Map([
       constrained: true,
     },
   ],
+  // Documentation quality (SPEC-011): rules read normalized facts from the
+  // canonical, authored, snippet, and release-diff contracts. The package
+  // never sees a parser, the CLI, presentation, React, or the browser, and
+  // it loads no rule at runtime.
+  [
+    "@specra/quality",
+    {
+      allowed: new Set([
+        "@specra/content",
+        "@specra/model",
+        "@specra/release",
+        "@specra/snippets",
+      ]),
+      constrained: true,
+    },
+  ],
   [
     "@specra/cli",
     {
@@ -72,6 +88,7 @@ const boundaries = new Map([
         "@specra/model",
         "@specra/openapi",
         "@specra/playground",
+        "@specra/quality",
         "@specra/release",
         "@specra/search",
         "@specra/snippets",
@@ -154,6 +171,7 @@ const clientForbiddenPackages = new Set([
   "@specra/content",
   "@specra/openapi",
   "@specra/playground",
+  "@specra/quality",
   "@specra/release",
   "@specra/search",
   "@specra/snippets",

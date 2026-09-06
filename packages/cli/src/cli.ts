@@ -3,6 +3,8 @@ import {
   EXIT_CODES,
   type BuildResult,
   type CatalogResult,
+  type CheckResult,
+  type DiffCommandResult,
   type ReleaseResult,
   type ValidationResult,
 } from "./contracts.js";
@@ -15,6 +17,7 @@ import {
   formatUsageError,
   ROOT_HELP,
 } from "./presentation.js";
+import { checkProject, diffDocumentation } from "./quality.js";
 import {
   deprecateRelease,
   releaseProject,
@@ -63,7 +66,12 @@ export async function runCli(
 }
 
 type CommandResult =
-  BuildResult | CatalogResult | ReleaseResult | ValidationResult;
+  | BuildResult
+  | CatalogResult
+  | CheckResult
+  | DiffCommandResult
+  | ReleaseResult
+  | ValidationResult;
 
 async function run(
   parsed: Extract<ReturnType<typeof parseArguments>, { kind: "command" }>,
@@ -100,6 +108,17 @@ async function run(
         ...options,
         version: parsed.version ?? "",
       });
+    case "check":
+      return await checkProject({
+        ...options,
+        ...(parsed.version === undefined ? {} : { version: parsed.version }),
+      });
+    case "diff":
+      return await diffDocumentation({
+        ...options,
+        from: parsed.from ?? "",
+        ...(parsed.to === undefined ? {} : { to: parsed.to }),
+      });
   }
 }
 
@@ -113,5 +132,7 @@ function exitCode(result: CommandResult): number {
       return EXIT_CODES.internalFailure;
     case "cancelled":
       return EXIT_CODES.cancelled;
+    case "quality-failure":
+      return EXIT_CODES.qualityFailure;
   }
 }

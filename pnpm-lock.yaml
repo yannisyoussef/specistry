@@ -26,6 +26,9 @@ importers:
       '@specra/playground':
         specifier: workspace:*
         version: link:packages/playground
+      '@specra/quality':
+        specifier: workspace:*
+        version: link:packages/quality
       '@specra/release':
         specifier: workspace:*
         version: link:packages/release
@@ -159,6 +162,9 @@ importers:
       '@specra/playground':
         specifier: workspace:*
         version: link:../playground
+      '@specra/quality':
+        specifier: workspace:*
+        version: link:../quality
       '@specra/release':
         specifier: workspace:*
         version: link:../release
@@ -257,6 +263,25 @@ importers:
       '@specra/model':
         specifier: workspace:*
         version: link:../model
+      '@specra/snippets':
+        specifier: workspace:*
+        version: link:../snippets
+    devDependencies:
+      '@types/node':
+        specifier: 24.13.3
+        version: 24.13.3
+
+  packages/quality:
+    dependencies:
+      '@specra/content':
+        specifier: workspace:*
+        version: link:../content
+      '@specra/model':
+        specifier: workspace:*
+        version: link:../model
+      '@specra/release':
+        specifier: workspace:*
+        version: link:../release
       '@specra/snippets':
         specifier: workspace:*
         version: link:../snippets

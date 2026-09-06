@@ -1,0 +1,59 @@
+[
+  {
+    "evaluateMs": 2.76,
+    "findings": 121,
+    "kind": "testinbox",
+    "operations": 25,
+    "outputBytes": 51814,
+    "rules": 25,
+    "summary": {
+      "error": 0,
+      "info": 97,
+      "rules": 17,
+      "suppressed": 0,
+      "truncated": false,
+      "warning": 24,
+      "gate": "passed"
+    }
+  },
+  {
+    "collectMs": 0.57,
+    "evaluateMs": 4.63,
+    "findings": 1668,
+    "kind": "operations-1000",
+    "operations": 1000,
+    "outputBytes": 662685,
+    "rssBytesDelta": 4603904,
+    "schemas": 200,
+    "serializeMs": 1.79,
+    "truncated": false
+  },
+  {
+    "collectMs": 7.01,
+    "evaluateMs": 22.55,
+    "findings": 3000,
+    "kind": "operations-10000",
+    "operations": 10000,
+    "outputBytes": 1210413,
+    "rssBytesDelta": 4210688,
+    "schemas": 2000,
+    "serializeMs": 9.4,
+    "truncated": true
+  },
+  {
+    "evaluateMs": 11.61,
+    "kind": "large-policy",
+    "overrides": 25,
+    "parsePolicyMs": 0.54,
+    "suppressed": 101,
+    "suppressions": 1000
+  },
+  {
+    "candidates": 100,
+    "compatibilityFindings": 100,
+    "diffMs": 36.78,
+    "evaluateMs": 3.82,
+    "kind": "compatibility-5000",
+    "operations": 5000
+  }
+]

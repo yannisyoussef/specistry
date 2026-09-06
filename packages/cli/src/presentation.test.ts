@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type {
   BuildResult,
+  DiffCommandResult,
   CatalogResult,
   ReleaseResult,
   ValidationResult,
@@ -181,5 +182,104 @@ describe("CLI presentation", () => {
     expect(formatHumanResult(built, "build")).toContain(
       "Diff candidates: 2 compared with v1 (truncated) in .specra/candidates/diff.json",
     );
+  });
+
+  it("renders a diff grouped by entity with safe labels (SPEC-011)", () => {
+    const context = { config: { name: "Versioned" } } as never;
+    const result = {
+      context,
+      diagnostics: [],
+      diff: {
+        candidates: [
+          {
+            id: "v1..v2:operation-removed:openapi.yaml~getRaw",
+            identity: "openapi.yaml~getRaw",
+            kind: "operation-removed",
+            label: "GET /inboxes/{id}/raw",
+            service: "openapi.yaml",
+          },
+          {
+            id: "v1..v2:operation-added:openapi.yaml~wait",
+            identity: "openapi.yaml~wait",
+            kind: "operation-added",
+            label: "POST /inboxes/{id}/wait",
+            service: "openapi.yaml",
+          },
+          {
+            changes: [
+              { aspect: "deprecated", detail: "deprecated" },
+              { aspect: "parameter-added", detail: "query:cursor" },
+            ],
+            id: "v1..v2:operation-changed:openapi.yaml~list",
+            identity: "openapi.yaml~list",
+            kind: "operation-changed",
+            label: "GET /inboxes",
+            service: "openapi.yaml",
+          },
+          {
+            id: "v1..v2:schema-changed:openapi.yaml~Inbox",
+            identity: "openapi.yaml~Inbox",
+            kind: "schema-changed",
+            label: "Inbox\u001b[31m",
+            service: "openapi.yaml",
+          },
+          {
+            id: "v1..v2:service-added:second.yaml",
+            identity: "second.yaml",
+            kind: "service-added",
+            label: "Second service",
+            service: "second.yaml",
+          },
+          {
+            id: "v1..v2:group-removed:openapi.yaml~Legacy",
+            identity: "openapi.yaml~Legacy",
+            kind: "group-removed",
+            label: "Legacy",
+            service: "openapi.yaml",
+          },
+        ],
+        counts: {},
+        diffFormat: 1,
+        from: "v1",
+        to: "v2",
+        truncated: false,
+      },
+      ok: true,
+      outcome: "success",
+    } as unknown as DiffCommandResult;
+    const output = formatHumanResult(result, "diff");
+    expect(output).toContain("Specra diff v1 → v2");
+    expect(output).toContain("Services:");
+    expect(output).toContain("+ Second service");
+    expect(output).toContain("Groups:");
+    expect(output).toContain("- Legacy");
+    expect(output).toContain("- GET /inboxes/{id}/raw");
+    expect(output).toContain("+ POST /inboxes/{id}/wait");
+    expect(output).toContain("~ GET /inboxes");
+    expect(output).toContain("parameter-added query:cursor");
+    expect(output).toContain("6 change(s)");
+    // A hostile label is neutralized like every other untrusted string.
+    expect(output).not.toMatch(/\u001b/);
+    expect(output).toContain("Inbox\\u001b[31m");
+
+    const empty = formatHumanResult(
+      {
+        ...(result as never as { context: unknown }),
+        diagnostics: [],
+        diff: {
+          candidates: [],
+          counts: {},
+          diffFormat: 1,
+          from: "v1",
+          to: "v1",
+          truncated: true,
+        },
+        ok: true,
+        outcome: "success",
+      } as unknown as DiffCommandResult,
+      "diff",
+    );
+    expect(empty).toContain("No structural differences.");
+    expect(empty).toContain("truncated at the candidate budget");
   });
 });
