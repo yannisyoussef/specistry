@@ -298,7 +298,7 @@ describe("Try it island", () => {
       credentials: "omit",
       method: "GET",
       mode: "cors",
-      redirect: "manual",
+      redirect: "error",
       referrerPolicy: "no-referrer",
     });
     expect(init.headers).toEqual([["X-Api-Key", SECRET]]);
