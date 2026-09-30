@@ -98,7 +98,7 @@ describe("executeRequest", () => {
       credentials: "omit",
       method: "GET",
       mode: "cors",
-      redirect: "manual",
+      redirect: "error",
       referrerPolicy: "no-referrer",
     });
     expect(init.signal).toBeInstanceOf(AbortSignal);

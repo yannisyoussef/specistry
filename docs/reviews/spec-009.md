@@ -17,7 +17,7 @@ Questions from the slice definition, each answered against the code:
 | Exact-origin enforcement before every fetch?        | Yes: `composeDestination` re-parses the composed URL and requires equal protocol, hostname, port, and origin, empty userinfo, no fragment, the normalized path under the base path, and the length budget. Destination fuzz covers `//evil.example`, `@evil.example`, `#`, `%2f%2f`, `..`, `%2e%2e`, Cyrillic look-alikes. |
 | Credentials persisted anywhere?                     | No. Memory-only vault keyed by environment and scheme; the island never touches `localStorage`, `document.cookie`, or `indexedDB` (source assertion); the only `sessionStorage` write is the environment id; jsdom and browser canaries check storage, URL, cookies, console, and the server HTML.                         |
 | Credentials in URLs?                                | Impossible by construction: query and cookie API keys are unsupported at build time and the builder places credentials in headers only.                                                                                                                                                                                    |
-| Redirects, retries, timeouts, cancellation?         | `redirect: "manual"` with opaqueredirect and 3xx reported as blocked (browser test against a real 302); no retry path exists; one `AbortController` serves the timeout (fixture 5 s) and Cancel, which also marks the request done immediately so a non-compliant fetch cannot leave the page "sending".                   |
+| Redirects, retries, timeouts, cancellation?         | `redirect: "error"` refuses the redirect target at the browser network layer; Fetch exposes that refusal as a generic network error, so the UI lists a blocked redirect among the possible causes. No retry path exists; one `AbortController` serves the timeout (fixture 5 s) and Cancel.                                |
 | Bounded request and response?                       | Hard limits (4 MiB body/file/response, 32 × 4096 headers, 2048 per parameter, 8192 URL, 120 s) clamp the config; the executor streams and stops at the limit (`truncated`), bounds headers to 64 × 2048 with control/bidi stripping, and never decodes binary.                                                             |
 | CSP exact origins only?                             | `connect-src 'self' <sorted exact origins>` on `/api` routes only; the builder's regex admits HTTPS anywhere and plain HTTP on loopback; hostile entries (wildcard, path, userinfo, `;`, query, fragment) are dropped in the security test; guides and home keep `'self'`.                                                 |
 | Response HTML executed?                             | Never: bodies are text nodes in `pre > code`; the browser test serves `<script>`/`<img onerror>` HTML and asserts no such nodes, no `window.__pwned`, and an unchanged title. `img-src 'self'` stays.                                                                                                                      |
@@ -141,14 +141,14 @@ the page's own request log is the witness.
 
 ## Cross-browser evaluation
 
-| Behaviour                         | Chromium (automated)   | Firefox (expected)  | Safari (expected)                                            |
-| --------------------------------- | ---------------------- | ------------------- | ------------------------------------------------------------ |
-| `redirect: "manual"`              | opaqueredirect         | opaqueredirect      | opaqueredirect                                               |
-| CORS refusal                      | TypeError → failure    | TypeError → failure | TypeError → failure                                          |
-| Stream cancel at the limit        | reader.cancel + abort  | same                | same                                                         |
-| `Set-Cookie` visibility           | hidden                 | hidden              | hidden                                                       |
-| Password input autocomplete off   | honoured               | honoured            | may still offer to save; the vault never asks the browser to |
-| Private-network access (loopback) | allowed with preflight | allowed             | allowed                                                      |
+| Behaviour                         | Chromium (automated)    | Firefox (expected)      | Safari (expected)                                            |
+| --------------------------------- | ----------------------- | ----------------------- | ------------------------------------------------------------ |
+| `redirect: "error"`               | rejected without follow | rejected without follow | rejected without follow                                      |
+| CORS refusal                      | TypeError → failure     | TypeError → failure     | TypeError → failure                                          |
+| Stream cancel at the limit        | reader.cancel + abort   | same                    | same                                                         |
+| `Set-Cookie` visibility           | hidden                  | hidden                  | hidden                                                       |
+| Password input autocomplete off   | honoured                | honoured                | may still offer to save; the vault never asks the browser to |
+| Private-network access (loopback) | allowed with preflight  | allowed                 | allowed                                                      |
 
 ## Disposition
 

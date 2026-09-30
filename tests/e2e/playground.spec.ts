@@ -214,7 +214,10 @@ test.describe("playground", () => {
     await fill(panel, "__redirect");
     await panel.getByRole("button", { name: "Send GET request" }).click();
     await expect(panel.locator(".try-it__response")).toContainText(
-      "Redirect blocked",
+      "Request failed",
+    );
+    await expect(panel.locator(".try-it__response")).toContainText(
+      "blocked redirect",
     );
     expect(
       targets
