@@ -153,18 +153,18 @@ jobs:
       - name: Pack the reviewed public CLI boundary
         run: |
           pnpm --filter @specra/cli... build
-          node scripts/build-release-candidate.mjs "$GITHUB_WORKSPACE/.specra-tooling/candidate"
+          node scripts/build-release-candidate.mjs "$RUNNER_TEMP/specra-candidate"
       - name: Reject private coupling in both consumers
         run: node scripts/check-public-boundary.mjs dogfood/specra-docs .specra-tooling/odexa
       - name: Verify Specra self-documentation through the package
         run: |
           mkdir -p "$RUNNER_TEMP/specra-self"
-          npm install --prefix "$RUNNER_TEMP/specra-self" .specra-tooling/candidate/specra-cli-0.1.0-rc.1.tgz --ignore-scripts --no-audit --no-fund --cache "$RUNNER_TEMP/specra-self-cache"
+          npm install --prefix "$RUNNER_TEMP/specra-self" "$RUNNER_TEMP/specra-candidate/specra-cli-0.1.0-rc.1.tgz" --ignore-scripts --no-audit --no-fund --cache "$RUNNER_TEMP/specra-self-cache"
           node "$RUNNER_TEMP/specra-self/node_modules/@specra/cli/dist/bin.js" validate --root dogfood/specra-docs
           node "$RUNNER_TEMP/specra-self/node_modules/@specra/cli/dist/bin.js" build --root dogfood/specra-docs
           node "$RUNNER_TEMP/specra-self/node_modules/@specra/cli/dist/bin.js" check --root dogfood/specra-docs
       - name: Verify Odexa through the same package
-        run: python3 -B .specra-tooling/odexa/scripts/specra-docs.py --tarball .specra-tooling/candidate/specra-cli-0.1.0-rc.1.tgz
+        run: python3 -B .specra-tooling/odexa/scripts/specra-docs.py --tarball "$RUNNER_TEMP/specra-candidate/specra-cli-0.1.0-rc.1.tgz"
 
   performance:
     name: Resource and performance evidence
