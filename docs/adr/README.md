@@ -21,3 +21,4 @@ ADRs record decisions that constrain multiple slices or security boundaries. Sta
 | [ADR-015](015-browser-direct-playground.md)                             | Browser-direct playground policy and execution boundary       | ACCEPTED |
 | [ADR-016](016-immutable-documentation-releases.md)                      | Immutable documentation releases, current alias, changelogs   | ACCEPTED |
 | [ADR-017](017-documentation-quality-facts-rules-policy.md)              | Documentation quality as facts, rules, and policy             | ACCEPTED |
+| [ADR-018](018-dogfood-public-boundary-and-release-candidate.md)         | Dogfood public boundary and release-candidate distribution    | ACCEPTED |

@@ -123,15 +123,16 @@ Each slice is a deployable or author-visible vertical increment. Its work item m
 - **Dependencies/risks/reviewers:** SPEC-003, SPEC-006, SPEC-008, SPEC-010; risks are vanity metrics and noisy gates; Product/DX, QA, OpenAPI, security.
 - **Outcome:** implemented ([ADR-017](adr/017-documentation-quality-facts-rules-policy.md), [quality reference](quality.md)): the pure `@specra/quality` engine with a static 25-rule registry across operations, schemas, examples, authentication, SDK mappings, authored content, compatibility, and suppression governance; `specra check` (exit 3 on a failed gate, 2 on a policy error) and public `specra diff` over the SPEC-010 port; severity overrides, `failOn`, `maxWarnings`, and governed suppressions with expiry and stale detection. **No percentage score**, by decision. The public commands are dogfooded in CI with self-tests that prove the gate can fail.
 
-## SPEC-012 — TestInbox dogfooding and release readiness
+## SPEC-012 — Odexa dogfooding and release readiness
 
-- **Objective/scope:** build TestInbox and Specra's own docs using only public config/contracts/content/SDK examples/branding; close production-readiness gaps.
-- **Non-goals:** TestInbox branches in core, unrelated API conformance, SaaS hosting, or a plugin marketplace.
+- **Objective/scope:** build Odexa and Specra's own docs using only the packed public CLI, public config, contracts, authored content, and branding; close production-readiness gaps.
+- **Non-goals:** Odexa branches in core, AsyncAPI ingestion, invented SDK mappings, unrelated API conformance, SaaS hosting, or a plugin marketplace.
 - **Architecture impact:** validates public boundaries and deployment artifacts; product-specific behavior stays in the consumer project.
 - **Acceptance:** both portals build without private hooks; no `if (project === "testinbox")`; real-scale budgets, broken-link/accessibility/visual/E2E/quality gates, rollback, provenance, and deployment runbooks pass.
 - **Tests/security:** full example builds, contract/content drift integration, cross-browser/manual AT, load/bundle/build benchmarks, supply-chain/release audit, disaster/rollback exercise.
 - **Docs/DoD:** operator/release/support policy, public compatibility and license decisions, dogfood findings, and residual-risk acceptance are complete.
-- **Dependencies/risks/reviewers:** SPEC-011; risks are hidden coupling, real-spec scale, and release operations; all specialists and TestInbox owners.
+- **Dependencies/risks/reviewers:** SPEC-011; risks are hidden coupling, real-spec scale, and release operations; all specialists and Odexa owners.
+- **Outcome:** technically ready with owner decisions. Odexa's six real OpenAPI 3.1 services and fourteen authored pages, plus Specra's authored-content-only self-documentation, build through the packed `0.1.0-rc.1` public CLI. Production Node/container deployment, liveness/readiness, rollback/restore, cross-browser critical flows, package audit, CycloneDX SBOM, checksums, and the public-boundary gate are implemented. Public release remains blocked by the explicit license choice and the recorded human assistive-technology pass; AsyncAPI ingestion remains a future capability and Odexa documents its events from the authoritative source without pretending Specra ingests it.
 
 ## Deferred dedicated proxy
 

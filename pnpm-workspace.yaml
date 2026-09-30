@@ -5,7 +5,14 @@ autoInstallPeers: false
 engineStrict: true
 saveExact: true
 strictPeerDependencies: true
+overrides:
+  "brace-expansion@<1.1.20": 1.1.20
+  "brace-expansion@>=2.0.0 <2.1.6": 2.1.6
+  "brace-expansion@>=4.0.0 <5.0.11": 5.0.11
+  "smol-toml@<=1.7.0": 1.7.1
+  "undici@>=8.0.0 <8.10.2": 8.10.2
 allowBuilds:
+  libxmljs2: false
   unrs-resolver: false
 minimumReleaseAgeExclude:
   - "@playwright/test@1.63.0"

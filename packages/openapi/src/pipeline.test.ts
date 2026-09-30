@@ -1018,9 +1018,16 @@ components:
     });
     expect(cancelled).toMatchObject({ cancelled: true, ok: false });
 
-    await expect(ingestOpenApi({ project, sources: [] })).rejects.toThrow(
-      TypeError,
-    );
+    const authoredOnly = await ingestOpenApi({ project, sources: [] });
+    expect(authoredOnly.ok).toBe(true);
+    expect(authoredOnly.artifact?.model.versions[0]?.services).toEqual([]);
+    expect(authoredOnly.sources).toEqual([]);
+    expect(authoredOnly.statistics).toEqual({
+      documents: 0,
+      operations: 0,
+      references: 0,
+      schemas: 0,
+    });
 
     const two = await ingestOpenApi({
       project,
@@ -1046,6 +1053,63 @@ components:
     expect(codes(clash)).toEqual([
       "error SOURCE_IDENTITY_COLLISION same.yaml#",
     ]);
+  });
+
+  it("records a shared referenced document once across service roots", async () => {
+    const shared = JSON.stringify({
+      components: {
+        schemas: {
+          Shared: { properties: { id: { type: "string" } }, type: "object" },
+        },
+      },
+      info: { title: "Shared", version: "1.0.0" },
+      openapi: "3.1.0",
+      paths: {},
+    });
+    const root = (title: string, route: string) =>
+      JSON.stringify({
+        info: { title, version: "1.0.0" },
+        openapi: "3.1.0",
+        paths: {
+          [route]: {
+            get: {
+              responses: {
+                "200": {
+                  content: {
+                    "application/json": {
+                      schema: {
+                        $ref: "common.yaml#/components/schemas/Shared",
+                      },
+                    },
+                  },
+                  description: "ok",
+                },
+              },
+            },
+          },
+        },
+      });
+    const result = await ingestOpenApi({
+      project,
+      sources: [
+        createMemoryAcquisition("a.yaml", {
+          "a.yaml": root("A", "/a"),
+          "common.yaml": shared,
+        }),
+        createMemoryAcquisition("b.yaml", {
+          "b.yaml": root("B", "/b"),
+          "common.yaml": shared,
+        }),
+      ],
+    });
+    expect(result.ok).toBe(true);
+    expect(result.sources.map((source) => source.id)).toEqual([
+      "a.yaml",
+      "common.yaml",
+      "b.yaml",
+    ]);
+    expect(result.statistics.documents).toBe(3);
+    expect(result.statistics.references).toBe(2);
   });
 
   it("normalizes servers, parameter overrides, media types, and encodings faithfully", async () => {

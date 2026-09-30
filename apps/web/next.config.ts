@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 // The Content-Security-Policy is set per request with a nonce in `proxy.ts`;
 // the fixed headers below apply to every response, static assets included.
@@ -18,6 +19,8 @@ const nextConfig: NextConfig = {
   agentRules: false,
   poweredByHeader: false,
   reactStrictMode: true,
+  output: "standalone",
+  outputFileTracingRoot: path.resolve(import.meta.dirname, "../.."),
   async headers() {
     return [{ headers: [...securityHeaders], source: "/(.*)" }];
   },

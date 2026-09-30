@@ -1,7 +1,16 @@
 {
   "name": "@specra/cli",
-  "version": "0.0.0",
+  "version": "0.1.0-rc.1",
   "private": true,
+  "description": "Build and operate self-hosted developer documentation",
+  "homepage": "https://github.com/yannisyoussef/specra#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yannisyoussef/specra.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yannisyoussef/specra/issues"
+  },
   "license": "UNLICENSED",
   "type": "module",
   "engines": {
@@ -29,7 +38,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "prebuild": "node ../../scripts/clean-package-dist.mjs",
