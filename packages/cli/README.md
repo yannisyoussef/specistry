@@ -26,8 +26,10 @@ This release candidate is source-available under the Business Source License
 currently open source. Each specific version changes to Apache-2.0 three years
 after that version's first public distribution. The confirmed Licensor and
 copyright owner is INFINITY VENTURES (legal form: SASU), and the release-license
-gate passes. The manual assistive-technology and protected-provenance gates
-remain open.
+gate passes. Public RC distribution requires verified protected provenance and
+the committed public-distribution ledger. Manual VoiceOver/NVDA qualification
+is accepted for pre-1.0 RCs and required before stable `1.0.0`; no comprehensive
+screen-reader or formal WCAG conformance claim is made.
 
 Documentation, compatibility policy, and security reporting instructions are
 maintained in the [Specra repository](https://github.com/yannisyoussef/specra).

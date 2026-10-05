@@ -21,8 +21,13 @@ An inspectable candidate contains:
 
 The next software version is `0.1.0-rc.2`: the complete planned v1 slices, the
 owner-confirmed Licensor and authority, and the approved BSL 1.1 policy are
-present. Human assistive-technology evidence and live registry/image provenance
-remain release gates. `1.0.0` would overstate those unresolved obligations.
+present. The owner accepts manual VoiceOver/NVDA qualification as P2 residual
+[A11Y-R01](reviews/spec-012-manual-at.md) for pre-1.0 RCs. It remains a blocker
+for stable `1.0.0` and comprehensive accessibility claims. Verified protected
+provenance, candidate integrity, and the committed public-distribution ledger
+remain required for RC publication. GitHub repository visibility and a GitHub
+pre-release with artifacts are the initial public distribution channel; npm and
+container registry publication may follow separately.
 
 ## Promotion sequence
 
@@ -31,12 +36,19 @@ remain release gates. `1.0.0` would overstate those unresolved obligations.
 2. Verify `develop` in integration with the packed CLI, Odexa, self-docs, and
    the production reader.
 3. Treat the owner confirmation of the Licensor, ownership, licensing
-   authority, and final populated license parameters as complete. Resolve the
-   human assistive-technology blocker. Qualified external legal review remains
-   strongly recommended and is not currently recorded.
-4. Generate the final candidate from the reviewed commit, verify checksums and
-   SBOM, then execute the dedicated provenance-capable release workflow.
-5. Open an explicit, owner-approved `develop` → `master` promotion PR.
+   authority, and final populated license parameters as complete. Commit the
+   owner-accepted manual AT deferral and preserve its stable-release obligation.
+   Qualified external legal review remains strongly recommended and unrecorded;
+   it is not an RC blocker.
+4. Freeze the exact green `develop` source, open its explicit `develop` →
+   `master` promotion PR, merge only after green checks, and verify post-merge CI.
+5. Run the protected candidate workflow against the reviewed `master` release
+   source. Verify attestations for the actual artifact digests, checksums, SBOM,
+   licensing metadata, and source commit before preparing publication.
+6. Generate and commit the immutable ledger through a reviewed PR, attest its
+   identical candidate copy and updated checksum manifest, and tag the original
+   artifact-producing source. Make the repository public and publish the GitHub
+   pre-release on the recorded first-public-distribution date.
 
 Ordinary PR CI keeps `contents: read`. OIDC, attestations, package publication,
 and registry write permissions belong only in a dedicated protected release

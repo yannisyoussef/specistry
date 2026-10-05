@@ -97,7 +97,7 @@ P0 open: 0. P1 unresolved: 0.
 - **P2 — Result kinds were colour-only for operations.** Fixed: every option starts with a visually hidden kind word ("API," / "Guide," …) and the method is text in the tag column.
 - **P2 — Status announced on every keystroke.** Fixed: one polite announcement 400 ms after typing pauses, cleared when the query is empty.
 - **P2 — Tabs and rows under 44 px on mobile.** Fixed: 44 px trigger, rows, and Cancel below 768 px.
-- **P3 — Manual AT verification** (VoiceOver, NVDA, TalkBack) for the palette is recorded in the matrix and remains due before release with the prior carry-over rows.
+- **P3 — Manual AT verification** (VoiceOver, NVDA, TalkBack) for the palette is recorded in the matrix and remains due before stable `1.0.0` with the prior carry-over rows. The owner accepts missing VoiceOver/NVDA qualification for pre-1.0 RCs under P2 A11Y-R01.
 - **P3 — Group headings are `aria-hidden` visual eyebrows with `role="group"` labels.** Accepted: avoids double announcement.
 
 ### Security
@@ -146,10 +146,10 @@ No regression remains open.
 
 ## Tracked follow-ups
 
-| Item                                                   | Severity | Owner            | Condition                                       |
-| ------------------------------------------------------ | -------- | ---------------- | ----------------------------------------------- |
-| Manual AT pass for the palette (with prior carry-over) | P3       | Accessibility    | Before the first release                        |
-| Worker-based hydration                                 | P3       | Search           | Hydration above ~300 ms on a real corpus        |
-| Deterministic sharding                                 | P3       | Search           | Artifact above ~5 MB gzip on a real project     |
-| Multilingual stemming or synonym layer                 | P3       | Search           | Relevance evidence from a non-English project   |
-| SDK and schema result kinds                            | P3       | SPEC-008 / later | SDK documentation exists; a global schema route |
+| Item                                                   | Severity | Owner            | Condition                                        |
+| ------------------------------------------------------ | -------- | ---------------- | ------------------------------------------------ |
+| Manual AT pass for the palette (with prior carry-over) | P3       | Accessibility    | Before stable `1.0.0`; A11Y-R01 accepted for RCs |
+| Worker-based hydration                                 | P3       | Search           | Hydration above ~300 ms on a real corpus         |
+| Deterministic sharding                                 | P3       | Search           | Artifact above ~5 MB gzip on a real project      |
+| Multilingual stemming or synonym layer                 | P3       | Search           | Relevance evidence from a non-English project    |
+| SDK and schema result kinds                            | P3       | SPEC-008 / later | SDK documentation exists; a global schema route  |

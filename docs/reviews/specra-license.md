@@ -54,5 +54,8 @@ external counsel should review the Additional Use Grant, trademark wording,
 and contribution/relicensing terms; that review is strongly recommended and is
 not currently recorded. External contributions requiring commercial
 relicensing must not be accepted until the inbound-rights approach is resolved.
-The remaining release blockers are the human VoiceOver/NVDA accessibility
-matrix and protected workflow execution with provenance attestation.
+Public RC release requires protected workflow execution with verified provenance
+and the committed public-distribution ledger. The owner accepts manual
+VoiceOver/NVDA qualification as A11Y-R01 for pre-1.0 RCs; it remains required
+before stable `1.0.0` and comprehensive accessibility claims. External legal
+review remains recommended and is not an RC blocker.

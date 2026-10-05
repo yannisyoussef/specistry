@@ -2,7 +2,9 @@
 
 Specra is a self-hosted, product-agnostic developer documentation platform. It transforms API specifications, authored guidance, and project configuration into an accessible developer experience while keeping source formats, rendering, and deployment independently evolvable.
 
-The repository contains the complete pre-release product through SPEC-012: bounded OpenAPI ingestion, authored content, an accessible reader, self-hosted search, generated protocol examples, an opt-in browser-direct playground, immutable documentation releases, and deterministic quality gates. The next release candidate is `0.1.0-rc.2`. The owner has confirmed Specra's Licensor, copyright ownership, licensing authority, and final Business Source License parameters. Public distribution remains blocked only until the recorded manual assistive-technology pass is complete and the protected release workflow emits provenance for the reviewed commit. Qualified external legal review is strongly recommended and has not been recorded.
+The repository contains the complete pre-release product through SPEC-012: bounded OpenAPI ingestion, authored content, an accessible reader, self-hosted search, generated protocol examples, an opt-in browser-direct playground, immutable documentation releases, and deterministic quality gates. The release candidate is `0.1.0-rc.2`. The owner has confirmed Specra's Licensor, copyright ownership, licensing authority, and final Business Source License parameters. Public distribution requires verified protected-workflow provenance and a committed public-distribution ledger. Qualified external legal review is strongly recommended and has not been recorded.
+
+Specra is continuously tested with automated accessibility rules, keyboard navigation, responsive layouts, and Chromium, Firefox, and WebKit. Manual VoiceOver and NVDA qualification is planned before the 1.0 stable release. The owner has accepted this qualification gap for pre-1.0 release candidates as [A11Y-R01](docs/reviews/spec-012-manual-at.md); no comprehensive screen-reader or formal WCAG conformance claim is made.
 
 ## Requirements
 
@@ -117,6 +119,6 @@ Change Date. See the authoritative [license decision](docs/license-decision.md)
 and [LICENSE](LICENSE).
 
 The confirmed Licensor and copyright owner is INFINITY VENTURES (legal form:
-SASU), and the release-license gate passes. Public distribution remains blocked
-by the manual assistive-technology and protected-provenance gates in the
+SASU), and the release-license gate passes. Public distribution requires the
+protected provenance and committed ledger evidence in the
 [release process](docs/release-process.md).

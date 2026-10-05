@@ -106,7 +106,7 @@ P0 open: 0. P1 unresolved: 0.
 - **P2 — Each callout was an `<aside>`**, creating many `complementary` landmarks inside `main`. Fixed: callouts are `role="note"` with a label of kind and title.
 - **P2 — Named regions for every code block collided** (`landmark-unique`). Fixed: `role="group"` instead of `region`.
 - **P2 — Tabs were 36 px tall on mobile.** Fixed: 44 px minimum below 768 px; mobile test asserts the box.
-- **P3 — Manual AT verification for tabs, callouts, and the drawer with sections** is due before release; the matrix rows in `performance-accessibility.md` record the expectation. The SPEC-005 VoiceOver/NVDA pass over long schema objects is carried over unchanged.
+- **P3 — Manual AT verification for tabs, callouts, and the drawer with sections** is due before stable `1.0.0`; the matrix rows in `performance-accessibility.md` record the expectation. The owner accepts the SPEC-005 and SPEC-006 qualification carry-overs for pre-1.0 RCs under P2 A11Y-R01.
 - **P3 — Comment token contrast** in dark mode was raised from `#6c6c73` to `#9a9aa1` on the code surface (light mode uses `#6c6c73` on white); recorded with the token consolidation.
 
 ### Performance
@@ -139,12 +139,12 @@ The authored page, guide, tabs, cards, table, image, drawer, and 404 states were
 
 ## Tracked follow-ups
 
-| Item                                                                       | Severity | Owner          | Condition                                |
-| -------------------------------------------------------------------------- | -------- | -------------- | ---------------------------------------- |
-| Fence attributes for line highlighting / numbers                           | P3       | Content        | Author demand                            |
-| `sidebarTitle` in breadcrumbs                                              | P3       | Product / DX   | Author feedback                          |
-| Partition or lazy-load `content.json` bodies                               | P3       | Reader         | Sites above ~500 pages or memory reports |
-| Prune the composed sidebar per page above a threshold                      | P3       | Reader         | Same as above                            |
-| Manual AT pass (tabs, callouts, drawer with sections; SPEC-005 carry-over) | P3       | Accessibility  | Before the first release                 |
-| Open Graph metadata                                                        | P3       | SEO / frontend | Social previews requested                |
-| Highlighter time bound                                                     | P3       | Security       | If a grammar regression is reported      |
+| Item                                                                       | Severity | Owner          | Condition                                        |
+| -------------------------------------------------------------------------- | -------- | -------------- | ------------------------------------------------ |
+| Fence attributes for line highlighting / numbers                           | P3       | Content        | Author demand                                    |
+| `sidebarTitle` in breadcrumbs                                              | P3       | Product / DX   | Author feedback                                  |
+| Partition or lazy-load `content.json` bodies                               | P3       | Reader         | Sites above ~500 pages or memory reports         |
+| Prune the composed sidebar per page above a threshold                      | P3       | Reader         | Same as above                                    |
+| Manual AT pass (tabs, callouts, drawer with sections; SPEC-005 carry-over) | P3       | Accessibility  | Before stable `1.0.0`; A11Y-R01 accepted for RCs |
+| Open Graph metadata                                                        | P3       | SEO / frontend | Social previews requested                        |
+| Highlighter time bound                                                     | P3       | Security       | If a grammar regression is reported              |

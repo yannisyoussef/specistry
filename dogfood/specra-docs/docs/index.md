@@ -16,6 +16,8 @@ Use this portal for the author and operator workflow. It is not the Specra marke
 
 <Callout type="warning" title="Release candidate">
 
-Specra's business terms select the source-available Business Source License 1.1, with the documented production-use grant and an Apache-2.0 Change License after three years for each version. It is not currently open source. The confirmed Licensor and copyright owner is INFINITY VENTURES (legal form: SASU), and the release-license gate passes. The manual assistive-technology and protected-provenance gates remain open. Qualified external legal review is strongly recommended and has not been recorded.
+Specra's business terms select the source-available Business Source License 1.1, with the documented production-use grant and an Apache-2.0 Change License after three years for each version. It is not currently open source. The confirmed Licensor and copyright owner is INFINITY VENTURES (legal form: SASU), and the release-license gate passes. Public RC distribution requires verified protected provenance and a committed public-distribution ledger. Qualified external legal review is strongly recommended and has not been recorded; it is not an RC blocker.
+
+Specra is continuously tested with automated accessibility rules, keyboard navigation, responsive layouts, and Chromium, Firefox, and WebKit. Manual VoiceOver and NVDA qualification is planned before the 1.0 stable release. The owner accepts this qualification gap for pre-1.0 RCs; no comprehensive screen-reader or formal WCAG conformance claim is made.
 
 </Callout>

@@ -75,9 +75,11 @@ policy. No such review is currently recorded, and this repository does not
 claim that it occurred. External review is distinct from the now-closed owner
 identity and authority gate.
 
-The release-license gate now passes. The remaining public-release blockers are
-the human VoiceOver/NVDA accessibility matrix and execution of the protected
-release workflow with provenance attestation.
+The release-license gate now passes. Public RC distribution requires verified
+protected-workflow provenance and a committed public-distribution ledger.
+The owner accepts manual VoiceOver/NVDA qualification as A11Y-R01 for pre-1.0
+RCs; it remains required before stable `1.0.0` and comprehensive accessibility
+claims. External legal review is recommended but is not an RC blocker.
 
 ## Operational policy
 
