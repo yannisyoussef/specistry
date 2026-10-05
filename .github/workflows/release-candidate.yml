@@ -29,24 +29,26 @@ jobs:
       - run: pnpm check
       - run: pnpm build
       - run: pnpm audit --audit-level high
-      - name: Require an owner-approved distribution license
-        run: node -e "const p=require('./package.json'); if (p.license === 'UNLICENSED') throw new Error('Public release is blocked until the owner selects a license.')"
+      - name: Require consistent, owner-confirmed distribution terms
+        run: pnpm check:release-license
       - run: pnpm release:candidate
       - name: Attest candidate artifacts
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
         with:
           subject-path: |
-            .release/specra-0.1.0-rc.1/*.tgz
-            .release/specra-0.1.0-rc.1/specra-cli.cdx.json
-            .release/specra-0.1.0-rc.1/release-audit.json
-            .release/specra-0.1.0-rc.1/SHA256SUMS
+            .release/specra-0.1.0-rc.2/*.tgz
+            .release/specra-0.1.0-rc.2/specra-cli.cdx.json
+            .release/specra-0.1.0-rc.2/license-metadata.json
+            .release/specra-0.1.0-rc.2/release-audit.json
+            .release/specra-0.1.0-rc.2/SHA256SUMS
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: specra-0.1.0-rc.1
+          name: specra-0.1.0-rc.2
           path: |
-            .release/specra-0.1.0-rc.1/*.tgz
-            .release/specra-0.1.0-rc.1/specra-cli.cdx.json
-            .release/specra-0.1.0-rc.1/release-audit.json
-            .release/specra-0.1.0-rc.1/SHA256SUMS
+            .release/specra-0.1.0-rc.2/*.tgz
+            .release/specra-0.1.0-rc.2/specra-cli.cdx.json
+            .release/specra-0.1.0-rc.2/license-metadata.json
+            .release/specra-0.1.0-rc.2/release-audit.json
+            .release/specra-0.1.0-rc.2/SHA256SUMS
           if-no-files-found: error
           retention-days: 30

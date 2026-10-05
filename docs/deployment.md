@@ -14,11 +14,11 @@ specra validate
 specra build
 specra check
 specra release v1 --current --no-diff
-docker build --tag specra-reader:0.1.0-rc.1 .
+docker build --tag specra-reader:0.1.0-rc.2 .
 docker run --read-only --tmpfs /tmp --publish 3000:3000 \
   --mount type=bind,src="$PWD",dst=/data/project,readonly \
   --env SPECRA_SITE_URL=https://docs.example.com \
-  specra-reader:0.1.0-rc.1
+  specra-reader:0.1.0-rc.2
 ```
 
 The image pins Node 24.20.0, runs the minimal Next standalone output as the

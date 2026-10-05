@@ -30,7 +30,7 @@ are the second consumer and need authored content without inventing an API.
 3. Source records are project identities. Shared referenced documents appear
    once in the manifest even when several configured roots use them. A digest
    mismatch for the same identity during one build fails closed.
-4. The release candidate is `0.1.0-rc.1`. A clean-room npm install and a
+4. The release candidate is `0.1.0-rc.2`. A clean-room npm install and a
    separate pnpm install exercise the packed CLI. The candidate bundle
    includes its README and metadata, is audited for required and forbidden
    paths, and ships a validated CycloneDX SBOM plus SHA-256 checksums.
@@ -43,10 +43,12 @@ are the second consumer and need authored content without inventing an API.
 6. Odexa documents event flows as authored content linked to its authoritative
    AsyncAPI source. SPEC-012 does not add partial AsyncAPI ingestion. It also
    does not invent SDK mappings where the consumer has none.
-7. Public publication stays blocked while the repository is `UNLICENSED`.
-   Build provenance is prepared for the protected release workflow but is not
-   claimed before that workflow runs. A human manual assistive-technology pass
-   is also a release gate, distinct from automated axe and keyboard coverage.
+7. The software policy is BSL 1.1 with a per-version Apache-2.0 Change License.
+   Public publication stays blocked until the exact legal name and licensing
+   authority of the proposed licensor are owner-confirmed. Build provenance is
+   prepared for the protected release workflow but is not claimed before that
+   workflow runs. A human manual assistive-technology pass is also a release
+   gate, distinct from automated axe and keyboard coverage.
 
 ## Consequences
 
@@ -67,7 +69,7 @@ are the second consumer and need authored content without inventing an API.
   behaviour and unnecessary maintenance).
 - Treating AsyncAPI as OpenAPI or implementing a partial event parser inside a
   dogfood slice (incorrect semantics and unreviewed scope).
-- Publishing an unlicensed package or labeling locally generated checksums as
-  signed provenance (false release evidence).
+- Publishing with an unconfirmed licensor identity or labeling locally
+  generated checksums as signed provenance (false release evidence).
 - Baking generated consumer artifacts into the reader image (couples content
   rollback to application rollout and weakens immutable release operations).

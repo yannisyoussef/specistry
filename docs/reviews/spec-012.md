@@ -20,15 +20,18 @@ the detailed finding dispositions are in the dogfood ledger.
 - **Security/privacy:** PASS WITH OWNER GATES. Authored content remains inert,
   the local playground is the only approved browser destination, readiness is
   value-free, the runtime is non-root, and generated evidence contains no
-  credential values. License, human AT, and protected provenance remain open.
+  credential values. Exact licensor identity/authority, human AT, and protected
+  provenance remain open.
 - **Frontend/accessibility:** AUTOMATED PASS; MANUAL BLOCKED. The critical
   guide/search/API/code/playground flows have focused Chromium, Firefox, and
   WebKit coverage with axe. The separate manual AT matrix must be completed by
   a human before public release.
 - **DX/release:** PASS WITH OWNER GATES. npm and pnpm install the tarball in
   clean rooms, the package audit rejects private material, and the candidate
-  includes a validated SBOM and checksums. Public publish is disabled while
-  `UNLICENSED`; local work does not claim signed provenance.
+  includes a validated SBOM and checksums. The approved BSL 1.1 terms are
+  consistent across release surfaces; public publish remains disabled until
+  the licensor's legal identity and authority are owner-confirmed. Local work
+  does not claim signed provenance.
 - **Operations:** PASS. Standalone Node output, liveness/readiness, immutable
   external artifacts, proxy/TLS/CSP guidance, multi-instance coherence,
   backup/restore, corruption handling, and rollback are documented.
@@ -38,7 +41,8 @@ the detailed finding dispositions are in the dogfood ledger.
 `TECHNICALLY_READY_WITH_OWNER_DECISIONS`
 
 The implementation may merge to `develop`. It may not be promoted to the
-production branch or published until the owner selects a license, the manual
-assistive-technology matrix passes, and protected CI emits the release
-attestation for the reviewed commit. No reviewer is authorized to silently
-convert those gates into documentation-only follow-ups.
+production branch or published until the owner confirms the licensor's exact
+legal identity and authority, the manual assistive-technology matrix passes,
+and protected CI emits the release attestation for the reviewed commit. No
+reviewer is authorized to silently convert those gates into documentation-only
+follow-ups.

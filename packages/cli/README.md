@@ -8,19 +8,26 @@ documentation releases.
 Requires Node.js 24.20.0 or newer within Node 24.
 
 ```bash
-npm install --save-dev @specra/cli@0.1.0-rc.1
+npm install --save-dev ./specra-cli-0.1.0-rc.2.tgz
 npx specra validate
 npx specra build
 npx specra check
 ```
 
+The registry coordinate `@specra/cli@0.1.0-rc.2` is available only after an
+explicit public release. Until then, use the reviewed candidate tarball.
+
 The package bundles its internal runtime dependencies. Only the executable,
 the root programmatic export, and the documented `@specra/config` dependency
 are supported consumer surfaces. Do not import internal package subpaths.
 
-This release candidate remains `UNLICENSED` until the repository owner makes
-and applies the public software-license decision. It is suitable for local
-evaluation, not public redistribution.
+This release candidate is source-available under the Business Source License
+1.1 (`BUSL-1.1`), including its stated Additional Use Grant. It is not
+currently open source. Each specific version changes to Apache-2.0 three years
+after that version's first public distribution. The license gate remains
+blocked until the owner confirms the proposed licensor's exact legal name and
+licensing authority and approves the final populated parameters. Separate
+manual assistive-technology and protected-provenance gates also remain open.
 
 Documentation, compatibility policy, and security reporting instructions are
 maintained in the [Specra repository](https://github.com/yannisyoussef/specra).
