@@ -42,21 +42,33 @@ container registry publication may follow separately.
    it is not an RC blocker.
 4. Freeze the exact green `develop` source, open its explicit `develop` →
    `master` promotion PR, merge only after green checks, and verify post-merge CI.
-5. Run the protected candidate workflow against the reviewed `master` release
-   source. Verify attestations for the actual artifact digests, checksums, SBOM,
-   licensing metadata, and source commit before preparing publication.
-6. Generate and commit the immutable ledger through a reviewed PR, attest its
-   identical candidate copy and updated checksum manifest, and tag the original
-   artifact-producing source. Make the repository public and publish the GitHub
-   pre-release on the recorded first-public-distribution date.
+5. Create the annotated version tag at the exact green `master` source. While
+   private, dispatch the candidate workflow on that tag with `mode=prepare`.
+   Download and verify the five prepared files; their distribution dates remain
+   null. Preparation has read-only permissions and cannot attest or publish.
+6. Use the supported recorder to generate the ledger for the actual intended
+   visibility-change date. Commit it through a reviewed PR and merge into
+   `master`; keep the version tag on the original artifact-producing source.
+7. Audit the full history, then make the repository public on the ledger date.
+   Configure `release` with exact tag/branch deployment policies, no cosmetic
+   self-approval, timers, or secrets. Dispatch `mode=attest` on the original tag,
+   supplying its successful preparation run ID and the reviewed ledger commit.
+8. Cryptographically verify all six artifact subjects against the repository,
+   workflow, frozen source digest, and exact tag before publishing the GitHub
+   pre-release. npm and container registries remain separate, deferred channels.
 
 Ordinary PR CI keeps `contents: read`. OIDC, attestations, package publication,
 and registry write permissions belong only in a dedicated protected release
-workflow. `.github/workflows/release-candidate.yml` is manual, targets the
-protected `release` environment, validates every manifest and authoritative
-license surface, including the confirmed licensor identity and authority. It
-uses GitHub's pinned build-provenance action
-and produces no registry publication by itself. A prepared workflow is not
+workflow. `.github/workflows/release-candidate.yml` is manual. Its private
+preparation job validates every manifest and authoritative license surface.
+Only its public attestation job targets `release` and receives OIDC/attestation
+write permissions. It verifies the successful same-repository preparation run,
+exact source/tag, immutable archive digest, reviewed ledger ancestry on `master`,
+every prepared checksum, undated policy metadata, and the ledger's tarball
+digest. It copies the exact committed record and deterministically updates the
+checksum manifest without rebuilding any prepared subject. It uses GitHub's
+pinned build-provenance action, preserves the signed bundle, and produces no
+registry publication by itself. A prepared workflow is not
 evidence of a live attestation; report that state as
 `PROVENANCE WORKFLOW PREPARED — LIVE ATTESTATION NOT EXECUTED`.
 
@@ -79,9 +91,11 @@ confirmations and final owner approval, binds the record to the source commit
 and tarball digest, writes an identical candidate copy, updates `SHA256SUMS`,
 and deterministically derives the Change Date three calendar years later.
 
-That future transaction must commit the ledger record through branch
-protection and attest its identical checksummed candidate copy before making
-the version public. It is deliberately not part of the candidate-only workflow
-and has not been executed or claimed here. Publication must never reuse a date
-record from another version or create an uncommitted or unchecksummed side
-record.
+The public-first transaction commits the ledger while private, makes the source
+public on that date, then attests and verifies the identical checksummed copy
+before publishing the GitHub pre-release. This ordering avoids requiring
+Enterprise Cloud solely for private attestations. The original release audit
+keeps its truthful preparation-time `executed: false` status; live verification
+is recorded separately with the signed bundle and actual run/subject references.
+Publication must never reuse another version's date or create an uncommitted or
+unchecksummed side record. A green workflow alone is not provenance verification.
