@@ -50,3 +50,25 @@ When a source construct is unsupported, preserve an explicit diagnostic or `unkn
 ## Pull requests
 
 A pull request should state the work-item identifier, scope, non-goals, risks, verification commands, and any ADR impact. All P0/P1 review findings must be resolved or explicitly dispositioned before a slice completes.
+
+## Contributions and licensing
+
+By intentionally submitting a contribution for inclusion in Specra, you agree
+that it may be distributed under the repository's current Business Source
+License 1.1 terms, including the recorded Additional Use Grant and the future
+Apache-2.0 Change License. Contributions offered under different or additional
+terms cannot be accepted without documented owner and legal review. Do not
+submit code, assets, or documentation that you are not authorized to
+contribute.
+
+This repository does not currently require a contributor license agreement.
+These inbound terms do not yet establish the separate relicensing rights that
+may be needed to include third-party contributions in a commercial license.
+The owner and qualified counsel must resolve that question before accepting an
+external contribution containing copyrightable changes for which commercial
+relicensing is intended; this document does not silently grant those rights.
+
+The proposed licensor is INFINITY VENTURES. Its exact legal entity name and
+authority to license the work still require owner confirmation before public
+distribution; this contributor guidance does not establish or transfer
+copyright ownership. See [the license decision](docs/license-decision.md).

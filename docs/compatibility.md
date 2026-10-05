@@ -1,6 +1,6 @@
 # Compatibility policy
 
-Specra `0.1.0-rc.1` is a pre-1.0 release candidate. Pre-1.0 does not mean
+Specra `0.1.0-rc.2` is a pre-1.0 release candidate. Pre-1.0 does not mean
 silent drift: compatibility-sensitive changes are documented, tested, and
 include a migration path, but may occur before 1.0 when evidence shows the
 current contract is wrong.

@@ -2,7 +2,7 @@
 
 Specra is a self-hosted, product-agnostic developer documentation platform. It transforms API specifications, authored guidance, and project configuration into an accessible developer experience while keeping source formats, rendering, and deployment independently evolvable.
 
-The repository contains the complete pre-release product through SPEC-012: bounded OpenAPI ingestion, authored content, an accessible reader, self-hosted search, generated protocol examples, an opt-in browser-direct playground, immutable documentation releases, and deterministic quality gates. The release candidate is `0.1.0-rc.1`; public distribution remains blocked until the repository owner chooses a license and completes the recorded manual assistive-technology pass.
+The repository contains the complete pre-release product through SPEC-012: bounded OpenAPI ingestion, authored content, an accessible reader, self-hosted search, generated protocol examples, an opt-in browser-direct playground, immutable documentation releases, and deterministic quality gates. The next release candidate is `0.1.0-rc.2`. Its software-license business terms are selected, while legal effectiveness and public distribution remain blocked until the owner confirms the licensor's exact legal name and authority, approves the final populated parameters, completes the recorded manual assistive-technology pass, and executes protected provenance. Qualified external legal review is strongly recommended and has not been recorded.
 
 ## Requirements
 
@@ -38,7 +38,7 @@ pnpm build
 ./packages/cli/dist/bin.js validate --root /path/to/consumer/project
 ```
 
-The packed executable name is `specra`. See the [CLI reference](docs/cli.md) for its commands, diagnostics, and exit contract. The package is not published while the license decision is open.
+The packed executable name is `specra`. See the [CLI reference](docs/cli.md) for its commands, diagnostics, and exit contract. The package is not published while the remaining release gates are open.
 
 ## Commands
 
@@ -101,4 +101,21 @@ Development integrates through `develop`; reviewed, green promotion pull request
 - Documentation quality (SPEC-011) is a deterministic gate, not a score: a static rule catalogue produces findings from normalized facts, project policy assigns severities, thresholds, and governed suppressions, and `specra check` maps the result to an exit code. `specra diff` exposes the SPEC-010 structured diff as a read-only public command. Neither runs user code, reaches the network, or writes anything; see the [quality reference](docs/quality.md).
 - Critical dependency boundaries, accessibility smoke coverage, malicious-input controls, and production-license policy run in CI.
 
-The package and container release paths are implemented and audited, but public distribution is deliberately blocked while the repository remains `UNLICENSED`. See the [license decision](docs/license-decision.md) and [release process](docs/release-process.md).
+## License
+
+Specra is source-available under the Business Source License 1.1
+(`BUSL-1.1`). The Additional Use Grant permits individuals and companies to
+self-host Specra in production to create, host, and publish documentation for
+their own products, services, APIs, projects, and internal systems, including
+commercial uses. Offering Specra itself, or a service whose primary value is
+Specra's functionality, as a hosted or managed service to third parties falls
+outside that grant and requires a commercial agreement while the BSL applies.
+
+Each specific version changes to Apache-2.0 three years after that version's
+first public distribution. Specra is not open source before the applicable
+Change Date. See the authoritative [license decision](docs/license-decision.md)
+and [LICENSE](LICENSE).
+
+Public distribution remains blocked until the owner confirms the proposed
+licensor's exact legal name and licensing authority and the other gates in the
+[release process](docs/release-process.md) are complete.

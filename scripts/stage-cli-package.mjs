@@ -97,6 +97,16 @@ await cp(
   path.join(cliDirectory, "README.md"),
   path.join(destination, "README.md"),
 );
+await cp(
+  path.join(repositoryRoot, "LICENSE"),
+  path.join(destination, "LICENSE"),
+);
+await mkdir(path.join(destination, "LICENSES"));
+await cp(
+  path.join(repositoryRoot, "LICENSES", "Apache-2.0.txt"),
+  path.join(destination, "LICENSES", "Apache-2.0.txt"),
+);
+await cp(path.join(repositoryRoot, "NOTICE"), path.join(destination, "NOTICE"));
 for (const name of workspacePackages) {
   const target = path.join(destination, "node_modules", "@specra", name);
   await mkdir(target, { recursive: true });
@@ -154,6 +164,41 @@ for (const [name, source] of [...closure.entries()].sort()) {
     recursive: true,
   });
 }
+
+// parse-entities still declares @types/unist v2 while the rest of the current
+// Markdown tree uses v3. Preserve pnpm's nested resolution instead of flattening
+// the two incompatible ranges into an npm-invalid tree. The strict SBOM
+// inventory in build-release-candidate.mjs will fail if this exception becomes
+// stale after an upstream upgrade.
+const parseEntities = closure.get("parse-entities");
+if (parseEntities === undefined)
+  throw new Error("The staged Markdown closure is missing parse-entities.");
+const parseEntitiesUnist = await findPackageDirectory(
+  parseEntities,
+  "@types/unist",
+);
+await mkdir(
+  path.join(
+    destination,
+    "node_modules",
+    "parse-entities",
+    "node_modules",
+    "@types",
+  ),
+  { recursive: true },
+);
+await cp(
+  parseEntitiesUnist,
+  path.join(
+    destination,
+    "node_modules",
+    "parse-entities",
+    "node_modules",
+    "@types",
+    "unist",
+  ),
+  { dereference: true, recursive: true },
+);
 
 async function findPackageDirectory(fromDirectory, name) {
   let current = await realpath(fromDirectory);
