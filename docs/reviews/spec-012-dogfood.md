@@ -25,8 +25,9 @@ of the packed CLI; it does not import this workspace.
 
 The technical verdict is `TECHNICALLY_READY_WITH_RELEASE_GATES`. No open P1/P2
 implementation defect is hidden by a suppression. F-007 is resolved by the
-owner confirmation and passing release-license gate. Public distribution
-requires F-009 verified provenance and a committed public-distribution ledger.
+owner confirmation and passing release-license gate. The public-first path commits
+the ledger before source exposure, then requires F-009 verified provenance before
+GitHub pre-release publication; see [release process](../release-process.md).
 F-008 is owner-accepted A11Y-R01 for pre-1.0 RCs and remains a stable `1.0.0`
 and comprehensive accessibility claim blocker. F-004 is an honest
 future product slice, and F-003 is visible consumer-owned source quality debt.
