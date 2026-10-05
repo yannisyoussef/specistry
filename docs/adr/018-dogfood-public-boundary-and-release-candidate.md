@@ -47,8 +47,10 @@ are the second consumer and need authored content without inventing an API.
    The owner has confirmed the canonical Licensor name, legal form, ownership,
    licensing authority, and final parameters. Build provenance is prepared for
    the protected release workflow but is not claimed before that workflow runs.
-   A human manual assistive-technology pass is also a release gate, distinct
-   from automated axe and keyboard coverage.
+   The owner accepts manual assistive-technology qualification as P2 residual
+   A11Y-R01 for pre-1.0 RCs; it remains a stable `1.0.0` gate, distinct from
+   automated axe and keyboard coverage, and blocks comprehensive accessibility
+   claims until completed.
 
 ## Consequences
 
