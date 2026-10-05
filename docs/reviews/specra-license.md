@@ -18,7 +18,8 @@ review, not legal advice or evidence of external counsel approval.
   leads with the unpublished tarball, and the future release record is
   checksummed, versioned, artifact-bound, and backed by a durable tracked
   ledger rather than per-run temporary state.
-- **License consistency:** pass with owner and counsel gates. The canonical BSL
+- **License consistency:** pass with the owner gate closed and external review
+  unrecorded. The canonical BSL
   and Apache texts are hash-locked. The entire BSL parameter preamble is exact,
   not merely substring-checked. Confirmed owner data must match both `LICENSE`
   and `NOTICE`, so changing flags alone cannot authorize a release.
@@ -44,14 +45,14 @@ review, not legal advice or evidence of external counsel approval.
 - P1: dogfood docs still claimed no license decision existed — corrected and
   covered by wording-drift tests.
 
-## Open owner/legal items
+## Confirmed owner record and legal follow-up
 
-Before public distribution, the owner still needs to confirm the exact legal
-entity name, copyright ownership or licensing authority, and approve the final
-populated license parameters. Qualified external counsel should review the
-Additional Use Grant, identity and ownership chain, trademark wording, and
-contribution/relicensing terms; that review is strongly recommended and is not
-currently recorded. External contributions requiring commercial relicensing
-must not be accepted until the inbound-rights approach is resolved. The
-protected release gate intentionally remains closed until the licensor identity,
-authority, and final owner approval are recorded.
+The owner has confirmed INFINITY VENTURES as the canonical legal name, SASU as
+the separate legal form, Specra ownership, licensing authority, and the final
+populated license parameters. The release-license gate now passes. Qualified
+external counsel should review the Additional Use Grant, trademark wording,
+and contribution/relicensing terms; that review is strongly recommended and is
+not currently recorded. External contributions requiring commercial
+relicensing must not be accepted until the inbound-rights approach is resolved.
+The remaining release blockers are the human VoiceOver/NVDA accessibility
+matrix and protected workflow execution with provenance attestation.

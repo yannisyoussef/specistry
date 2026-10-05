@@ -1,21 +1,24 @@
 # Software license decision
 
-Status: **BUSINESS TERMS DECIDED — licensor identity, authority, and legal
-effectiveness still require confirmation before public distribution.**
+Status: **OWNER CONFIRMED — licensor identity, ownership, licensing authority,
+and final parameters are recorded.**
 
 The owner selected the Business Source License 1.1 (`BUSL-1.1`) business model
-for Specra. The exact Licensor parameter and legal effectiveness are not final
-until the confirmations below are recorded.
+for Specra and approved the final populated parameters. The confirmed
+copyright owner and Licensor is INFINITY VENTURES, whose legal form is recorded
+separately as SASU. INFINITY VENTURES owns Specra and has authority to license
+the work.
 The current license is source-available, not open source. Each specific
 version changes to the Apache License, Version 2.0 (`Apache-2.0`) three years
 after that version's first public distribution.
 
 ## Approved parameters
 
-- **Proposed licensor:** INFINITY VENTURES.
+- **Licensor:** INFINITY VENTURES.
+- **Legal form:** SASU.
 - **Licensed Work:** Specra. The standard BSL terms apply separately to each
   version.
-- **Change Date:** three years after the first publicly available distribution
+- **Change Date:** three years after the first public distribution
   of each specific version.
 - **Change License:** Apache License, Version 2.0.
 - **Additional Use Grant:** “You may make production use of the Licensed Work
@@ -58,25 +61,23 @@ These examples are explanatory and do not replace the license text:
 For edge cases, rely on the authoritative license and obtain guidance from the
 Licensor rather than extending these examples by analogy.
 
-## Required owner confirmation
+## Confirmed owner record
 
-Repository and nearby company records do not establish the legal suffix or
-jurisdiction of INFINITY VENTURES, nor do they prove that it owns the relevant
-copyrights or is authorized to license them. Before any public distribution,
-an authorized owner must record:
+The owner has recorded the canonical legal name `INFINITY VENTURES`, the legal
+form `SASU`, Specra ownership, authority to license the work, and approval of
+the final populated parameters. The canonical machine-readable legal name does
+not append the legal form; human-facing notices may identify the entity as
+INFINITY VENTURES, SASU where useful.
 
-1. the exact legal entity name, including its legal form and jurisdiction;
-2. confirmation that the entity owns or is authorized to license the work;
-3. approval of the final populated license parameters.
+Qualified external legal review remains strongly recommended, particularly for
+the Additional Use Grant, contribution and relicensing strategy, and trademark
+policy. No such review is currently recorded, and this repository does not
+claim that it occurred. External review is distinct from the now-closed owner
+identity and authority gate.
 
-Qualified external legal review of those final parameters is strongly
-recommended before release, but no such review is currently recorded and this
-repository does not claim that it occurred.
-
-Until then, the protected release workflow fails closed. The current LICENSE
-parameter identifies the proposed name and pending confirmation without adding
-an invented corporate suffix or copyright claim. It must be regenerated with
-the exact confirmed legal name before release.
+The release-license gate now passes. The remaining public-release blockers are
+the human VoiceOver/NVDA accessibility matrix and execution of the protected
+release workflow with provenance attestation.
 
 ## Operational policy
 
@@ -91,5 +92,5 @@ recorded first-public-distribution date.
 The Specra name, Specra logo, and associated branding are trademarks or brand
 assets of their respective owner. The software license grants no trademark
 rights except as expressly required by the license. This repository record is
-implementation evidence, not legal advice; external counsel should validate
-the final licensor identity, ownership chain, and approved grant before release.
+implementation evidence, not legal advice; external counsel should review the
+approved grant, contribution and relicensing strategy, and trademark policy.

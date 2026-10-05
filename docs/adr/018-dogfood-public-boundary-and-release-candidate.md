@@ -44,11 +44,11 @@ are the second consumer and need authored content without inventing an API.
    AsyncAPI source. SPEC-012 does not add partial AsyncAPI ingestion. It also
    does not invent SDK mappings where the consumer has none.
 7. The software policy is BSL 1.1 with a per-version Apache-2.0 Change License.
-   Public publication stays blocked until the exact legal name and licensing
-   authority of the proposed licensor are owner-confirmed. Build provenance is
-   prepared for the protected release workflow but is not claimed before that
-   workflow runs. A human manual assistive-technology pass is also a release
-   gate, distinct from automated axe and keyboard coverage.
+   The owner has confirmed the canonical Licensor name, legal form, ownership,
+   licensing authority, and final parameters. Build provenance is prepared for
+   the protected release workflow but is not claimed before that workflow runs.
+   A human manual assistive-technology pass is also a release gate, distinct
+   from automated axe and keyboard coverage.
 
 ## Consequences
 
@@ -69,7 +69,7 @@ are the second consumer and need authored content without inventing an API.
   behaviour and unnecessary maintenance).
 - Treating AsyncAPI as OpenAPI or implementing a partial event parser inside a
   dogfood slice (incorrect semantics and unreviewed scope).
-- Publishing with an unconfirmed licensor identity or labeling locally
+- Publishing without confirmed licensing authority or labeling locally
   generated checksums as signed provenance (false release evidence).
 - Baking generated consumer artifacts into the reader image (couples content
   rollback to application rollout and weakens immutable release operations).

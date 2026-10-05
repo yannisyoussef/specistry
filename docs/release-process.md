@@ -19,11 +19,10 @@ An inspectable candidate contains:
   unpublished candidate;
 - provenance status and the exact source commit.
 
-The next software version is `0.1.0-rc.2`: the complete planned v1 slices and
-approved BSL 1.1 policy are present, while exact licensor identity and authority,
-human assistive-technology evidence, and live registry/image provenance remain
-owner or release-manager gates. `1.0.0` would overstate those unresolved
-obligations.
+The next software version is `0.1.0-rc.2`: the complete planned v1 slices, the
+owner-confirmed Licensor and authority, and the approved BSL 1.1 policy are
+present. Human assistive-technology evidence and live registry/image provenance
+remain release gates. `1.0.0` would overstate those unresolved obligations.
 
 ## Promotion sequence
 
@@ -31,10 +30,10 @@ obligations.
    reviews are green.
 2. Verify `develop` in integration with the packed CLI, Odexa, self-docs, and
    the production reader.
-3. Have the owner confirm the licensor's exact legal name and licensing
-   authority, approve the final populated license parameters, and resolve the
-   human assistive-technology blocker. Obtain qualified external legal review;
-   it is strongly recommended and is not currently recorded.
+3. Treat the owner confirmation of the Licensor, ownership, licensing
+   authority, and final populated license parameters as complete. Resolve the
+   human assistive-technology blocker. Qualified external legal review remains
+   strongly recommended and is not currently recorded.
 4. Generate the final candidate from the reviewed commit, verify checksums and
    SBOM, then execute the dedicated provenance-capable release workflow.
 5. Open an explicit, owner-approved `develop` → `master` promotion PR.
@@ -43,8 +42,8 @@ Ordinary PR CI keeps `contents: read`. OIDC, attestations, package publication,
 and registry write permissions belong only in a dedicated protected release
 workflow. `.github/workflows/release-candidate.yml` is manual, targets the
 protected `release` environment, validates every manifest and authoritative
-license surface, and refuses to run until the exact licensor identity and
-authority are owner-confirmed. It uses GitHub's pinned build-provenance action
+license surface, including the confirmed licensor identity and authority. It
+uses GitHub's pinned build-provenance action
 and produces no registry publication by itself. A prepared workflow is not
 evidence of a live attestation; report that state as
 `PROVENANCE WORKFLOW PREPARED — LIVE ATTESTATION NOT EXECUTED`.

@@ -26,6 +26,7 @@ export function licenseMetadata(policy, version, firstPublicDistribution) {
     version,
     currentLicense: policy.currentLicense,
     licensor: policy.licensor.legalName ?? policy.licensor.proposedName,
+    legalForm: policy.licensor.legalForm ?? null,
     licensorConfirmed:
       policy.licensor.legalNameConfirmed === true &&
       policy.licensor.licensingAuthorityConfirmed === true,
@@ -71,16 +72,18 @@ Change License: Apache License, Version 2.0
 export function expectedNotice(policy) {
   const confirmed = confirmedLicensor(policy);
   const identity = confirmed
-    ? `The Licensor for this version is ${confirmed}.`
+    ? `Copyright © ${confirmed}
+
+${confirmed} is a société par actions simplifiée unipersonnelle (${policy.licensor.legalForm}).`
     : `The exact legal entity name and licensing authority for the proposed licensor,
 ${policy.licensor.proposedName}, must be confirmed by the owner before public distribution.`;
   return `Specra
 
+${identity}
+
 The Specra name, Specra logo, and associated branding are trademarks or brand
 assets of their respective owner. The software license does not grant
 trademark rights except as expressly required by the license.
-
-${identity}
 `;
 }
 

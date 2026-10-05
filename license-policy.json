@@ -4,11 +4,12 @@
   "licensedWork": "Specra",
   "licensor": {
     "proposedName": "INFINITY VENTURES",
-    "legalName": null,
-    "legalNameConfirmed": false,
-    "licensingAuthorityConfirmed": false
+    "legalName": "INFINITY VENTURES",
+    "legalForm": "SASU",
+    "legalNameConfirmed": true,
+    "licensingAuthorityConfirmed": true
   },
-  "finalParametersOwnerApproved": false,
+  "finalParametersOwnerApproved": true,
   "externalLegalReview": {
     "status": "not-recorded",
     "reference": null

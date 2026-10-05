@@ -24,10 +24,10 @@ are supported consumer surfaces. Do not import internal package subpaths.
 This release candidate is source-available under the Business Source License
 1.1 (`BUSL-1.1`), including its stated Additional Use Grant. It is not
 currently open source. Each specific version changes to Apache-2.0 three years
-after that version's first public distribution. The license gate remains
-blocked until the owner confirms the proposed licensor's exact legal name and
-licensing authority and approves the final populated parameters. Separate
-manual assistive-technology and protected-provenance gates also remain open.
+after that version's first public distribution. The confirmed Licensor and
+copyright owner is INFINITY VENTURES (legal form: SASU), and the release-license
+gate passes. The manual assistive-technology and protected-provenance gates
+remain open.
 
 Documentation, compatibility policy, and security reporting instructions are
 maintained in the [Specra repository](https://github.com/yannisyoussef/specra).
