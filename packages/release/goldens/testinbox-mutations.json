@@ -1,0 +1,108 @@
+{
+  "candidates": [
+    {
+      "id": "v1..v2:operation-removed:openapi.yaml~deleteMessage",
+      "identity": "openapi.yaml~deleteMessage",
+      "kind": "operation-removed",
+      "label": "DELETE /inboxes/{inboxId}/messages/{messageId}",
+      "service": "openapi.yaml"
+    },
+    {
+      "id": "v1..v2:operation-added:openapi.yaml~archiveInbox",
+      "identity": "openapi.yaml~archiveInbox",
+      "kind": "operation-added",
+      "label": "POST /inboxes/{inboxId}/archive",
+      "service": "openapi.yaml"
+    },
+    {
+      "changes": [
+        {
+          "aspect": "path",
+          "detail": "/inboxes -> /inboxes/create"
+        }
+      ],
+      "id": "v1..v2:operation-changed:openapi.yaml~createInbox",
+      "identity": "openapi.yaml~createInbox",
+      "kind": "operation-changed",
+      "label": "POST /inboxes/create",
+      "service": "openapi.yaml"
+    },
+    {
+      "changes": [
+        {
+          "aspect": "request-schema",
+          "detail": "application/json"
+        },
+        {
+          "aspect": "response-schema",
+          "detail": "201 application/json"
+        }
+      ],
+      "id": "v1..v2:operation-changed:openapi.yaml~createWebhook",
+      "identity": "openapi.yaml~createWebhook",
+      "kind": "operation-changed",
+      "label": "POST /webhooks",
+      "service": "openapi.yaml"
+    },
+    {
+      "changes": [
+        {
+          "aspect": "title"
+        },
+        {
+          "aspect": "deprecated",
+          "detail": "deprecated"
+        },
+        {
+          "aspect": "parameter-removed",
+          "detail": "query:cursor"
+        },
+        {
+          "aspect": "response-removed",
+          "detail": "401"
+        }
+      ],
+      "id": "v1..v2:operation-changed:openapi.yaml~listInboxes",
+      "identity": "openapi.yaml~listInboxes",
+      "kind": "operation-changed",
+      "label": "GET /inboxes",
+      "service": "openapi.yaml"
+    },
+    {
+      "changes": [
+        {
+          "aspect": "response-schema",
+          "detail": "200 application/json"
+        }
+      ],
+      "id": "v1..v2:operation-changed:openapi.yaml~listWebhooks",
+      "identity": "openapi.yaml~listWebhooks",
+      "kind": "operation-changed",
+      "label": "GET /webhooks",
+      "service": "openapi.yaml"
+    },
+    {
+      "id": "v1..v2:schema-changed:openapi.yaml~schema_0f3a2561cb921d56",
+      "identity": "openapi.yaml~schema_0f3a2561cb921d56",
+      "kind": "schema-changed",
+      "label": "schema_0f3a2561cb921d56",
+      "service": "openapi.yaml"
+    }
+  ],
+  "counts": {
+    "group-added": 0,
+    "group-removed": 0,
+    "operation-added": 1,
+    "operation-changed": 4,
+    "operation-removed": 1,
+    "schema-added": 0,
+    "schema-changed": 1,
+    "schema-removed": 0,
+    "service-added": 0,
+    "service-removed": 0
+  },
+  "diffFormat": 1,
+  "from": "v1",
+  "to": "v2",
+  "truncated": false
+}

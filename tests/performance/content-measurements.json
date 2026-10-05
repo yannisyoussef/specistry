@@ -1,0 +1,19 @@
+[
+  {
+    "inputBytes": 1896000,
+    "kind": "input",
+    "pages": 1000
+  },
+  {
+    "buildMs": 6216,
+    "contentBytes": 40516143,
+    "kind": "build-1000",
+    "maxRssBytes": 722042880,
+    "navigationEntries": 1001,
+    "navigationHtmlBytes": 123318,
+    "navigationRenderMs": 32.59,
+    "pageHtmlBytes": 13469,
+    "pageRenderMs": 12.26,
+    "pages": 1000
+  }
+]

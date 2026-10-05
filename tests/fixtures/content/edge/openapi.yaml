@@ -1,0 +1,13 @@
+openapi: 3.1.0
+info:
+  title: Content edge cases
+  version: 1.0.0
+paths:
+  /ping:
+    get:
+      operationId: ping
+      summary: Ping
+      tags: [health]
+      responses:
+        "200":
+          description: OK.

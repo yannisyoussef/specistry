@@ -40,13 +40,15 @@ while (queue.length > 0) {
   visited.add(packagePath);
 
   const manifest = await readManifest(path.join(packagePath, "package.json"));
-  const license = licenseExpression(manifest.license);
+  const license = licenseExpression(manifest.license ?? manifest.licenses);
   if (license === "UNKNOWN" || isDenied(license))
     violations.push(`${manifest.name}@${manifest.version}: ${license}`);
-  const nodeModulesPath = packagePath
-    .split(path.sep)
-    .slice(0, -candidate.name.split("/").length)
-    .join(path.sep);
+  const nodeModulesPath = isWorkspacePackage(packagePath)
+    ? path.join(packagePath, "node_modules")
+    : packagePath
+        .split(path.sep)
+        .slice(0, -candidate.name.split("/").length)
+        .join(path.sep);
   enqueueDependencies(nodeModulesPath, manifest.dependencies, false);
   enqueueDependencies(nodeModulesPath, manifest.optionalDependencies, true);
 }
@@ -68,12 +70,33 @@ function enqueueDependencies(nodeModulesPath, dependencies, optional) {
     queue.push({ name, nodeModulesPath, optional });
 }
 
+function isWorkspacePackage(packagePath) {
+  return ["apps", "packages"].some((group) =>
+    packagePath.startsWith(`${path.join(workspaceRoot, group)}${path.sep}`),
+  );
+}
+
 async function readManifest(manifestPath) {
   return JSON.parse(await readFile(manifestPath, "utf8"));
 }
 
 function licenseExpression(license) {
   if (typeof license === "string") return license;
+  // Legacy manifests declare `licenses: [{ type, url }]`; every entry must be
+  // typed, and the alternatives form an OR expression for the policy check.
+  if (Array.isArray(license)) {
+    const types = license.map((entry) =>
+      entry !== null &&
+      typeof entry === "object" &&
+      typeof entry.type === "string"
+        ? entry.type
+        : undefined,
+    );
+    if (types.length > 0 && types.every((type) => type !== undefined)) {
+      return types.length === 1 ? types[0] : `(${types.join(" OR ")})`;
+    }
+    return "UNKNOWN";
+  }
   if (
     license !== null &&
     typeof license === "object" &&

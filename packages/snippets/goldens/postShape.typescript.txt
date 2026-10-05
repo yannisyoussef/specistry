@@ -1,0 +1,13 @@
+const init: RequestInit = {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    kind: "circle",
+    radius: 0,
+  }),
+};
+const response: Response = await fetch("https://api.example.com/v1/shapes", init);
+const data: unknown = await response.json();
+console.log(response.status, data);

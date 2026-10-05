@@ -48,7 +48,7 @@ Specra can expose hooks for contract-conformance tools, but does not assert that
 
 - **Correctness:** deterministic normalized output; explicit diagnostics for unsupported or invalid semantics; OpenAPI 3.1 JSON Schema behavior prioritized.
 - **Security:** hostile-source assumptions, no unsanitized HTML, bounded processing, remote refs off by default, no unrestricted proxy, secret redaction.
-- **Accessibility:** WCAG 2.2 AA target; keyboard and screen-reader behavior designed and tested.
+- **Accessibility:** WCAG 2.2 AA target; automated rules, keyboard navigation, responsive layouts, and Chromium/Firefox/WebKit are continuously tested. Manual VoiceOver/NVDA qualification is planned before stable `1.0.0`; pre-1.0 RCs make no comprehensive screen-reader or formal WCAG conformance claim.
 - **Performance:** static-first pages, defined payload and parser budgets, bounded schema expansion, replaceable build-time search.
 - **Portability:** self-host on a Node server or static-capable target where selected features permit; no required paid SaaS.
 - **Maintainability:** small dependency graph, stable package contracts, ADRs, semantic tests, centralized versions, explicit ownership.

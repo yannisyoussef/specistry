@@ -1,0 +1,68 @@
+{
+  "name": "@specra/cli",
+  "version": "0.1.0-rc.2",
+  "private": true,
+  "description": "Build and operate self-hosted developer documentation",
+  "homepage": "https://github.com/yannisyoussef/specra#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yannisyoussef/specra.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yannisyoussef/specra/issues"
+  },
+  "license": "BUSL-1.1",
+  "type": "module",
+  "engines": {
+    "node": ">=24.20.0 <25"
+  },
+  "bin": {
+    "specra": "./dist/bin.js"
+  },
+  "bundleDependencies": [
+    "@specra/config",
+    "@specra/content",
+    "@specra/model",
+    "@specra/openapi",
+    "@specra/playground",
+    "@specra/quality",
+    "@specra/release",
+    "@specra/search",
+    "@specra/snippets",
+    "zod"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "LICENSES/Apache-2.0.txt",
+    "NOTICE"
+  ],
+  "scripts": {
+    "prebuild": "node ../../scripts/clean-package-dist.mjs",
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/ensure-cli-bin.mjs",
+    "prepack": "node ../../scripts/refuse-direct-pack.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@specra/config": "workspace:*",
+    "@specra/content": "workspace:*",
+    "@specra/model": "workspace:*",
+    "@specra/openapi": "workspace:*",
+    "@specra/playground": "workspace:*",
+    "@specra/quality": "workspace:*",
+    "@specra/release": "workspace:*",
+    "@specra/search": "workspace:*",
+    "@specra/snippets": "workspace:*",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3"
+  }
+}

@@ -1,0 +1,33 @@
+openapi: 3.1.0
+info:
+  title: Navigation
+  version: 2.0.0
+  description: A tiny contract for navigation tests.
+tags:
+  - name: widgets
+    description: Widget management.
+  - name: gadgets
+paths:
+  /widgets:
+    get:
+      operationId: listWidgets
+      summary: List widgets
+      tags: [widgets]
+      responses:
+        "200":
+          description: OK.
+    post:
+      operationId: createWidget
+      summary: Create widget
+      tags: [widgets]
+      responses:
+        "201":
+          description: Created.
+  /gadgets:
+    get:
+      operationId: listGadgets
+      summary: List gadgets
+      tags: [gadgets]
+      responses:
+        "200":
+          description: OK.

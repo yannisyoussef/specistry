@@ -1,0 +1,11 @@
+const init: RequestInit = {
+  method: "POST",
+  headers: {
+    "Authorization": "Digest <CREDENTIALS>",
+    "Content-Type": "text/plain",
+  },
+  body: "line one\nline two",
+};
+const response: Response = await fetch("https://api.example.com/v1/notes", init);
+const data: unknown = await response.json();
+console.log(response.status, data);

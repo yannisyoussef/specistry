@@ -1,0 +1,6 @@
+# Mutual TLS: present the client certificate issued for this API.
+curl --request DELETE \
+  --url 'https://api.example.com/v1/team/<MEMBER_ID>' \
+  --header 'X-Api-Key: <YOUR_API_KEY>' \
+  --cert '<CLIENT_CERT_PATH>' \
+  --key '<CLIENT_KEY_PATH>'

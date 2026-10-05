@@ -1,0 +1,6 @@
+PUT /v1/files/<FILE_ID> HTTP/1.1
+Host: api.example.com
+Content-Type: application/octet-stream
+Cookie: sid=<YOUR_API_KEY>
+
+<FILE_CONTENTS>

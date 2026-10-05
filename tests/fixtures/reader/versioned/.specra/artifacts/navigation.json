@@ -1,0 +1,25 @@
+{
+  "items": [
+    {
+      "items": [
+        {
+          "kind": "page",
+          "label": "Quickstart",
+          "route": "/docs/quickstart"
+        },
+        {
+          "kind": "page",
+          "label": "Authentication",
+          "route": "/docs/authentication"
+        }
+      ],
+      "kind": "section",
+      "label": "Start"
+    },
+    {
+      "kind": "api",
+      "label": "API reference"
+    }
+  ],
+  "navigationVersion": 1
+}

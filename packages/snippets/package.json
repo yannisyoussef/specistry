@@ -1,0 +1,31 @@
+{
+  "name": "@specra/snippets",
+  "version": "0.1.0-rc.2",
+  "private": true,
+  "license": "BUSL-1.1",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./protocol": {
+      "types": "./dist/protocol.d.ts",
+      "default": "./dist/protocol.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "node ../../scripts/clean-package-dist.mjs",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@specra/model": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3"
+  }
+}

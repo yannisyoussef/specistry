@@ -3,3 +3,20 @@ coverage
 dist
 node_modules
 pnpm-lock.yaml
+tests/fixtures/openapi/adversarial/malformed.json
+tests/fixtures/openapi/adversarial/malformed.yaml
+# Local-only agent working directories (excluded from git via .git/info/exclude)
+.agent
+prompts
+# Canonical artifacts are byte-exact CLI output, never reformatted.
+tests/fixtures/reader/*/.specra/
+# Performance evidence is written by the perf suite with JSON.stringify, which
+# does not collapse short arrays the way Prettier does; reformatting it would
+# make every perf run dirty the working tree.
+tests/performance/*-measurements.json
+# Hostile fixture with a 2,000-character mapping key that YAML formatters reject.
+tests/fixtures/reader/edge/openapi.yaml
+# Authored fixture pages are parser input: their exact bytes, line and column
+# positions are what the tests assert, so they are never reformatted.
+tests/fixtures/reader/*/docs/
+tests/fixtures/content/*/docs/

@@ -2,7 +2,7 @@
 
 ## Status
 
-ACCEPTED — 2026-09-05
+ACCEPTED — 2026-09-05; AMENDED BY SPEC-001 — 2026-09-05
 
 ## Context
 
@@ -31,6 +31,22 @@ What representation and pipeline preserve difficult API semantics, deterministic
 
 Use the pipeline bytes → parse → resolve → validate → normalize → canonical model v1 → purpose-specific projections. Parser and resolved models are adapter-private. The canonical model represents source-independent API/service/operation/auth/body/response/example/schema semantics and authored-page metadata. Registries plus stable IDs represent schema cycles. Unknown or unsupported constructs carry explicit diagnostics. Normalization fixes ordering and identifiers deterministically.
 
+SPEC-001 freezes model v1 with these additional decisions:
+
+- explicit `any`, boolean, type-less, unknown, scalar, object, array, tuple,
+  composition, and reference schema nodes;
+- type-less constraints retain keyword applicability without implying a type;
+- `allOf`, `anyOf`, `oneOf`, and `not` remain composed instead of being flattened;
+- mixed vocabularies use represented, partial, ignored-annotation, unsupported, or
+  invalid capability dispositions with linked value-free diagnostics;
+- exact/range/default response statuses, empty body collections, contract servers,
+  and security OR-of-AND semantics remain explicit;
+- all object keys and semantically unordered collections canonicalize deterministically,
+  while documented presentation-significant arrays preserve order;
+- defensive validation rejects values JSON would drop or change, registry/auth/server
+  failures, duplicates, cycles, and centralized resource-budget violations;
+- model v1 serialization is compact, byte-deterministic, round-trippable, and versioned.
+
 Local references resolve within an approved project root with symlink/path-escape controls. Remote references are off by default and require HTTPS host allowlists, public pinned resolution, redirect denial, size/time limits, and isolated egress. A production parser/resolver is selected in SPEC-003 through corpus evidence, not brand recognition.
 
 ## Rationale
@@ -45,7 +61,10 @@ A graph preserves identity and recursion without non-serializable object cycles.
 
 ## Risks
 
-The model may be too OpenAPI-shaped or too generic. SPEC-001 validates it against rendering/search/snippet consumers and difficult schemas before full ingestion. Callback/event concepts stay diagnostic until a justified canonical abstraction exists.
+Future source semantics may not fit model v1. Adapters must capability-diagnose rather
+than narrow them, and a new model version requires explicit compatibility handling.
+Callback/event concepts stay diagnostic until a justified source-independent
+abstraction exists.
 
 ## Security implications
 

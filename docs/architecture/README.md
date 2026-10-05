@@ -23,7 +23,8 @@ The consuming product controls sources, deployment, approved API origins, and re
 
 ```mermaid
 flowchart TB
-  Config["Config loader + validator"] --> Orchestrator["Build / dev orchestrator"]
+  CLI["specra CLI"] --> Orchestrator["Programmatic orchestration"]
+  Config["Isolated config loader + validator"] --> Orchestrator
   Content["Controlled MDX/content compiler"] --> Orchestrator
   OpenAPI["OpenAPI adapter"] --> Model["Canonical documentation model"]
   Model --> Orchestrator
@@ -37,20 +38,21 @@ flowchart TB
   Web -. "future explicit deployment" .-> Proxy["Hardened dedicated proxy"]
 ```
 
-Components shown without packages are planned boundaries, not Phase 0 code.
+The CLI, config loader, and initial orchestration context are implemented by SPEC-002. Other components shown without packages remain planned boundaries.
 
 ## Repository and package boundaries
 
-The repository is a pnpm monorepo without a separate build orchestrator. At this scale, pnpm's topological recursive commands provide enough ordering and cache-neutral simplicity.
+The repository is a pnpm monorepo with a thin author-workflow orchestrator. Pnpm's topological recursive commands remain sufficient for building the workspace itself.
 
-| Boundary           | Current responsibility                                                 | May depend on                                                                |
-| ------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `packages/model`   | Canonical serializable contracts and invariants                        | TypeScript/platform types only                                               |
-| `packages/openapi` | Source parsing boundary, limits, reference policy; later normalization | `model`, focused parser/resolver libraries                                   |
-| `packages/config`  | Serializable public configuration schema and defaults                  | focused validation libraries                                                 |
-| `apps/web`         | Next.js reader shell and future rendering composition                  | canonical/rendering contracts, UI/content/search ports; never parser objects |
+| Boundary           | Current responsibility                                                  | May depend on                                                                 |
+| ------------------ | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `packages/model`   | Canonical serializable contracts and invariants                         | TypeScript/platform types only                                                |
+| `packages/openapi` | Bounded parse, confined reference graph, OpenAPI 3.0/3.1 normalization  | `model`, `yaml`; no filesystem or network access                              |
+| `packages/config`  | Serializable public configuration schema and defaults                   | focused validation libraries                                                  |
+| `packages/cli`     | CLI parsing/presentation, bounded hosts, acquisition policy, artifacts  | `config`, `model`, `openapi`; the only package allowed filesystem/network I/O |
+| `apps/web`         | Next.js reader: artifact loader, reader projection, server-first routes | `@specra/model` contracts and `@specra/config` only; never parser objects     |
 
-Future packages earn their existence when their slice begins: `content`, `search`, `snippets`, `ui`, and `cli` are expected candidates. `core` is not created because an orchestrator with a stable responsibility does not yet exist.
+`content`, `search`, and `snippets` now exist; `ui` remains an expected candidate. The concrete orchestration responsibility now lives with `cli`; a generic `core` package is still unjustified.
 
 ## Dependency direction
 
@@ -59,19 +61,59 @@ flowchart BT
   Model["model"]
   OpenAPI["openapi adapter"] --> Model
   Config["config"]
-  FutureSearch["future search"] --> Model
-  FutureSnippets["future snippets"] --> Model
-  FutureContent["future content"]
+  Content["content"] --> Model
+  Search["search"] --> Model
+  Search --> Content
+  Snippets["snippets"] --> Model
   Web["web reader"] --> Model
-  Web --> FutureContent
-  Web --> FutureSearch
-  Web --> FutureSnippets
-  FutureCLI["future CLI"] --> Config
-  FutureCLI --> OpenAPI
-  FutureCLI --> FutureContent
+  Web --> Content
+  Web --> Search
+  Web --> Snippets
+  CLI["CLI / orchestration"] --> Config
+  CLI --> OpenAPI
+  CLI --> Model
+  CLI --> Content
+  CLI --> Search
+  CLI --> Snippets
 ```
 
-The model never depends on React, Next.js, parsers, config, or a source adapter. The reader never imports raw source representations. `scripts/check-architecture.mjs` enforces the critical subset now; a workspace graph tool can replace it when graph complexity justifies one.
+The model never depends on React, Next.js, parsers, config, or a source adapter. The reader never imports raw source representations. `scripts/check-architecture.mjs` discovers every workspace package and enforces one direction table: each package needs an entry and each entry needs a package; source imports and every internal manifest dependency section must follow the table; internal imports must be declared in the importing manifest; relative imports must stay inside their package; and library/executable packages must not use browser globals, opaque runtime loading, process-boundary modules (`child_process`, `worker_threads`, `vm`, `cluster`), or, outside the CLI, filesystem/network modules and the global `fetch` in production code, so no package other than the CLI can open a file or socket and no hidden source loader can exist. Browser-global detection binds identifiers with the TypeScript checker, so locally declared names such as an OpenAPI `document` variable are not false positives. The trusted-config host is the single reviewed opaque-load exception with an exact recorded count, and the bounded-host runner shared by the config and ingestion loaders is the single process-boundary exception. The checker self-tests each rule on every run; a workspace graph tool can replace it when graph complexity justifies one.
+
+## SPEC-002 orchestration flow
+
+```mermaid
+flowchart TD
+  User["Author or CI"] --> Args["Thin argument routing"]
+  Args --> Validate["validateProject / createBuildContext"]
+  Validate --> Root["Canonical project root + path policy"]
+  Validate --> ConfigProcess["Fresh trusted-config child process"]
+  ConfigProcess --> Schema["@specra/config schema v1"]
+  Schema --> Boundary["Bounded JSON result"]
+  Boundary --> Validate
+  Validate --> Context["BuildContext + ordered diagnostics"]
+  Context --> Presenter["Human or JSON presenter"]
+  Presenter --> User
+```
+
+The CLI owns only argument parsing, routing, presentation, signals, and exit projection. Programmatic orchestration owns root selection, isolated-process lifecycle, path confinement, deterministic diagnostics, and the initial artifact context. It writes no terminal output and does not exit the calling process. `BuildContext` contains validated config, canonical roots/resolved source paths, `.specra/artifacts`, and an `AbortSignal`; it contains no OpenAPI parser, content compiler, renderer, or web object.
+
+Config evaluation uses a fresh child process and process group with bounded time, captured raw and stream output, memory/stack hints, forced tree termination, and a bounded validated fd3 protocol. This contains synchronous native blocking work, ordinary descendants, raw descriptor writes, and accidental process exits while retaining trusted code's filesystem, environment, network, and process-user authority. Only schema-v1 JSON data is accepted by the parent, and it is validated on both sides of the boundary.
+
+## SPEC-003 ingestion flow
+
+```mermaid
+flowchart TD
+  Context["BuildContext (config + confined paths)"] --> Host["Bounded ingestion host process"]
+  Host --> Acquire["CLI acquisition policy: path policy, byte ceilings"]
+  Acquire --> Adapter["@specra/openapi: parse → graph → validate → normalize"]
+  Adapter --> Model["Canonical model v1 (validated, canonicalized)"]
+  Model --> Frame["One bounded fd3 frame"]
+  Frame --> Revalidate["Parent revalidation: frame shape + parseDocumentationArtifact"]
+  Revalidate --> Validate["specra validate: diagnostics"]
+  Revalidate --> Build["specra build: staged write → atomic promotion"]
+```
+
+The adapter owns no I/O. Every byte it parses arrives through the `SourceAcquisition` port that the CLI implements on top of the SPEC-002 path policy, which re-confines each project-relative document id physically and enforces byte ceilings before and after reading. Remote references are diagnosed and never fetched. The host process inherits the SPEC-002 lifecycle guarantees (timeout, cancellation, output caps, tree termination), and the parent trusts nothing it cannot revalidate. See [ADR-009](../adr/009-openapi-ingestion-and-source-isolation.md) and the [OpenAPI ingestion reference](../openapi.md).
 
 ## Data flow and model ownership
 
@@ -91,13 +133,33 @@ flowchart LR
 - **Source model:** original JSON/YAML bytes and origin metadata; immutable input, retained only for diagnostics when policy permits.
 - **Parser model:** adapter-private representation retaining OpenAPI vocabulary and source pointers. It never crosses package boundaries into rendering.
 - **Normalized model:** the canonical model in `@specra/model`; source-independent semantics, stable IDs, normalized methods/statuses, explicit unsupported nodes and diagnostics.
-- **Rendering model:** small derived view state for a route or component. It may add presentation grouping, but never source semantics.
+- **Rendering model:** small derived view state for a route or component. It may add presentation grouping, but never source semantics. SPEC-004 implements it as the reader projection in `apps/web/lib/reader` (route identity, navigation grouping, operation views, page metadata), documented in ADR-010; SPEC-005 adds the schema view projection (`schema-view.ts`), a bounded, context-aware tree over the canonical schema registry that the server renderer turns into native-disclosure HTML.
+
+  ```text
+  Canonical schema registry (ApiService.schemas, SchemaId → SchemaNode)
+            ↓ createSchemaView(node, { context, registry, budget })
+  Schema view projection (SchemaView tree with structural locators)
+            ↓ <SchemaBlock> / <SchemaDisclosure> (React Server Components)
+  Server HTML with native <details>/<summary> disclosures
+            ↓ (no client state; the focused view is a validated query on the operation route)
+  ```
+
+  Renderer state ownership: the server owns everything. Expansion identity is the structural locator, disclosure state is the browser's native `open` attribute, recursion is decided by the ancestry of registry IDs during projection, and the only "navigation state" is the `?schema=&at=` query of the focused view. Budgets (depth 6, 400 nodes, 200 properties, 20 variants, 200 enum values) live in `DEFAULT_SCHEMA_BUDGET` and are enforced in the projection, never in the renderer. See the [reader reference](../reader.md#schema-rendering) and ADR-011 for the additive schema-name contract.
 
 There is no second domain model between normalized and canonical. Search and snippets derive their own purpose-built documents from canonical input rather than mutating it.
 
 ## Canonical model
 
-`DocumentationModel` is a versioned documentation projection, not a JSON Schema validator AST. It owns projects, documentation versions, authored-page metadata, services, operations, servers, authentication, parameters, media variants, responses, examples, and schemas. Schema recursion is represented through stable `SchemaId` references into a service registry, never object cycles. The Phase 0 draft includes boolean schemas, scalar constraints, arrays, tuples, objects, composition, discriminators, `additionalProperties`, metadata, and explicit unknown nodes. SPEC-001 must resolve keyword-without-type and mixed-vocabulary semantics before model v1 is frozen; adapters must emit capability diagnostics rather than narrow validation meaning silently.
+`DocumentationModel` is a versioned documentation projection, not a JSON Schema
+validator AST. It owns projects, documentation versions, authored-page metadata,
+services, operations, servers, authentication, parameters, media variants, responses,
+examples, and schemas. Model v1 is frozen by SPEC-001: recursion uses stable registry
+references, type-less constraints never imply a type, boolean forms remain explicit,
+composition is not flattened, and mixed/unsupported vocabulary receives linked
+capability diagnostics rather than silent narrowing. See the
+[canonical model reference](canonical-model.md),
+[normalization contract](normalization-contract.md), and
+[diagnostic catalog](model-diagnostics.md).
 
 Key invariants include operation IDs unique within a versioned service, required and template-matched path parameters, resolvable schema/security/server IDs, normalized uppercase HTTP methods, explicit response descriptions, deterministic ordering, JSON-only extension values, and no parser-library objects. Validation returns stable codes and JSON pointers.
 
@@ -107,15 +169,103 @@ OpenAPI-specific features such as callbacks are normalized into future canonical
 
 ## Build-time responsibilities
 
-- Load a trusted local TypeScript config in an isolated build worker, then validate and convert it to serializable data.
-- Read local sources within the configured project root; enforce byte, depth, key, example, and reference budgets.
-- Resolve local references with cycle-aware graph traversal; remote retrieval requires explicit host and scheme policy.
-- Validate OpenAPI and normalize deterministically to a versioned canonical artifact plus diagnostics.
-- Compile reviewed content with a component allowlist and no arbitrary imports.
+- Load trusted local erasable-TypeScript config in an isolated process lifecycle, then validate and convert it to bounded serializable data. This SPEC-002 responsibility is implemented.
+- Read local sources within the configured project root; enforce byte, depth, node, string, document, reference, operation, example, and diagnostic budgets. Implemented in SPEC-003.
+- Resolve local references with cycle-aware graph traversal; remote retrieval stays disabled (an opt-in hardened mode would require explicit host and scheme policy plus the ADR-002 controls). Implemented in SPEC-003.
+- Validate OpenAPI 3.0/3.1 and normalize deterministically to a versioned canonical artifact plus diagnostics; `specra build` writes `documentation.json` and `manifest.json` atomically. Implemented in SPEC-003.
+- Compile reviewed content with a component allowlist and no arbitrary imports. Implemented in SPEC-006 (`@specra/content`, ADR-012): Markdown/MDX parsed to an AST, validated against the Callout/Steps/Cards/Tabs/CodeGroup vocabulary, highlighted at build time, and serialized to `content.json`, `navigation.json`, and content-addressed `assets/`.
 - Build route manifests, navigation, protocol samples, search documents, metadata, sitemap, redirects, and immutable version artifacts.
 - Pre-highlight code and partition large model payloads by route/schema where practical.
 
 Builds fail closed for errors and threshold breaches. Warnings are machine-readable and may be promoted by project policy.
+
+SPEC-002 establishes `.specra/artifacts` as the deterministic project-relative artifact root. `validate` resolves but never creates or cleans it; SPEC-003's `build` writes it through a staged directory and atomic rename, removes it after a failed build, and refuses a symlinked entry. Existing source paths use canonical real paths; a not-yet-created artifact tail is proven against its nearest existing real ancestor. Every future filesystem access must revalidate immediately before use because point-in-time checks cannot eliminate symlink replacement races.
+
+## Reader (SPEC-004)
+
+```mermaid
+flowchart LR
+  Artifact[".specra/artifacts (documentation.json + manifest.json)"] --> Loader["Artifact loader: manifest + model validation, memoized"]
+  Loader --> Projection["Reader projection: index, routes, operation views"]
+  Projection --> Routes["Next.js routes (/, /api, /api/[...segments])"]
+  Routes --> RSC["React Server Components"]
+  RSC --> Islands["Client islands: mobile drawer, copy control"]
+```
+
+Build time: `specra build` produces the artifact; `next build` compiles the reader and fails when `SPECRA_PROJECT_ROOT` holds no valid artifact. Runtime: every documentation route renders on demand from the one validated artifact under a per-request nonce CSP; the theme choice is a cookie set by a form-post handler. Trust: the artifact is validated through `parseDocumentationArtifact` and `parseArtifactManifest` before any render, and every canonical string is rendered as text. Client boundary: navigation, endpoint content, and metadata are server HTML; only the drawer control and the copy button hydrate. See the [reader reference](../reader.md), the [design contract](../design/reader-v1.md), and ADR-010.
+
+## Authored content (SPEC-006)
+
+```mermaid
+flowchart LR
+  docs["docs/**/*.md|mdx"] --> content["@specra/content compile\n(parse → validate → highlight → model)"]
+  config["specra.config.ts navigation + branding"] --> nav["buildNavigation"]
+  content --> nav
+  content --> cli["CLI buildContent\n(assets by signature, confinement, budgets)"]
+  nav --> cli
+  cli --> artifacts["content.json · navigation.json · assets/ · manifest"]
+  artifacts --> reader["Reader: /docs routes, composed sidebar,\nbreadcrumbs, prev/next, tabs island"]
+```
+
+`@specra/content` is a build-time package that depends on `@specra/model` only; the CLI and the reader may depend on it (the reader uses its artifact parsers and types). Authored text never becomes code: expressions, ESM, raw HTML, unknown components, and non-string props are diagnostics with a source line and column. The reader composes one sidebar from the navigation artifact and the API projection, keeps the nonce CSP unchanged, and serves assets only by manifest name.
+
+## Search (SPEC-007)
+
+```mermaid
+flowchart LR
+  canonical["documentation.json"] --> project["@specra/search projection\n(pages, sections, groups, operations)"]
+  content["content.json + navigation.json"] --> project
+  project --> index["MiniSearch index (build time)"]
+  index --> artifact["search.json + manifest digest"]
+  artifact --> route["reader /search/index.<digest>.json\n(validated, immutable)"]
+  route --> palette["lazy ⌘K palette + browser engine\n(queries stay local)"]
+```
+
+`@specra/search` depends on `@specra/model` and `@specra/content` only; its `./client` entry is browser-safe and carries the engine alone. The CLI generates the index from the exact artifacts it is about to write, so search is part of the atomic build. The reader validates the artifact against the manifest digest before serving it and loads the engine on first open. ADR-013 records the engine evaluation and the privacy policy.
+
+## Code samples and SDK mappings (SPEC-008)
+
+```mermaid
+flowchart LR
+  canonical["documentation.json"] --> project["@specra/snippets projection\n(path, query, headers, cookies, bodies, auth, servers)"]
+  config["specra.config.ts sdks\n+ example files"] --> mappings["validated, resolved, highlighted\nSDK examples"]
+  project --> artifact["snippets.json + manifest digest"]
+  mappings --> artifact
+  artifact --> reader["reader (server render)\nselection → six generators"]
+  reader --> rail["Code rail\n(language control, copy)"]
+```
+
+`@specra/snippets` depends on `@specra/model` only and is pure: projection and the six generators (cURL, HTTP, JavaScript, TypeScript, Java, Python) read nothing but their input. The artifact stores projections, so it is linear in operations and independent of environments; the reader generates the texts on render, memoized per artifact digest, and ships no generator to the browser (the architecture gate forbids build-only imports from client islands and the bundle gate scans client chunks). SDK examples are consumer data declared in the config and resolved to canonical identity at build time; Specra never infers an SDK call. ADR-014 records the decisions; the [code samples reference](../code-samples.md) documents the contracts.
+
+## Documentation quality and the public diff (SPEC-011)
+
+```mermaid
+flowchart LR
+  artifacts["documentation.json + content.json + navigation.json + snippets.json\n(+ a base release)"] --> facts["@specra/quality facts\n(services, operations, schemas, auth, examples, SDK, pages, diff)"]
+  facts --> rules["static rule registry\n25 rules, explicit imports, no plugin hook"]
+  rules --> findings["findings: rule + entity identity + message"]
+  policy["specra.config.ts quality\nseverities · failOn · maxWarnings · suppressions"] --> evaluation
+  findings --> evaluation["policy evaluation\neffective severity, suppression, counts, truncation, gate"]
+  evaluation --> cli["@specra/cli\nhuman report · JSON · exit code"]
+```
+
+`@specra/quality` is pure and depends only on `@specra/model`,
+`@specra/content`, `@specra/snippets`, and `@specra/release`. It performs no
+I/O, loads nothing at runtime, and the reader may not depend on it; the
+architecture gate enforces all three. Facts are an index over the canonical
+artifacts, so no parser object, Markdown AST, or React element can reach a
+rule. Policy is separate from rules, and the CLI owns no quality semantics:
+it resolves the artifact sets, calls the engine, formats the result, and maps
+the outcome to an exit code (`3` for a failed gate, distinct from `2` for a
+project or policy error).
+
+Compatibility rules read the SPEC-010 structured diff _and_ both fact sets
+and never mutate a diff record; uncertain schema changes stay "changed,
+review required". `specra diff` is the public, read-only view of the same
+port and reuses its `diffFormat: 1` envelope. There is no quality score, no
+rule plugin mechanism, and no reader surface: quality is author and CI
+tooling. See [ADR-017](../adr/017-documentation-quality-facts-rules-policy.md)
+and the [quality reference](../quality.md).
 
 ## Runtime responsibilities
 
@@ -131,9 +281,22 @@ Theming uses validated design tokens with contrast-aware defaults. Arbitrary CSS
 
 The initial search port consumes version-scoped `SearchDocument` records produced at build time and returns typed result IDs. A local compressed index loads on demand; implementation remains replaceable. Search indexes visible normalized text, never secrets or hidden examples.
 
-Documentation releases are explicit config entries, not application deployments. Immutable retained versions use `/docs/{version}` and are self-canonical. `/docs` is a convenience alias that issues a non-permanent `302` or `307` redirect to the configured current immutable version; it is not emitted in the sitemap. Redirects are validated, sitemaps include retained public versions, and search is version-scoped by default.
+Documentation releases are explicit `specra release <version>` promotions, not application deployments (SPEC-010, [ADR-016](../adr/016-immutable-documentation-releases.md)). `@specra/release` (pure; depends on model and content only) owns the version grammar, the release manifest and catalog contracts, the route table with semantic identities, redirect validation, the conservative structured diff, and the changelog contracts; the CLI does the I/O: verify the candidate, derive routes and redirects, validate the changelog, stage, fsync, verify, and promote with one atomic rename into `.specra/releases/<version>`, then update `catalog.json` under a lock.
 
-Contract diffing will produce structured candidate changes linked to source pointers. Authors review and edit changelog entries before publication.
+```mermaid
+flowchart LR
+  build["specra build\n.specra/artifacts (candidate)"] --> diff[".specra/candidates/diff.json\n(private, value-free)"]
+  diff --> author["changelog/<version>.json\n(human-reviewed)"]
+  build --> release["specra release <version>\nverify → stage → fsync → rename"]
+  author --> release
+  release --> store[".specra/releases/<version>\nrelease.json + components + routes + redirects + changelog"]
+  store --> catalog["catalog.json\ncurrent + retained releases"]
+  catalog --> reader["reader: /docs/{v}, /api/{v}\n307 aliases, 308 frozen redirects, 404 unknown"]
+```
+
+Immutable retained versions use `/docs/{version}` and `/api/{version}` and are self-canonical. `/`, `/docs`, and `/api` are mutable aliases that issue a `307` to the explicit current release and never appear in sitemaps; the sitemap is an index of one partitioned sitemap per release. The reader reads the small catalog first, then the requested release's manifest and digest-verified components into a bounded cache (four releases), so memory does not grow with the catalog. Navigation, search, snippets, SDK examples, assets, and the playground policy are scoped to the release being read; only the current release executes requests and contributes `connect-src` origins.
+
+Contract diffing produces deterministic, identity-based candidates (service, group, operation, schema added/removed/changed with aspects, digests instead of values, no rename guessing, no scoring) in a private directory the reader never reads. Authors disposition every candidate in `changelog/<version>.json`; only their text is published at `/docs/{version}/changelog`. SPEC-011 consumes the same structural diff port for `specra diff` and quality gates.
 
 ## Configuration
 
@@ -141,7 +304,7 @@ Public configuration starts at `schemaVersion: 1`, receives strict validation, h
 
 ## Playground and credentials
 
-The first implementation is browser-direct and disabled unless a project enables approved environments. This exposes normal CORS requirements but keeps user credentials out of Specra infrastructure. Credentials live in component memory by default; optional tab-scoped session storage may be a clearly labeled future opt-in. They never enter URLs, local storage, cookies, server persistence, logs, analytics, traces, crash reports, or screenshots.
+The implementation (SPEC-009, [ADR-015](../adr/015-browser-direct-playground.md)) is browser-direct and disabled unless a project enables approved environments (`playground.mode: "browser"` plus `playground.environments`). `specra build` derives `playground.json`, a policy of exact origins, clamped limits, and one bounded form per operation with a browser-capability verdict; the reader verifies it against the manifest digest, emits `connect-src` for exactly those origins on API routes, and the Try it island composes each request through the same serializer as the code examples and asserts the destination before one hardened `fetch`. This exposes normal CORS requirements but keeps user credentials out of Specra infrastructure; see the [playground reference](../playground.md). Credentials live in component memory by default; optional tab-scoped session storage may be a clearly labeled future opt-in. They never enter URLs, local storage, cookies, server persistence, logs, analytics, traces, crash reports, or screenshots.
 
 APIs that cannot support browser CORS may later deploy a separate hardened proxy, never an implicit web-app endpoint. Its mandatory controls are documented in the threat model and ADR-005.
 
@@ -151,15 +314,18 @@ The build output is reproducible from locked source and dependencies. Consumers 
 
 Security headers are a deployment invariant, not merely framework configuration. The Node deployment emits them from Next.js; static hosts and CDNs must reproduce the same effective policy from generated deployment metadata and are verified against a deployed artifact. See [deployment requirements](../deployment.md).
 
-| Failure                           | Behavior                                                       | Mitigation                                                         |
-| --------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Invalid or oversized source       | Build fails with redacted stable diagnostics                   | Limits, source pointers, author correction                         |
-| Recursive/cyclic schema           | Registry references preserve cycles without recursion overflow | Iterative traversal and expansion budgets                          |
-| Search-index build fails          | Build fails; no silently stale index                           | Deterministic index contract and tests                             |
-| Optional search chunk unavailable | Reading/navigation continue; search reports unavailable        | Lazy isolated asset and error boundary                             |
-| Target API unavailable            | Playground reports bounded network failure                     | Timeout, cancellation, no automatic retry of mutations             |
-| Config execution compromised      | Build-worker authority may be compromised                      | Trusted-only rule, isolated CI, data-only mode for untrusted input |
-| CDN/server outage                 | Portal unavailable                                             | Consumer deployment redundancy and immutable artifact rollback     |
+| Failure                           | Behavior                                                              | Mitigation                                                                      |
+| --------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Invalid or oversized source       | Build fails with redacted stable diagnostics; stale artifacts removed | Limits, source pointers, author correction                                      |
+| Ingestion host hangs or crashes   | `INGESTION_TIMEOUT` / `INGESTION_FAILED`; nothing partial written     | Bounded host, tree termination, parent revalidation                             |
+| Recursive/cyclic schema           | Registry references preserve cycles without recursion overflow        | Iterative traversal and expansion budgets                                       |
+| Search-index build fails          | Build fails; no silently stale index                                  | Deterministic index contract and tests                                          |
+| Optional search chunk unavailable | Reading/navigation continue; search reports unavailable               | Lazy isolated asset and error boundary                                          |
+| Target API unavailable            | Playground reports bounded network failure                            | Timeout, cancellation, no automatic retry of mutations                          |
+| Config execution hangs/leaks      | Build availability or environment values are exposed                  | Timeout/cancel, output/result limits, value-free errors, terminate process tree |
+| Trusted config is malicious       | Build-user filesystem/network authority may be compromised            | Trusted-only rule, least-privilege CI, data-only untrusted mode                 |
+| Path changes after validation     | Later read/write follows a replaced symlink                           | Revalidate at use, fail closed, keep artifact operations root-fixed             |
+| CDN/server outage                 | Portal unavailable                                                    | Consumer deployment redundancy and immutable artifact rollback                  |
 
 ## Architecture evolution
 

@@ -1,31 +1,43 @@
-export default function FoundationPage() {
-  return (
-    <>
-      <a className="skip-link" href="#content">
-        Skip to content
-      </a>
-      <header className="site-header">
-        <a aria-label="Specra home" className="wordmark" href="/">
-          Specra
-        </a>
-        <span className="phase">Engineering foundation</span>
-      </header>
-      <main id="content" tabIndex={-1}>
-        <p className="eyebrow">Specification → Developer experience</p>
-        <h1>Documentation infrastructure your team controls.</h1>
-        <p className="lede">
-          Specra turns API contracts, authored guides, and product configuration
-          into an accessible, self-hosted developer experience.
-        </p>
-        <section aria-labelledby="phase-heading" className="status-card">
-          <h2 id="phase-heading">SPEC-000</h2>
-          <p>
-            The architectural and engineering foundation is in place. Product
-            slices follow review.
-          </p>
-        </section>
-      </main>
-      <footer>Specra is product-agnostic by design.</footer>
-    </>
-  );
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+
+import { DocsPage } from "../components/reader/content/docs-page";
+import { HomePage } from "../components/reader/list-pages";
+import { loadReaderArtifact } from "../lib/reader/artifact";
+import { homeMetadata, pageMetadata, siteUrl } from "../lib/reader/metadata";
+import { loadReaderCatalog, readerMode } from "../lib/reader/release";
+
+/**
+ * The homepage is the authored `docs/index.*` page when the project has one;
+ * otherwise the generated API-reference entry from SPEC-004.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { content, index } = await loadReaderArtifact();
+  const metadata =
+    content?.home === undefined
+      ? homeMetadata(index)
+      : pageMetadata(index, content.home);
+  return {
+    ...(siteUrl(index) === undefined
+      ? {}
+      : { alternates: { canonical: metadata.path } }),
+    ...(metadata.description === undefined
+      ? {}
+      : { description: metadata.description }),
+    title: metadata.title,
+  };
+}
+
+export default async function Home() {
+  // Release mode: `/` is a mutable alias the proxy redirects (SPEC-010 §21);
+  // this is the fallback when the proxy did not run.
+  if ((await readerMode()) === "releases") {
+    const reader = await loadReaderCatalog();
+    redirect(`/docs/${reader?.catalog.current ?? ""}`);
+  }
+  const { content, index } = await loadReaderArtifact();
+  if (content?.home !== undefined) {
+    return <DocsPage content={content} page={content.home} />;
+  }
+  return <HomePage index={index} />;
 }

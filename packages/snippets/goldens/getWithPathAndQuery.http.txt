@@ -1,0 +1,6 @@
+GET /v1/inboxes/<INBOX_ID>/messages/.a.b/;x=1;y=2?limit=20&tags=a&tags=b%20c&csv=a,b&space=a%20b&pipe=a|b&filter[x]=1&filter[y]=2&obj=x,1,y,2&path=/a/b?c=d%26e HTTP/1.1
+Host: api.example.com
+X-Trace: t1,t2
+X-Point: x=1,y=2
+X-Api-Key: <YOUR_API_KEY>
+Cookie: prefs=compact%20mode

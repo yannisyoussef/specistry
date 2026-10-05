@@ -12,21 +12,30 @@ Pnpm may record exact, reviewable `minimumReleaseAgeExclude` entries when a newl
 
 ## Current significant dependencies
 
-| Dependency              | Role and decision                                                                                                     |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Next.js + React         | Server-first routing/rendering baseline with static and Node deployment paths; selected in ADR-006                    |
-| `yaml`                  | Focused YAML 1.2 parser with alias controls; JSON remains accepted as YAML-compatible input; not a validator/resolver |
-| Zod                     | Strict runtime validation and useful path-aware errors for the public config boundary                                 |
-| Vitest                  | ESM/TypeScript-aligned semantic tests and V8 coverage                                                                 |
-| ESLint + Next config    | TypeScript/React correctness and framework rules                                                                      |
-| Prettier + markdownlint | Deterministic source and documentation formatting                                                                     |
-| Testing Library + axe   | User-oriented component queries and automated accessibility checks                                                    |
-| Playwright              | Chromium HTTP-header, keyboard, reflow, metadata, and axe browser smoke coverage                                      |
+| Dependency              | Role and decision                                                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Next.js + React         | Server-first routing/rendering baseline with static and Node deployment paths; selected in ADR-006                                |
+| `yaml`                  | Focused YAML 1.2 parser with alias controls; JSON remains accepted as YAML-compatible input; the only parser dependency (ADR-009) |
+| Zod                     | Strict runtime validation and useful path-aware errors for the public config boundary                                             |
+| Node child processes    | Native bounded/cancellable trusted-config lifecycle and process-group containment; avoids a CLI framework dependency              |
+| Vitest                  | ESM/TypeScript-aligned semantic tests and V8 coverage                                                                             |
+| ESLint + Next config    | TypeScript/React correctness and framework rules                                                                                  |
+| Prettier + markdownlint | Deterministic source and documentation formatting                                                                                 |
+| Testing Library + axe   | User-oriented component queries and automated accessibility checks                                                                |
+| Playwright              | Chromium HTTP-header, keyboard, reflow, metadata, and axe browser smoke coverage                                                  |
 
-No OpenAPI resolver/validator is selected until SPEC-003 evaluates current candidates against the corpus, OpenAPI 3.1 semantics, remote-reference controls, maintenance, license, and parser-model leakage.
+SPEC-003 evaluated `@apidevtools/json-schema-ref-parser`, `@scalar/openapi-parser`, `@readme/openapi-parser`, `@apidevtools/swagger-parser`, `ajv` with the official OAS meta-schemas, and `@hyperjump/json-schema` against the corpus, OpenAPI 3.1 semantics, remote-reference controls, maintenance, license, and parser-model leakage, and selected an adapter-private resolver/validator/normalizer over `yaml` instead; see [ADR-009](../adr/009-openapi-ingestion-and-source-isolation.md).
+
+SPEC-002 intentionally adds no CLI framework: one command and three options do not justify another production dependency. The packed private CLI bundles `@specra/config`, `@specra/model`, `@specra/openapi`, and Zod so its executable can be installed and exercised without workspace symlinks; `yaml` is staged beside the adapter as its own dependency rather than declared by the CLI, so Zod remains the single config-schema implementation and `yaml` the adapter's single parser.
 
 ## Enforcement and response
 
 `pnpm audit --audit-level high` blocks CI for high/critical advisories. The production license script denies AGPL and GPL-family licenses by default; exceptions require legal review, an ADR, scope, owner, and review date. Pull requests receive a dedicated dependency-policy job that performs a frozen install, exact-manifest checks, full production-license traversal, and a whole-lockfile audit. This repository-local gate is portable to private GitHub plans where GitHub Advanced Security's Dependency Review action is unavailable. Secrets scanning is redacted.
 
 Advisories are triaged by reachability, runtime/dev scope, exploitability, and fixes. High/critical reachable production findings block release. Document any deferral with owner and review date. Never suppress install scripts or verification merely to make the pipeline green; use pnpm's dependency build allowlist deliberately when a package requires scripts.
+
+### Active advisory deferrals
+
+| Advisory                                          | Scope                                                                                                                               | Decision                                                                                                                                                                                  | Owner       | Review date |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------- |
+| `GHSA-vfj7-8cjw-p6xm` (`braces` stack exhaustion) | Development-only lint tooling through `eslint-config-next` and `markdownlint-cli2`; not included in the runtime image or packed CLI | Temporarily ignored because the advisory names `3.0.4` as patched, but that release is not published. Remove the ignore and upgrade immediately when a patched release becomes available. | Maintainers | 2026-10-19  |

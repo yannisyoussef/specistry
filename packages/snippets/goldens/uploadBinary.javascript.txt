@@ -1,0 +1,11 @@
+// const file = ... // a File or Blob
+// Node.js sends the Cookie header as given; browsers manage cookies themselves.
+const response = await fetch("https://api.example.com/v1/files/<FILE_ID>", {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/octet-stream",
+    "Cookie": "sid=<YOUR_API_KEY>",
+  },
+  body: file,
+});
+console.log(response.status, await response.text());

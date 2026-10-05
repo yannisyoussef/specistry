@@ -1,0 +1,203 @@
+{
+  "$comment": "SPEC-007 relevance corpus for the committed TestInbox search artifact. `top` must be the first result; `first` lists acceptable first results when several are equally reasonable; `firstPrefix` accepts any first result under one of the given route prefixes; `within` lists routes that must all appear in the first N results.",
+  "queries": [
+    {
+      "query": "create inbox",
+      "top": "/api/inboxes/create-inbox"
+    },
+    {
+      "query": "POST /inboxes",
+      "top": "/api/inboxes/create-inbox"
+    },
+    {
+      "query": "POST /v1/inboxes",
+      "top": "/api/inboxes/create-inbox"
+    },
+    {
+      "query": "GET /inboxes/{inboxId}",
+      "top": "/api/inboxes/get-inbox"
+    },
+    {
+      "query": "delete inbox",
+      "top": "/api/inboxes/delete-inbox"
+    },
+    {
+      "query": "createInbox",
+      "top": "/api/inboxes/create-inbox"
+    },
+    {
+      "query": "authentication",
+      "top": "/docs/authentication"
+    },
+    {
+      "query": "auth",
+      "top": "/docs/authentication"
+    },
+    {
+      "query": "authentcation",
+      "top": "/docs/authentication"
+    },
+    {
+      "query": "bearer token",
+      "top": "/docs/authentication#bearer-tokens"
+    },
+    {
+      "query": "api keys",
+      "first": ["/docs/authentication#api-keys", "/docs/authentication"]
+    },
+    {
+      "query": "wait for email",
+      "top": "/docs/guides/waiting-for-email"
+    },
+    {
+      "query": "wait email",
+      "top": "/docs/guides/waiting-for-email"
+    },
+    {
+      "query": "wait for message",
+      "top": "/api/inboxes/wait-for-message"
+    },
+    {
+      "query": "attachments",
+      "within": {
+        "n": 4,
+        "routes": [
+          "/docs/guides/attachments",
+          "/api/attachments/list-attachments",
+          "/api/attachments"
+        ]
+      }
+    },
+    {
+      "query": "attachements",
+      "firstPrefix": ["/api/attachments/", "/docs/guides/attachments"]
+    },
+    {
+      "query": "expiresAt",
+      "within": {
+        "n": 3,
+        "routes": ["/api/inboxes/create-inbox", "/api/inboxes/get-inbox"]
+      }
+    },
+    {
+      "query": "ttl",
+      "within": {
+        "n": 3,
+        "routes": ["/api/inboxes/create-inbox"]
+      }
+    },
+    {
+      "query": "webhook",
+      "within": {
+        "n": 3,
+        "routes": ["/api/webhooks/create-webhook"]
+      }
+    },
+    {
+      "query": "webh",
+      "firstPrefix": ["/api/webhooks/"]
+    },
+    {
+      "query": "messages",
+      "within": {
+        "n": 3,
+        "routes": ["/api/messages/list-messages", "/api/messages"]
+      }
+    },
+    {
+      "query": "quickstart",
+      "top": "/docs/quickstart"
+    },
+    {
+      "query": "inbox",
+      "firstPrefix": ["/api/inboxes/"],
+      "within": {
+        "n": 6,
+        "routes": ["/docs/concepts/inbox-lifecycle"]
+      }
+    },
+    {
+      "query": "inbo",
+      "firstPrefix": ["/api/inboxes/"]
+    },
+    {
+      "query": "npm install",
+      "top": "/"
+    },
+    {
+      "query": "ci integration",
+      "top": "/docs/guides/ci-integration"
+    },
+    {
+      "query": "github actions",
+      "first": ["/docs/guides/ci-integration", "/docs/quickstart#where-next"],
+      "within": {
+        "n": 3,
+        "routes": ["/docs/guides/ci-integration"]
+      }
+    },
+    {
+      "query": "troubleshooting",
+      "top": "/docs/troubleshooting"
+    },
+    {
+      "query": "401",
+      "within": {
+        "n": 3,
+        "routes": ["/docs/troubleshooting#errors"]
+      }
+    },
+    {
+      "query": "rate limited",
+      "top": "/docs/troubleshooting#errors"
+    },
+    {
+      "query": "mark message read",
+      "top": "/api/messages/mark-message-read"
+    },
+    {
+      "query": "team",
+      "within": {
+        "n": 3,
+        "routes": ["/api/team"]
+      }
+    },
+    {
+      "query": "invite team member",
+      "top": "/api/team/invite-team-member"
+    },
+    {
+      "query": "domains",
+      "within": {
+        "n": 3,
+        "routes": ["/api/domains"]
+      }
+    },
+    {
+      "query": "inbox lifecycle",
+      "top": "/docs/concepts/inbox-lifecycle"
+    },
+    {
+      "query": "expired",
+      "within": {
+        "n": 3,
+        "routes": ["/docs/concepts/inbox-lifecycle#expired"]
+      }
+    },
+    {
+      "query": "typescript sdk create inbox",
+      "top": "/api/inboxes/create-inbox"
+    },
+    {
+      "query": "java sdk wait for message",
+      "top": "/api/inboxes/wait-for-message"
+    },
+    {
+      "query": "sdk",
+      "within": {
+        "n": 4,
+        "routes": ["/api/inboxes/create-inbox", "/api/inboxes/wait-for-message"]
+      }
+    }
+  ]
+}

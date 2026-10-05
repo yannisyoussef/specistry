@@ -1,0 +1,22 @@
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
+HttpClient client = HttpClient.newHttpClient();
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create("https://api.example.com/v1/inboxes/<INBOX_ID>"))
+    .header("Content-Type", "application/vnd.api+json")
+    .header("Authorization", "Basic " + Base64.getEncoder().encodeToString("<USERNAME>:<PASSWORD>".getBytes(StandardCharsets.UTF_8)))
+    .method("PATCH", HttpRequest.BodyPublishers.ofString("""
+        {
+          "name": "renamed",
+          "password": "<YOUR_PASSWORD>"
+        }\
+        """))
+    .build();
+HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+System.out.println(response.statusCode());
+System.out.println(response.body());

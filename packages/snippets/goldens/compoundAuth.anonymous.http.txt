@@ -1,0 +1,2 @@
+DELETE /v1/team/<MEMBER_ID> HTTP/1.1
+Host: api.example.com

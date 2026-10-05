@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "currentLicense": "BUSL-1.1",
+  "licensedWork": "Specra",
+  "licensor": {
+    "proposedName": "INFINITY VENTURES",
+    "legalName": "INFINITY VENTURES",
+    "legalForm": "SASU",
+    "legalNameConfirmed": true,
+    "licensingAuthorityConfirmed": true
+  },
+  "finalParametersOwnerApproved": true,
+  "externalLegalReview": {
+    "status": "not-recorded",
+    "reference": null
+  },
+  "additionalUseGrant": "You may make production use of the Licensed Work to create, host, and publish documentation for products, services, APIs, projects, or internal systems owned or operated by you or your organization, including for commercial purposes, provided that you do not offer the Licensed Work itself, or a service whose primary value is the functionality of the Licensed Work, as a hosted or managed service to third parties.",
+  "changeDatePolicy": {
+    "yearsAfterFirstPublicDistribution": 3,
+    "appliesPerVersion": true
+  },
+  "changeLicense": "Apache-2.0",
+  "trademarkNotice": "The Specra name, Specra logo, and associated branding are trademarks or brand assets of their respective owner. The software license does not grant trademark rights except as expressly required by the license."
+}

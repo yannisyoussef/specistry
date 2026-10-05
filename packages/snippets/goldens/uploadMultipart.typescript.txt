@@ -1,0 +1,14 @@
+// Requires an OAuth 2.0 access token with the scope team:read.
+declare const file: Blob;
+const form = new FormData();
+form.append("file", file);
+form.append("altText", "string");
+const init: RequestInit = {
+  method: "PUT",
+  headers: {
+    "Authorization": "Bearer <YOUR_ACCESS_TOKEN>",
+  },
+  body: form,
+};
+const response: Response = await fetch("https://api.example.com/v1/domains/<DOMAIN_ID>/logo", init);
+console.log(response.status);

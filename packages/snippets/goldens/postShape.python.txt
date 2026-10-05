@@ -1,0 +1,11 @@
+import requests  # pip install requests
+
+response = requests.post(
+    "https://api.example.com/v1/shapes",
+    json={
+        "kind": "circle",
+        "radius": 0,
+    },
+)
+print(response.status_code)
+print(response.json())

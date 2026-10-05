@@ -1,0 +1,15 @@
+PUT /v1/domains/<DOMAIN_ID>/logo HTTP/1.1
+Host: api.example.com
+Authorization: Bearer <YOUR_ACCESS_TOKEN>
+Content-Type: multipart/form-data; boundary=----SpecraFormBoundary
+
+------SpecraFormBoundary
+Content-Disposition: form-data; name="file"; filename="file"
+Content-Type: image/png
+
+<FILE_CONTENTS>
+------SpecraFormBoundary
+Content-Disposition: form-data; name="altText"
+
+string
+------SpecraFormBoundary--

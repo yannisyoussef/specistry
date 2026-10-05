@@ -1,0 +1,17 @@
+import requests  # pip install requests
+
+response = requests.post(
+    "https://api.example.com/v1/inboxes",
+    headers={
+        "Authorization": "Bearer <YOUR_ACCESS_TOKEN>",
+    },
+    json={
+        "name": "string",
+        "email": "user@example.com",
+        "ttl": 3600,
+        "secretToken": "<YOUR_SECRET_TOKEN>",
+        "parent": {},
+        "children": [],
+    },
+)
+print(response.status_code)

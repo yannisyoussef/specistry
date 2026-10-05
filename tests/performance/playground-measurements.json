@@ -1,0 +1,47 @@
+[
+  {
+    "committedArtifactBytes": 25646,
+    "committedGzipBytes": 2468,
+    "artifactBytes": 25648,
+    "artifactBytesPerOperation": 1026,
+    "environments": 2,
+    "executable": 21,
+    "gzipBytes": 2473,
+    "kind": "testinbox",
+    "operations": 25,
+    "parseMs": 0.677125000000018,
+    "projectMs": 1.6599580000000174,
+    "serializeMs": 0.47691700000001447,
+    "unsupportedDiagnostics": 0
+  },
+  {
+    "buildMs": 2964.4384579999996,
+    "committedArtifactBytes": 2028405,
+    "committedGzipBytes": 60200,
+    "maxRssBytes": 501972992,
+    "artifactBytes": 2028405,
+    "artifactBytesPerOperation": 203,
+    "environments": 3,
+    "executable": 10000,
+    "gzipBytes": 60200,
+    "kind": "operations-10000",
+    "operations": 10000,
+    "parseMs": 12.419958000000406,
+    "projectMs": 10.124499999999898,
+    "serializeMs": 20.696792000000187,
+    "unsupportedDiagnostics": 0
+  },
+  {
+    "artifactBytes": 2028191,
+    "artifactBytesPerOperation": 203,
+    "environments": 1,
+    "executable": 10000,
+    "gzipBytes": 60150,
+    "kind": "operations-10000-one-environment",
+    "operations": 10000,
+    "parseMs": 9.997708999999759,
+    "projectMs": 6.145583999999872,
+    "serializeMs": 14.556125000000065,
+    "unsupportedDiagnostics": 0
+  }
+]

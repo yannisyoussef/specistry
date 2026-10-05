@@ -1,0 +1,58 @@
+{
+  "artifactFormat": 1,
+  "diagnostics": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "files": {
+    "documentation": "documentation.json",
+    "playground": "playground.json",
+    "search": "search.json",
+    "snippets": "snippets.json"
+  },
+  "generator": "specra",
+  "modelVersion": 1,
+  "playground": {
+    "bytes": 5135,
+    "enabled": false,
+    "environments": 0,
+    "operations": 10,
+    "sha256": "2ca4a4d5fc3ac2c7668a109fd5db43136277e4f53c231d10e69d6c2f5a68c550",
+    "version": 1
+  },
+  "project": {
+    "id": "project_3b461578d597485a",
+    "name": "Acme Platform"
+  },
+  "search": {
+    "bytes": 7796,
+    "documents": 18,
+    "sha256": "0a43e01e6ee3da4348ce1004f254cd04d24f92e71a80570c0cd0f89c6c7f2bd8",
+    "version": 1
+  },
+  "snippets": {
+    "bytes": 4266,
+    "operations": 10,
+    "sdkExamples": 0,
+    "sha256": "92c11d6c65cbc2b123b3c63576461b4788b697e0dadf5a5c3a941bbf22ba4d1f",
+    "version": 1
+  },
+  "sources": [
+    {
+      "bytes": 3325,
+      "path": "apis/v1/accounts.yaml",
+      "sha256": "45bc64760b42108da050fec744ed2141130764524ee53ec26365a27c730c9d2d"
+    },
+    {
+      "bytes": 1526,
+      "path": "apis/v1/billing.yaml",
+      "sha256": "a9c019afab2957e6926cb5c357d7c4a01889d71acbcf292d18bd0a49db1164f4"
+    }
+  ],
+  "statistics": {
+    "documents": 2,
+    "operations": 10,
+    "references": 8,
+    "schemas": 2
+  }
+}

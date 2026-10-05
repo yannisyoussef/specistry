@@ -1,0 +1,7 @@
+curl --request POST \
+  --url 'https://api.example.com/v1/xml' \
+  --header 'Content-Type: application/xml' \
+  --data-binary '{
+  "x": 0,
+  "y": 0
+}'

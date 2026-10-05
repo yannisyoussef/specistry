@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("serves indexable, keyboard-accessible foundation HTML with security headers", async ({
+test("serves indexable, keyboard-accessible home HTML with security headers", async ({
   page,
 }) => {
   const response = await page.goto("/");
@@ -14,11 +14,14 @@ test("serves indexable, keyboard-accessible foundation HTML with security header
     "strict-origin-when-cross-origin",
   );
   expect(response?.headers()["x-content-type-options"]).toBe("nosniff");
-  expect(await page.title()).toBe("Specra");
+  // The fixture has an authored homepage; its frontmatter drives the metadata.
+  expect(await page.title()).toBe(
+    "Email testing built for automation. | TestInbox API",
+  );
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    /self-hosted, product-agnostic/i,
+    /Create disposable inboxes and receive real application emails/i,
   );
 
   await page.keyboard.press("Tab");

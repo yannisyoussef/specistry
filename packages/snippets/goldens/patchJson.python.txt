@@ -1,0 +1,17 @@
+import json
+
+import requests  # pip install requests
+
+response = requests.patch(
+    "https://api.example.com/v1/inboxes/<INBOX_ID>",
+    headers={
+        "Content-Type": "application/vnd.api+json",
+    },
+    auth=("<USERNAME>", "<PASSWORD>"),
+    data=json.dumps({
+        "name": "renamed",
+        "password": "<YOUR_PASSWORD>",
+    }),
+)
+print(response.status_code)
+print(response.json())

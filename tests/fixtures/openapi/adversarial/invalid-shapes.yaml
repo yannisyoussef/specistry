@@ -1,0 +1,37 @@
+openapi: 3.1.0
+info: { title: Shapes, version: 1.0.0 }
+paths:
+  /no-desc:
+    get:
+      operationId: noDesc
+      responses:
+        "200": {}
+  /bad-status:
+    get:
+      operationId: badStatus
+      responses:
+        "2xx": { description: lowercase range }
+        "999": { description: out of range }
+        "200": { description: ok }
+  /no-responses:
+    get:
+      operationId: noResponses
+  /{missing}:
+    get:
+      operationId: missingParam
+      responses:
+        "200": { description: ok }
+  /unknown-scheme:
+    get:
+      operationId: unknownScheme
+      security:
+        - nope: []
+        - apiKey: [scope-not-allowed]
+      responses:
+        "200": { description: ok }
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      name: k
+      in: header

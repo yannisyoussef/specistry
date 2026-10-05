@@ -8,6 +8,9 @@ export default defineConfig([
     "**/coverage/**",
     "**/dist/**",
     "**/node_modules/**",
+    // Local-only material excluded from version control.
+    ".agent/**",
+    "prompts/**",
   ]),
   ...nextVitals,
   ...nextTypescript,

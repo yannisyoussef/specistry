@@ -1,0 +1,37 @@
+---
+title: Authentication
+description: API keys, bearer tokens, and the difference between sandbox and production credentials.
+---
+
+Every request carries a credential. Most integrations use an **API key**; dashboard sessions and team-management integrations use OAuth 2.0.
+
+## API keys
+
+Send the key in the `X-Api-Key` header. Keys are scoped to a project and an environment.
+
+```http title="Request"
+GET /v1/inboxes HTTP/1.1
+Host: api.testinbox.email
+X-Api-Key: tib_sandbox_0123abcd
+```
+
+| Environment | Prefix          | Mail leaves the sandbox |
+| ----------- | --------------- | ----------------------- |
+| Sandbox     | `tib_sandbox_`  | No                      |
+| Production  | `tib_live_`     | Yes                     |
+
+<Callout type="warning" title="Keep keys out of the browser">
+API keys are secrets. Use them from CI and servers only; never embed them in front-end code or commit them to a repository.
+</Callout>
+
+## Bearer tokens
+
+Short-lived tokens issued by the dashboard work everywhere an API key does. They expire after one hour.
+
+## OAuth 2.0
+
+Team-management operations such as [Invite team member](/api/team/invite-team-member) require the `team:write` scope through the authorization-code flow. The [Create webhook](/api/webhooks/create-webhook) operation shows how scopes combine with a key.
+
+<Callout type="danger" title="Rotating a leaked key">
+Revoke the key in the dashboard first, then rotate the secret in your CI provider. Revocation is immediate; in-flight requests fail with `401`.
+</Callout>

@@ -1,0 +1,11 @@
+import requests  # pip install requests
+
+response = requests.post(
+    "https://api.example.com/v1/xml",
+    headers={
+        "Content-Type": "application/xml",
+    },
+    data="{\n  \"x\": 0,\n  \"y\": 0\n}",
+)
+print(response.status_code)
+print(response.json())

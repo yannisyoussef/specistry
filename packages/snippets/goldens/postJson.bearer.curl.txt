@@ -1,0 +1,12 @@
+curl --request POST \
+  --url 'https://api.example.com/v1/inboxes' \
+  --header 'Authorization: Bearer <YOUR_ACCESS_TOKEN>' \
+  --header 'Content-Type: application/json' \
+  --data '{
+  "name": "string",
+  "email": "user@example.com",
+  "ttl": 3600,
+  "secretToken": "<YOUR_SECRET_TOKEN>",
+  "parent": {},
+  "children": []
+}'

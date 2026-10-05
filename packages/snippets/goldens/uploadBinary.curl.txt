@@ -1,0 +1,5 @@
+curl --request PUT \
+  --url 'https://api.example.com/v1/files/<FILE_ID>' \
+  --header 'Content-Type: application/octet-stream' \
+  --cookie 'sid=<YOUR_API_KEY>' \
+  --data-binary '@/path/to/file'
