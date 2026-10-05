@@ -2,37 +2,102 @@ name: Protected release candidate
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Prepare privately, or attest the identical prepared bytes publicly
+        type: choice
+        options: [prepare, attest]
+        default: prepare
+        required: true
+      candidate_run_id:
+        description: Successful preparation run (attest only)
+        type: string
+      ledger_commit:
+        description: Full reviewed ledger commit on master (attest only)
+        type: string
 
 permissions:
   contents: read
-  id-token: write
-  attestations: write
+
+concurrency:
+  group: release-candidate-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  candidate:
-    name: Build and attest reviewed candidate
+  prepare:
+    name: Private candidate preparation
+    if: inputs.mode == 'prepare' && github.event.repository.private
     runs-on: ubuntu-latest
-    environment: release
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9 # v6.0.8
-        with:
-          version: 11.19.0
       - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
         with:
           node-version-file: .node-version
-          cache: pnpm
+      - name: Require the frozen release tag
+        run: node scripts/verify-release-tag.mjs
+      - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9 # v6.0.8
+        with:
+          version: 11.19.0
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
       - run: pnpm audit --audit-level high
-      - name: Require consistent, owner-confirmed distribution terms
-        run: pnpm check:release-license
+      - run: pnpm check:release-license
       - run: pnpm release:candidate
-      - name: Attest candidate artifacts
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: prepared-specra-0.1.0-rc.2
+          path: .release/specra-0.1.0-rc.2/
+          if-no-files-found: error
+          retention-days: 30
+
+  attest:
+    name: Verify and attest frozen candidate
+    if: inputs.mode == 'attest' && !github.event.repository.private
+    runs-on: ubuntu-latest
+    environment: release
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        with:
+          node-version-file: .node-version
+      - name: Require the frozen release tag
+        run: node scripts/verify-release-tag.mjs
+      - name: Bind preparation and reviewed ledger to this source
+        id: binding
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+          LEDGER_COMMIT: ${{ inputs.ledger_commit }}
+        run: node scripts/verify-preparation-run.mjs
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          artifact-ids: ${{ steps.binding.outputs.artifact_id }}
+          path: .release/specra-0.1.0-rc.2
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.candidate_run_id }}
+          digest-mismatch: error
+      - name: Read the immutable reviewed ledger
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.ledger_commit }}
+          path: .release/ledger-source
+          persist-credentials: false
+      - name: Verify all prepared subjects and the committed distribution record
+        run: node scripts/finalize-release-candidate.mjs .release/specra-0.1.0-rc.2 .release/ledger-source
+      - name: Attest exact release subjects
+        id: provenance
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
         with:
           subject-path: |
@@ -41,14 +106,14 @@ jobs:
             .release/specra-0.1.0-rc.2/license-metadata.json
             .release/specra-0.1.0-rc.2/release-audit.json
             .release/specra-0.1.0-rc.2/SHA256SUMS
+            .release/specra-0.1.0-rc.2/public-distribution-0.1.0-rc.2.json
+      - name: Preserve the signed verification bundle
+        env:
+          BUNDLE_PATH: ${{ steps.provenance.outputs.bundle-path }}
+        run: cp -- "$BUNDLE_PATH" .release/specra-0.1.0-rc.2/provenance.sigstore.json
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: specra-0.1.0-rc.2
-          path: |
-            .release/specra-0.1.0-rc.2/*.tgz
-            .release/specra-0.1.0-rc.2/specra-cli.cdx.json
-            .release/specra-0.1.0-rc.2/license-metadata.json
-            .release/specra-0.1.0-rc.2/release-audit.json
-            .release/specra-0.1.0-rc.2/SHA256SUMS
+          path: .release/specra-0.1.0-rc.2/
           if-no-files-found: error
           retention-days: 30
