@@ -42,7 +42,7 @@ if (violations.length > 0) {
   process.exitCode = 1;
 } else {
   console.log(
-    `Project license policy passed (${manifestPaths.length} manifests inspected; licensor confirmation remains a protected-release gate).`,
+    `Project license policy passed (${manifestPaths.length} manifests inspected; confirmed licensor and final parameters verified).`,
   );
 }
 
@@ -77,11 +77,25 @@ export function validate(candidate) {
     );
   if (policy.licensor?.proposedName !== "INFINITY VENTURES")
     failures.push(
-      "license-policy.json: proposed licensor must remain INFINITY VENTURES until owner confirmation",
+      "license-policy.json: proposedName must remain INFINITY VENTURES as the decision history",
     );
-  if (typeof policy.finalParametersOwnerApproved !== "boolean")
+  if (policy.licensor?.legalName !== "INFINITY VENTURES")
     failures.push(
-      "license-policy.json: finalParametersOwnerApproved must be explicit",
+      "license-policy.json: legalName must be the confirmed INFINITY VENTURES name",
+    );
+  if (policy.licensor?.legalForm !== "SASU")
+    failures.push("license-policy.json: legalForm must be SASU");
+  if (policy.licensor?.legalNameConfirmed !== true)
+    failures.push(
+      "license-policy.json: legalNameConfirmed must record owner confirmation",
+    );
+  if (policy.licensor?.licensingAuthorityConfirmed !== true)
+    failures.push(
+      "license-policy.json: licensingAuthorityConfirmed must record owner confirmation",
+    );
+  if (policy.finalParametersOwnerApproved !== true)
+    failures.push(
+      "license-policy.json: finalParametersOwnerApproved must record owner approval",
     );
   if (
     policy.externalLegalReview?.status !== "not-recorded" &&

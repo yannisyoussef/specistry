@@ -1,5 +1,4 @@
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
   cp,
   mkdir,
@@ -38,6 +37,17 @@ describe("software license policy", () => {
         yearsAfterFirstPublicDistribution: number;
         appliesPerVersion: boolean;
       };
+      finalParametersOwnerApproved: boolean;
+      externalLegalReview: {
+        reference: string | null;
+        status: string;
+      };
+      licensor: {
+        legalForm: string;
+        legalName: string;
+        legalNameConfirmed: boolean;
+        licensingAuthorityConfirmed: boolean;
+      };
     };
     expect(policy).toMatchObject({
       currentLicense: "BUSL-1.1",
@@ -46,6 +56,17 @@ describe("software license policy", () => {
         yearsAfterFirstPublicDistribution: 3,
       },
       changeLicense: "Apache-2.0",
+      externalLegalReview: {
+        reference: null,
+        status: "not-recorded",
+      },
+      finalParametersOwnerApproved: true,
+      licensor: {
+        legalForm: "SASU",
+        legalName: "INFINITY VENTURES",
+        legalNameConfirmed: true,
+        licensingAuthorityConfirmed: true,
+      },
     });
 
     const license = await readFile(
@@ -56,6 +77,7 @@ describe("software license policy", () => {
       `Additional Use Grant: ${policy.additionalUseGrant}`,
     );
     expect(license).toContain("Business Source License 1.1");
+    expect(license).toContain("Licensor: INFINITY VENTURES");
     expect(license).toContain("Change License: Apache License, Version 2.0");
     const apache = await readFile(
       path.join(repositoryRoot, "LICENSES", "Apache-2.0.txt"),
@@ -63,6 +85,11 @@ describe("software license policy", () => {
     );
     expect(apache).toContain("Apache License");
     expect(apache).toContain("Version 2.0, January 2004");
+    const notice = await readFile(path.join(repositoryRoot, "NOTICE"), "utf8");
+    expect(notice).toContain("Copyright © INFINITY VENTURES");
+    expect(notice).toContain(
+      "société par actions simplifiée unipersonnelle (SASU)",
+    );
 
     const manifests = [
       "package.json",
@@ -112,6 +139,9 @@ describe("software license policy", () => {
       expect(surface).not.toContain("UNLICENSED");
       expect(surface).not.toMatch(
         /has not made a public software-license decision/i,
+      );
+      expect(surface).not.toMatch(
+        /(?:licensor|licensing authority).{0,80}(?:unconfirmed|requires? owner confirmation)/i,
       );
     }
   });
@@ -207,6 +237,7 @@ describe("software license policy", () => {
       licensor: {
         proposedName: "INFINITY VENTURES",
         legalName: "Confirmed Example Corporation",
+        legalForm: "SASU",
         legalNameConfirmed: true,
         licensingAuthorityConfirmed: true,
       },
@@ -229,7 +260,7 @@ describe("software license policy", () => {
     );
   });
 
-  it("packs the license surfaces and emits blocked, undated candidate metadata and SBOM license data", async () => {
+  it("packs the confirmed license surfaces and emits undated candidate metadata and SBOM license data", async () => {
     const temporaryRoot = await mkdtemp(
       path.join(tmpdir(), "specra-license-candidate-"),
     );
@@ -273,8 +304,10 @@ describe("software license policy", () => {
       changeLicense: "Apache-2.0",
       currentLicense: "BUSL-1.1",
       firstPublicDistribution: null,
-      finalParametersOwnerApproved: false,
-      licensorConfirmed: false,
+      finalParametersOwnerApproved: true,
+      legalForm: "SASU",
+      licensor: "INFINITY VENTURES",
+      licensorConfirmed: true,
       version: "0.1.0-rc.2",
     });
     const audit = JSON.parse(
@@ -283,7 +316,7 @@ describe("software license policy", () => {
     expect(audit).toMatchObject({
       license: "BUSL-1.1",
       licenseMetadata: "license-metadata.json",
-      publicDistribution: "blocked-owner-license-confirmation",
+      publicDistribution: "eligible-after-protected-review",
       version: "0.1.0-rc.2",
     });
     expect(audit.bundledDependencies).toContain("zod");
@@ -315,36 +348,10 @@ describe("software license policy", () => {
       path.join(repositoryRoot, "package.json"),
       path.join(confirmedRepository, "package.json"),
     );
-    const confirmedPolicy = JSON.parse(
-      await readFile(path.join(repositoryRoot, "license-policy.json"), "utf8"),
-    );
-    confirmedPolicy.licensor = {
-      proposedName: "INFINITY VENTURES",
-      legalName: "Confirmed Example Corporation",
-      legalNameConfirmed: true,
-      licensingAuthorityConfirmed: true,
-    };
-    confirmedPolicy.finalParametersOwnerApproved = true;
-    await writeFile(
+    await cp(
+      path.join(repositoryRoot, "license-policy.json"),
       path.join(confirmedRepository, "license-policy.json"),
-      `${JSON.stringify(confirmedPolicy, null, 2)}\n`,
     );
-    metadata.licensor = "Confirmed Example Corporation";
-    metadata.licensorConfirmed = true;
-    metadata.finalParametersOwnerApproved = true;
-    await writeFile(
-      path.join(output, "license-metadata.json"),
-      `${JSON.stringify(metadata, null, 2)}\n`,
-    );
-    const updatedLicenseMetadata = await readFile(
-      path.join(output, "license-metadata.json"),
-    );
-    const checksumPath = path.join(output, "SHA256SUMS");
-    const updatedChecksums = (await readFile(checksumPath, "utf8")).replace(
-      /^[a-f0-9]{64}  license-metadata\.json$/m,
-      `${createHash("sha256").update(updatedLicenseMetadata).digest("hex")}  license-metadata.json`,
-    );
-    await writeFile(checksumPath, updatedChecksums);
     const publicDistributionModuleUrl = pathToFileURL(
       path.join(repositoryRoot, "scripts", "lib", "public-distribution.mjs"),
     ).href;
@@ -388,18 +395,48 @@ describe("software license policy", () => {
     ).rejects.toThrow("already exists");
   }, 60_000);
 
-  it("keeps protected publication blocked until the licensor is confirmed", () => {
+  it("passes the confirmed release state and fails closed on confirmation drift", async () => {
     const checked = command(process.execPath, [
       path.join(repositoryRoot, "scripts", "check-release-license.mjs"),
     ]);
-    expect(checked.status).toBe(1);
-    expect(checked.stderr).toContain(
-      "exact licensor legal name is not owner-confirmed",
+    expect(checked.status, checked.stderr).toBe(0);
+    expect(checked.stdout).toContain(
+      "Public release license gate passed for INFINITY VENTURES",
     );
-    expect(checked.stderr).toContain(
-      "licensor copyright ownership or licensing authority is not owner-confirmed",
+
+    const fixture = await mkdtemp(path.join(tmpdir(), "specra-release-gate-"));
+    temporary.push(fixture);
+    for (const file of ["LICENSE", "NOTICE", "license-policy.json"])
+      await cp(path.join(repositoryRoot, file), path.join(fixture, file));
+    const policyPath = path.join(fixture, "license-policy.json");
+    const policy = JSON.parse(await readFile(policyPath, "utf8"));
+    const mutations = [
+      { key: "legalNameConfirmed", value: false },
+      { key: "licensingAuthorityConfirmed", value: false },
+      { key: "legalName", value: null },
+      { key: "legalForm", value: "UNKNOWN" },
+    ];
+    for (const mutation of mutations) {
+      const candidate = structuredClone(policy);
+      candidate.licensor[mutation.key] = mutation.value;
+      await writeFile(policyPath, `${JSON.stringify(candidate, null, 2)}\n`);
+      const rejected = command(
+        process.execPath,
+        [path.join(repositoryRoot, "scripts", "check-release-license.mjs")],
+        fixture,
+      );
+      expect(rejected.status, mutation.key).toBe(1);
+    }
+    const unapproved = structuredClone(policy);
+    unapproved.finalParametersOwnerApproved = false;
+    await writeFile(policyPath, `${JSON.stringify(unapproved, null, 2)}\n`);
+    const rejectedApproval = command(
+      process.execPath,
+      [path.join(repositoryRoot, "scripts", "check-release-license.mjs")],
+      fixture,
     );
-    expect(checked.stderr).toContain(
+    expect(rejectedApproval.status).toBe(1);
+    expect(rejectedApproval.stderr).toContain(
       "final populated license parameters are not owner-approved",
     );
   });
@@ -412,12 +449,19 @@ describe("software license policy", () => {
       "--input-type=module",
       "--eval",
       `import { licenseMetadata } from ${JSON.stringify(moduleUrl)};
-       const policy = { currentLicense: "BUSL-1.1", changeLicense: "Apache-2.0", changeDatePolicy: { yearsAfterFirstPublicDistribution: 3, appliesPerVersion: true }, licensor: { proposedName: "INFINITY VENTURES", legalName: "Confirmed Example Entity", legalNameConfirmed: true, licensingAuthorityConfirmed: true } };
+       const policy = { currentLicense: "BUSL-1.1", changeLicense: "Apache-2.0", finalParametersOwnerApproved: true, changeDatePolicy: { yearsAfterFirstPublicDistribution: 3, appliesPerVersion: true }, licensor: { proposedName: "INFINITY VENTURES", legalName: "INFINITY VENTURES", legalForm: "SASU", legalNameConfirmed: true, licensingAuthorityConfirmed: true } };
        console.log(JSON.stringify({ dryRun: licenseMetadata(policy, "0.1.0-rc.2"), published: licenseMetadata(policy, "0.1.0-rc.2", "2028-02-29") }));`,
     ]);
     expect(evaluated.status, evaluated.stderr).toBe(0);
     expect(JSON.parse(evaluated.stdout)).toMatchObject({
-      dryRun: { changeDate: null, firstPublicDistribution: null },
+      dryRun: {
+        changeDate: null,
+        finalParametersOwnerApproved: true,
+        firstPublicDistribution: null,
+        legalForm: "SASU",
+        licensor: "INFINITY VENTURES",
+        licensorConfirmed: true,
+      },
       published: {
         changeDate: "2031-02-28",
         firstPublicDistribution: "2028-02-29",

@@ -2,7 +2,7 @@
 
 Specra is a self-hosted, product-agnostic developer documentation platform. It transforms API specifications, authored guidance, and project configuration into an accessible developer experience while keeping source formats, rendering, and deployment independently evolvable.
 
-The repository contains the complete pre-release product through SPEC-012: bounded OpenAPI ingestion, authored content, an accessible reader, self-hosted search, generated protocol examples, an opt-in browser-direct playground, immutable documentation releases, and deterministic quality gates. The next release candidate is `0.1.0-rc.2`. Its software-license business terms are selected, while legal effectiveness and public distribution remain blocked until the owner confirms the licensor's exact legal name and authority, approves the final populated parameters, completes the recorded manual assistive-technology pass, and executes protected provenance. Qualified external legal review is strongly recommended and has not been recorded.
+The repository contains the complete pre-release product through SPEC-012: bounded OpenAPI ingestion, authored content, an accessible reader, self-hosted search, generated protocol examples, an opt-in browser-direct playground, immutable documentation releases, and deterministic quality gates. The next release candidate is `0.1.0-rc.2`. The owner has confirmed Specra's Licensor, copyright ownership, licensing authority, and final Business Source License parameters. Public distribution remains blocked only until the recorded manual assistive-technology pass is complete and the protected release workflow emits provenance for the reviewed commit. Qualified external legal review is strongly recommended and has not been recorded.
 
 ## Requirements
 
@@ -116,6 +116,7 @@ first public distribution. Specra is not open source before the applicable
 Change Date. See the authoritative [license decision](docs/license-decision.md)
 and [LICENSE](LICENSE).
 
-Public distribution remains blocked until the owner confirms the proposed
-licensor's exact legal name and licensing authority and the other gates in the
-[release process](docs/release-process.md) are complete.
+The confirmed Licensor and copyright owner is INFINITY VENTURES (legal form:
+SASU), and the release-license gate passes. Public distribution remains blocked
+by the manual assistive-technology and protected-provenance gates in the
+[release process](docs/release-process.md).

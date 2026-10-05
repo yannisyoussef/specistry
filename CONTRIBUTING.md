@@ -68,7 +68,8 @@ The owner and qualified counsel must resolve that question before accepting an
 external contribution containing copyrightable changes for which commercial
 relicensing is intended; this document does not silently grant those rights.
 
-The proposed licensor is INFINITY VENTURES. Its exact legal entity name and
-authority to license the work still require owner confirmation before public
-distribution; this contributor guidance does not establish or transfer
-copyright ownership. See [the license decision](docs/license-decision.md).
+The confirmed copyright owner and Licensor is INFINITY VENTURES (legal form:
+SASU), and its authority to license Specra is confirmed. This does not resolve
+the separate question of commercial relicensing rights for third-party
+contributions; the caution above remains in force. See
+[the license decision](docs/license-decision.md).

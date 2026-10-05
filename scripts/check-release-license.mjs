@@ -25,6 +25,10 @@ if (
   policy.licensor.legalName.trim() === ""
 )
   blockers.push("confirmed licensor legal name is missing");
+if (policy.licensor?.legalName !== "INFINITY VENTURES")
+  blockers.push("confirmed licensor legal name is not INFINITY VENTURES");
+if (policy.licensor?.legalForm !== "SASU")
+  blockers.push("confirmed licensor legal form is not SASU");
 if (policy.finalParametersOwnerApproved !== true)
   blockers.push("final populated license parameters are not owner-approved");
 const licensor = confirmedLicensor(policy);
