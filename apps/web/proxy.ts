@@ -180,7 +180,6 @@ export function contentSecurityPolicy(
     "script-src-attr 'none'",
     `style-src 'self' 'nonce-${nonce}'`,
     "worker-src 'none'",
-    "upgrade-insecure-requests",
   ].join("; ");
 }
 

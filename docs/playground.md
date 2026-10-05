@@ -135,26 +135,25 @@ allows `connect-src` for `'self'` and the approved exact origins only, on
 API routes only; guides and the home page keep `connect-src 'self'`.
 
 Requests are sent with `mode: "cors"`, `credentials: "omit"`,
-`redirect: "manual"`, `cache: "no-store"`, and `referrerPolicy:
+`redirect: "error"`, `cache: "no-store"`, and `referrerPolicy:
 "no-referrer"`. The API must therefore answer CORS preflights for the
 documentation origin: `Access-Control-Allow-Origin` (the exact docs
 origin, or `*` since no cookies are sent), `Access-Control-Allow-Methods`,
 `Access-Control-Allow-Headers` naming `authorization`, `content-type`, and
 any API-key or custom header, and `Access-Control-Expose-Headers` for
 headers the response card should list. A refusal shows as a network
-failure with this guidance; there is no fallback path. A redirect is never
-followed: the page reports it and asks the project to configure the final
-URL.
+failure with this guidance; there is no fallback path. Redirects are refused
+at the browser network layer and are reported as a request failure because
+Fetch does not distinguish that refusal from CORS or other network errors.
 
 ## Limits and failure states
 
 | State            | Cause                                                       | What the reader shows                                     |
 | ---------------- | ----------------------------------------------------------- | --------------------------------------------------------- |
 | Validation error | Missing required value, wrong kind, oversize, unsafe header | Field-level messages; nothing is sent                     |
-| Redirect blocked | Any 3xx or opaque redirect                                  | "Redirect blocked" and the configuration advice           |
 | Timed out        | No response within `timeoutMs`                              | "Timed out"; the request was aborted                      |
 | Cancelled        | The reader pressed Cancel                                   | "Cancelled"; the API may still have processed it          |
-| Request failed   | CORS refusal, DNS, TLS, network, private-network block      | "Request failed" with the CORS checklist                  |
+| Request failed   | CORS refusal, blocked redirect, DNS, TLS, or network policy | "Request failed" with credential-free possible causes     |
 | Partial response | Body longer than `responseLimitBytes`                       | The prefix as text, labelled partial, with the limit note |
 
 ## Browser support

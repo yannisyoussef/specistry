@@ -86,12 +86,13 @@ export async function ingestOpenApi(
   if (limits === undefined) {
     throw new TypeError("Ingestion limits must be positive safe integers.");
   }
-  if (options.sources.length === 0) {
-    throw new TypeError("At least one source acquisition is required.");
-  }
+  // Zero sources is the canonical input for an authored-content-only site.
+  // Keeping that shape in the same model avoids a fake OpenAPI document and
+  // lets every downstream consumer continue to read one artifact contract.
   const rootDocument = options.sources[0]?.entry ?? "";
   const sink = new DiagnosticSink(limits.maxDiagnostics, rootDocument);
   const sources: IngestionSourceRecord[] = [];
+  const sourceRecords = new Map<string, IngestionSourceRecord>();
   const services: ApiService[] = [];
   const canonicalDiagnostics = new Map<string, CanonicalDiagnostic>();
   const ledger = new IdentityLedger();
@@ -128,13 +129,29 @@ export async function ingestOpenApi(
     for (const parsed of [...graph.documents.values()].sort((left, right) =>
       compareText(left.id, right.id),
     )) {
-      sources.push({
+      const record = {
         bytes: parsed.bytes,
         id: parsed.id,
         sha256: parsed.sha256,
-      });
+      };
+      const existing = sourceRecords.get(parsed.id);
+      if (existing === undefined) {
+        sourceRecords.set(parsed.id, record);
+        sources.push(record);
+      } else if (
+        existing.bytes !== record.bytes ||
+        existing.sha256 !== record.sha256
+      ) {
+        // A project-relative source is one identity even when several service
+        // roots reference it. If it changes between graph loads, fail closed
+        // instead of emitting an ambiguous manifest.
+        sink.add("SOURCE_IDENTITY_COLLISION", {
+          document: parsed.id,
+          pointer: "",
+        });
+      }
     }
-    documents += graph.documents.size;
+    documents = sourceRecords.size;
     references += graph.referenceCount;
     const serviceId = canonicalSlug("service", acquisition.entry) as ServiceId;
     const claim = ledger.claim("service", serviceId, acquisition.entry, {

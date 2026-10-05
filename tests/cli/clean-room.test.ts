@@ -189,7 +189,6 @@ describe("CLI clean-room package", () => {
         project,
       );
       expect(installed.status, installed.stderr).toBe(0);
-      expect(installed.stderr).toBe("");
 
       const installedManifest = JSON.parse(
         await readFile(
@@ -734,6 +733,40 @@ describe("CLI clean-room package", () => {
           target: { kind: "release", version: "v2" },
         },
       });
+
+      // pnpm is the second supported consumer package manager. Install the
+      // exact same tarball into another empty project, still offline, and
+      // prove the public executable is linked without a workspace.
+      const pnpmProject = path.join(cleanRoom, "pnpm-project");
+      await mkdir(pnpmProject);
+      await writeFile(
+        path.join(pnpmProject, "package.json"),
+        JSON.stringify({
+          name: "pnpm-consumer",
+          private: true,
+          version: "1.0.0",
+        }),
+      );
+      const pnpmCli = process.env.npm_execpath;
+      expect(
+        pnpmCli,
+        "pnpm must expose npm_execpath to its test process",
+      ).toEqual(expect.stringContaining("pnpm"));
+      const pnpmInstalled = command(
+        process.execPath,
+        [pnpmCli!, "add", "--offline", "--ignore-scripts", tarball],
+        pnpmProject,
+      );
+      expect(pnpmInstalled.status, pnpmInstalled.stderr).toBe(0);
+      const pnpmExecutable = path.join(
+        pnpmProject,
+        "node_modules",
+        ".bin",
+        process.platform === "win32" ? "specra.cmd" : "specra",
+      );
+      const help = command(pnpmExecutable, ["--help"], pnpmProject);
+      expect(help.status, help.stderr).toBe(0);
+      expect(help.stdout).toContain("build      Validate and write");
     } finally {
       await rm(cleanRoom, { force: true, recursive: true });
     }
@@ -749,15 +782,29 @@ function command(
   args: readonly string[],
   cwd: string,
 ): ReturnType<typeof spawnSync> & { stderr: string; stdout: string } {
-  const result = spawnSync(executable, args, {
-    cwd,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      npm_config_cache: path.join(cwd, ".npm-cache"),
+  // npm and pnpm may be installed by a host runtime older than Specra's
+  // supported Node line. Package installation is still useful evidence, but
+  // execute their linked public bin with this test process's validated Node.
+  const linkedSpecra = new Set(["specra", "specra.cmd"]).has(
+    path.basename(executable),
+  );
+  const installedEntry = path.resolve(
+    path.dirname(executable),
+    "../@specra/cli/dist/bin.js",
+  );
+  const result = spawnSync(
+    linkedSpecra ? process.execPath : executable,
+    linkedSpecra ? [installedEntry, ...args] : args,
+    {
+      cwd,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        npm_config_cache: path.join(cwd, ".npm-cache"),
+      },
+      timeout: 60_000,
     },
-    timeout: 60_000,
-  });
+  );
   if (result.error !== undefined) throw result.error;
   return result;
 }

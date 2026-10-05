@@ -476,7 +476,7 @@ test.describe("playground", () => {
     await panel.getByLabel(/inboxId/).fill("__redirect");
     await panel.getByRole("button", { name: "Send GET request" }).click();
     await expect(panel.locator(".try-it__response")).toContainText(
-      "Redirect blocked",
+      "Request failed",
     );
     await expect(rail(page)).toHaveScreenshot("playground-blocked-light.png");
     const invalid = await openTryIt(page, "/api/inboxes/get-inbox", "dark");

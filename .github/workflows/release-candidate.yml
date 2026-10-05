@@ -1,0 +1,52 @@
+name: Protected release candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  candidate:
+    name: Build and attest reviewed candidate
+    runs-on: ubuntu-latest
+    environment: release
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9 # v6.0.8
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm build
+      - run: pnpm audit --audit-level high
+      - name: Require an owner-approved distribution license
+        run: node -e "const p=require('./package.json'); if (p.license === 'UNLICENSED') throw new Error('Public release is blocked until the owner selects a license.')"
+      - run: pnpm release:candidate
+      - name: Attest candidate artifacts
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        with:
+          subject-path: |
+            .release/specra-0.1.0-rc.1/*.tgz
+            .release/specra-0.1.0-rc.1/specra-cli.cdx.json
+            .release/specra-0.1.0-rc.1/release-audit.json
+            .release/specra-0.1.0-rc.1/SHA256SUMS
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: specra-0.1.0-rc.1
+          path: |
+            .release/specra-0.1.0-rc.1/*.tgz
+            .release/specra-0.1.0-rc.1/specra-cli.cdx.json
+            .release/specra-0.1.0-rc.1/release-audit.json
+            .release/specra-0.1.0-rc.1/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30

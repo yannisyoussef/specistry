@@ -7,8 +7,8 @@ import type { ExecutableRequest } from "./request.js";
 /**
  * Bounded browser execution (SPEC-009 §22–§28, §83–§85, §99–§118). One
  * hardened `fetch` per explicit user action: `mode: "cors"`,
- * `credentials: "omit"` (no ambient cookies), `redirect: "manual"` (a
- * redirect is a blocked result, never followed), `cache: "no-store"`,
+ * `credentials: "omit"` (no ambient cookies), `redirect: "error"` (the
+ * browser refuses redirects before requesting their targets), `cache: "no-store"`,
  * `referrerPolicy: "no-referrer"`, and an `AbortController` shared by the
  * timeout and the Cancel control. The body is read as a stream and stops
  * at the configured limit. The result model is plain data: no `Response`
@@ -53,7 +53,7 @@ export const RESULT_MESSAGES: Readonly<
   cancelled:
     "Cancelled. Specra stopped waiting for the response; a request that was already transmitted may still have been processed by the API.",
   "network-failure":
-    "The browser could not complete this request. Common causes include CORS policy, network or TLS failure, DNS, or private-network restrictions.",
+    "The browser could not complete this request. Common causes include CORS policy, a blocked redirect, network or TLS failure, DNS, or private-network restrictions.",
   "redirect-blocked":
     "The target returned a redirect. Specra does not automatically follow redirects in the playground. Configure the final approved environment URL.",
   timeout: "Timed out. The API did not respond within the playground timeout.",
@@ -98,7 +98,7 @@ export async function executeRequest(
       ]),
       method: request.method,
       mode: "cors",
-      redirect: "manual",
+      redirect: "error",
       referrerPolicy: "no-referrer",
       signal: controller.signal,
     });

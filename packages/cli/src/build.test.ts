@@ -59,6 +59,41 @@ paths:
 `;
 
 describe("buildProject", () => {
+  it("builds an authored-content-only project with zero API services", async () => {
+    const project = await makeTemporaryDirectory("specra-docs-only-");
+    await mkdir(path.join(project, "docs"));
+    await writeFile(
+      path.join(project, "docs", "index.md"),
+      "---\ntitle: Product guide\ndescription: A documentation-only project.\n---\n\n## Start here\n\nNo fake API is required.\n",
+    );
+    await writeFile(
+      path.join(project, "specra.config.ts"),
+      "export default { schemaVersion: 1, name: 'Product guide' };",
+    );
+
+    const result = await buildProject({ cwd: project });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.ingestion).toEqual({
+      sources: [],
+      statistics: { documents: 0, operations: 0, references: 0, schemas: 0 },
+    });
+    expect(result.content.pages).toBe(1);
+    expect(result.snippets).toEqual({ operations: 0, sdkExamples: 0 });
+    expect(result.playground).toEqual({
+      enabled: false,
+      environments: 0,
+      operations: 0,
+    });
+    const documentation = JSON.parse(
+      await readFile(
+        path.join(project, ".specra", "artifacts", "documentation.json"),
+        "utf8",
+      ),
+    ) as { model: { versions: readonly { services: readonly unknown[] }[] } };
+    expect(documentation.model.versions[0]?.services).toEqual([]);
+  });
+
   it("writes deterministic canonical artifacts atomically and reproducibly", async () => {
     const project = await createProject(VALID);
     const first = await buildProject({ cwd: project });

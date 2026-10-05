@@ -5,6 +5,9 @@ dist/
 coverage/
 playwright-report/
 test-results/
+dogfood/**/.specra/
+.release/
+.specra-tooling/
 *.tsbuildinfo
 .DS_Store
 .idea/

@@ -45,6 +45,10 @@ describe("no proxy, no forwarding", () => {
       // catalog and route tables; they fetch nothing.
       "apps/web/app/sitemap.xml/route.ts",
       "apps/web/app/sitemaps/[name]/route.ts",
+      // SPEC-012: local process liveness and artifact-verifying readiness.
+      // Both are GET-only, value-free, and have no forwarding authority.
+      "apps/web/app/healthz/route.ts",
+      "apps/web/app/readyz/route.ts",
     ]);
     for (const file of routes) {
       const relative = path.relative(root, file);
@@ -153,6 +157,10 @@ describe("content security policy", () => {
       "https://api.example.com",
     ]);
     expect(policy).toMatch(/img-src 'self'(?:;|$)/);
+    // Safari upgrades same-origin loopback assets when this directive is
+    // present, which breaks the explicitly supported local HTTP workflow.
+    // Production transport enforcement belongs at the TLS/HSTS proxy.
+    expect(policy).not.toContain("upgrade-insecure-requests");
   });
 });
 

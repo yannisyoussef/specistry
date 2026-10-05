@@ -44,7 +44,7 @@ build` projects `playground.json` from the canonical artifact and the
    path, and the length must fit the budget. The CSP's `connect-src` names
    `'self'` and the approved exact origins on API routes only.
 4. **Hardened, single, explicit request.** `mode: "cors"`, `credentials:
-"omit"`, `redirect: "manual"`, `cache: "no-store"`, `referrerPolicy:
+"omit"`, `redirect: "error"`, `cache: "no-store"`, `referrerPolicy:
 "no-referrer"`, one `AbortController` shared by the timeout and Cancel,
    no retry, a streaming body read that stops at the limit, and a plain-data
    result: status, bounded sanitized headers with credential headers masked,

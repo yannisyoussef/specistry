@@ -1,0 +1,16 @@
+.agent
+.git
+.github
+.next
+**/.next
+.pnpm-store
+coverage
+dogfood
+logo
+node_modules
+playwright-report
+prompts
+test-results
+tests
+**/dist
+**/*.tsbuildinfo

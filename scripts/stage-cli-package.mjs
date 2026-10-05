@@ -93,6 +93,10 @@ await mkdir(destination);
 await cp(path.join(cliDirectory, "dist"), path.join(destination, "dist"), {
   recursive: true,
 });
+await cp(
+  path.join(cliDirectory, "README.md"),
+  path.join(destination, "README.md"),
+);
 for (const name of workspacePackages) {
   const target = path.join(destination, "node_modules", "@specra", name);
   await mkdir(target, { recursive: true });
@@ -179,6 +183,10 @@ const stagedCliManifest = {
   version: cliManifest.version,
   private: cliManifest.private,
   license: cliManifest.license,
+  description: cliManifest.description,
+  homepage: cliManifest.homepage,
+  repository: cliManifest.repository,
+  bugs: cliManifest.bugs,
   type: cliManifest.type,
   engines: cliManifest.engines,
   bin: cliManifest.bin,

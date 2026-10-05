@@ -298,7 +298,10 @@ export const specraConfigSchema = z
   .object({
     schemaVersion: z.literal(1),
     name: z.string().trim().min(1).max(120),
-    openapi: z.union([relativePath, z.array(relativePath).min(1)]),
+    // Authored-content-first projects are a supported public shape. An empty
+    // list means "no API reference"; it is intentionally different from a
+    // missing or unreadable configured contract.
+    openapi: z.union([relativePath, z.array(relativePath).max(64)]).default([]),
     docs: relativePath.default("./docs"),
     navigation: z.array(navigationNodeSchema).max(500).optional(),
     branding: z

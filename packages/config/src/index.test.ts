@@ -83,6 +83,13 @@ describe("navigation and branding", () => {
 });
 
 describe("parseConfig", () => {
+  it("supports authored-content-only projects without a fake API", () => {
+    expect(parseConfig({ name: "Docs", schemaVersion: 1 }).openapi).toEqual([]);
+    expect(
+      parseConfig({ name: "Docs", openapi: [], schemaVersion: 1 }).openapi,
+    ).toEqual([]);
+  });
+
   it("applies secure defaults", () => {
     expect(
       parseConfig({

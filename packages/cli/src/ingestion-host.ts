@@ -97,7 +97,6 @@ function readRequest(): HostRequest | undefined {
     typeof record.projectRoot !== "string" ||
     record.projectRoot.length === 0 ||
     !Array.isArray(record.entries) ||
-    record.entries.length === 0 ||
     record.entries.length > 64 ||
     !record.entries.every(
       (entry) => typeof entry === "string" && isDocumentId(entry),
