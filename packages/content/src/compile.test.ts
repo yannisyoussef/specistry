@@ -115,7 +115,7 @@ Keys live in the dashboard.
 `;
 
 describe("content compiler", () => {
-  it("compiles Markdown and every Specra component into the content model", async () => {
+  it("compiles Markdown and every Specistry component into the content model", async () => {
     const result = await compile(
       source("quickstart.mdx", QUICKSTART),
       source("authentication.md", AUTHENTICATION),

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Dogfoods the public `specra check` command against the production-realistic
+ * Dogfoods the public `specistry check` command against the production-realistic
  * TestInbox fixture, exactly as a consumer's CI would call it (SPEC-011 §80,
  * §184, §205): the packed binary, no private import, no repository-internal
  * hook.
@@ -44,9 +44,9 @@ function expect(condition, message) {
 
 /** A copy of the fixture whose configuration carries an extra policy. */
 function projectWithPolicy(quality) {
-  const root = mkdtempSync(path.join(tmpdir(), "specra-quality-gate-"));
+  const root = mkdtempSync(path.join(tmpdir(), "specistry-quality-gate-"));
   cpSync(fixture, root, { recursive: true });
-  const config = path.join(root, "specra.config.ts");
+  const config = path.join(root, "specistry.config.ts");
   const original = readFileSync(config, "utf8");
   const marker = "const config = {";
   if (!original.includes(marker)) {
@@ -63,17 +63,19 @@ function projectWithPolicy(quality) {
 const passing = run(fixture, ["check", "--json"]);
 expect(
   passing.status === 0,
-  `specra check exited ${passing.status} on the TestInbox fixture:\n${passing.stderr}`,
+  `specistry check exited ${passing.status} on the TestInbox fixture:\n${passing.stderr}`,
 );
 expect(
   passing.stderr === "",
-  "specra check --json wrote to stderr; machine mode must stay silent there.",
+  "specistry check --json wrote to stderr; machine mode must stay silent there.",
 );
 let report;
 try {
   report = JSON.parse(passing.stdout);
 } catch {
-  failures.push("specra check --json did not write exactly one JSON envelope.");
+  failures.push(
+    "specistry check --json did not write exactly one JSON envelope.",
+  );
 }
 if (report !== undefined) {
   expect(

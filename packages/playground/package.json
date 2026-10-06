@@ -1,6 +1,6 @@
 {
-  "name": "@specra/playground",
-  "version": "0.1.0-rc.2",
+  "name": "@specistry/playground",
+  "version": "0.1.0-rc.3",
   "private": true,
   "license": "BUSL-1.1",
   "type": "module",
@@ -23,8 +23,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@specra/model": "workspace:*",
-    "@specra/snippets": "workspace:*"
+    "@specistry/model": "workspace:*",
+    "@specistry/snippets": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "24.13.3"

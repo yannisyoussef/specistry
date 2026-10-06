@@ -13,8 +13,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseDocumentationArtifact } from "@specra/model";
-import { diffArtifacts, serializeContractDiff } from "@specra/release";
+import { parseDocumentationArtifact } from "@specistry/model";
+import { diffArtifacts, serializeContractDiff } from "@specistry/release";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -94,13 +94,13 @@ async function directorySize(directory: string): Promise<number> {
 
 /** A project with 20 retained releases of a 200-operation contract, each with a different page. */
 async function twentyReleases(): Promise<string> {
-  const root = await mkdtemp(path.join(tmpdir(), "specra-versions-"));
+  const root = await mkdtemp(path.join(tmpdir(), "specistry-versions-"));
   temporary.push(root);
   await mkdir(path.join(root, "docs"));
   // The generator returns JSON text already.
   await writeFile(path.join(root, "openapi.json"), leanOperationsDocument(200));
   await writeFile(
-    path.join(root, "specra.config.ts"),
+    path.join(root, "specistry.config.ts"),
     'export default { schemaVersion: 1, name: "Many", openapi: "./openapi.json", environments: { a: { baseUrl: "https://a.example.com" } } };',
   );
   const promotions: number[] = [];
@@ -116,7 +116,7 @@ async function twentyReleases(): Promise<string> {
   }
   evidence.push({
     catalogBytes: (
-      await stat(path.join(root, ".specra", "releases", "catalog.json"))
+      await stat(path.join(root, ".specistry", "releases", "catalog.json"))
     ).size,
     firstBuildMs: Math.round(firstBuildMs),
     kind: "twenty-releases",
@@ -124,9 +124,9 @@ async function twentyReleases(): Promise<string> {
       promotions.reduce((total, ms) => total + ms, 0) / promotions.length,
     ),
     promotionMsMax: Math.round(Math.max(...promotions)),
-    storeBytes: await directorySize(path.join(root, ".specra", "releases")),
+    storeBytes: await directorySize(path.join(root, ".specistry", "releases")),
     storeBytesPerRelease: Math.round(
-      (await directorySize(path.join(root, ".specra", "releases"))) / 20,
+      (await directorySize(path.join(root, ".specistry", "releases"))) / 20,
     ),
   });
   return root;
@@ -182,11 +182,11 @@ describe("multi-version reader", () => {
 
 describe("structured diff at scale", () => {
   it("diffs two 10,000-operation contracts quickly with a bounded, value-free output", async () => {
-    const root = await mkdtemp(path.join(tmpdir(), "specra-diff-scale-"));
+    const root = await mkdtemp(path.join(tmpdir(), "specistry-diff-scale-"));
     temporary.push(root);
     await mkdir(path.join(root, "docs"));
     await writeFile(
-      path.join(root, "specra.config.ts"),
+      path.join(root, "specistry.config.ts"),
       'export default { schemaVersion: 1, name: "Scale", openapi: "./openapi.json", environments: { a: { baseUrl: "https://a.example.com" } } };',
     );
     await writeFile(
@@ -196,7 +196,7 @@ describe("structured diff at scale", () => {
     run(root, ["build"]);
     const before = parseDocumentationArtifact(
       await readFile(
-        path.join(root, ".specra", "artifacts", "documentation.json"),
+        path.join(root, ".specistry", "artifacts", "documentation.json"),
         "utf8",
       ),
     );
@@ -228,7 +228,7 @@ describe("structured diff at scale", () => {
     run(root, ["build"]);
     const after = parseDocumentationArtifact(
       await readFile(
-        path.join(root, ".specra", "artifacts", "documentation.json"),
+        path.join(root, ".specistry", "artifacts", "documentation.json"),
         "utf8",
       ),
     );
@@ -270,14 +270,18 @@ describe("structured diff at scale", () => {
 
 describe("sitemap scale", () => {
   it("partitions a large release deterministically and never lists an alias", async () => {
-    const root = await mkdtemp(path.join(tmpdir(), "specra-sitemap-scale-"));
+    const root = await mkdtemp(path.join(tmpdir(), "specistry-sitemap-scale-"));
     temporary.push(root);
-    await cp(path.join(versioned, ".specra"), path.join(root, ".specra"), {
-      recursive: true,
-    });
+    await cp(
+      path.join(versioned, ".specistry"),
+      path.join(root, ".specistry"),
+      {
+        recursive: true,
+      },
+    );
     // Inflate v2's route table to cross the partition threshold; the manifest
     // digest is recomputed so the tampering guard accepts the inflated table.
-    const store = path.join(root, ".specra", "releases");
+    const store = path.join(root, ".specistry", "releases");
     const routes = JSON.parse(
       await readFile(path.join(store, "v2", "routes.json"), "utf8"),
     ) as {
@@ -303,7 +307,7 @@ describe("sitemap scale", () => {
       computeReleaseDigest,
       serializeReleaseManifest,
       parseReleaseManifest,
-    } = await import("@specra/release");
+    } = await import("@specistry/release");
     const manifest = parseReleaseManifest(
       await readFile(path.join(store, "v2", "release.json"), "utf8"),
     );
@@ -329,8 +333,8 @@ describe("sitemap scale", () => {
       catalog.replace(manifest.digest, digest),
     );
     resetReleaseCaches();
-    process.env.SPECRA_SITE_URL = "https://versioned.example.test";
-    process.env.SPECRA_PROJECT_ROOT = root;
+    process.env.SPECISTRY_SITE_URL = "https://versioned.example.test";
+    process.env.SPECISTRY_PROJECT_ROOT = root;
     try {
       const started = performance.now();
       const partitions = await sitemapPartitions();
@@ -356,8 +360,8 @@ describe("sitemap scale", () => {
       );
       expect(ms).toBeLessThan(5_000);
     } finally {
-      delete process.env.SPECRA_SITE_URL;
-      delete process.env.SPECRA_PROJECT_ROOT;
+      delete process.env.SPECISTRY_SITE_URL;
+      delete process.env.SPECISTRY_PROJECT_ROOT;
       resetReleaseCaches();
     }
   }, 120_000);

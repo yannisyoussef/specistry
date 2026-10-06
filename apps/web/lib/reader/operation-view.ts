@@ -9,7 +9,7 @@ import type {
   SchemaNode,
   SecurityScheme,
   ServerDefinition,
-} from "@specra/model";
+} from "@specistry/model";
 
 import type {
   ReaderGroup,

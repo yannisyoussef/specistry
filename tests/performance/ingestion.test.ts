@@ -148,7 +148,7 @@ describe("fresh-process ingestion evidence", () => {
   });
 
   it("builds a 10,000-operation project end to end through the packaged CLI at the default timeout", async () => {
-    const project = await mkdtemp(path.join(tmpdir(), "specra-perf-"));
+    const project = await mkdtemp(path.join(tmpdir(), "specistry-perf-"));
     temporaryDirectories.push(project);
     await mkdir(path.join(project, "docs"));
     await writeFile(
@@ -156,7 +156,7 @@ describe("fresh-process ingestion evidence", () => {
       generateDocument("lean", 10_000),
     );
     await writeFile(
-      path.join(project, "specra.config.ts"),
+      path.join(project, "specistry.config.ts"),
       "export default { schemaVersion: 1, name: 'Perf', openapi: './openapi.json' };",
     );
     const started = performance.now();
@@ -175,7 +175,7 @@ describe("fresh-process ingestion evidence", () => {
     expect(output.ok).toBe(true);
     expect(output.statistics.operations).toBe(10_000);
     const documentation = await readFile(
-      path.join(project, ".specra", "artifacts", "documentation.json"),
+      path.join(project, ".specistry", "artifacts", "documentation.json"),
       "utf8",
     );
     process.stdout.write(

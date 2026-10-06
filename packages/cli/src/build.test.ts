@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { DEFAULT_INGESTION_LIMITS } from "@specra/openapi";
+import { DEFAULT_INGESTION_LIMITS } from "@specistry/openapi";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runCli } from "./cli.js";
@@ -60,14 +60,14 @@ paths:
 
 describe("buildProject", () => {
   it("builds an authored-content-only project with zero API services", async () => {
-    const project = await makeTemporaryDirectory("specra-docs-only-");
+    const project = await makeTemporaryDirectory("specistry-docs-only-");
     await mkdir(path.join(project, "docs"));
     await writeFile(
       path.join(project, "docs", "index.md"),
       "---\ntitle: Product guide\ndescription: A documentation-only project.\n---\n\n## Start here\n\nNo fake API is required.\n",
     );
     await writeFile(
-      path.join(project, "specra.config.ts"),
+      path.join(project, "specistry.config.ts"),
       "export default { schemaVersion: 1, name: 'Product guide' };",
     );
 
@@ -87,7 +87,7 @@ describe("buildProject", () => {
     });
     const documentation = JSON.parse(
       await readFile(
-        path.join(project, ".specra", "artifacts", "documentation.json"),
+        path.join(project, ".specistry", "artifacts", "documentation.json"),
         "utf8",
       ),
     ) as { model: { versions: readonly { services: readonly unknown[] }[] } };
@@ -101,7 +101,7 @@ describe("buildProject", () => {
     if (!first.ok) return;
     expect(first.artifacts).toEqual({
       bytes: expect.any(Number),
-      directory: ".specra/artifacts",
+      directory: ".specistry/artifacts",
       files: [
         "documentation.json",
         "manifest.json",
@@ -116,7 +116,7 @@ describe("buildProject", () => {
       references: 0,
       schemas: 0,
     });
-    const artifactDirectory = path.join(project, ".specra", "artifacts");
+    const artifactDirectory = path.join(project, ".specistry", "artifacts");
     expect((await readdir(artifactDirectory)).sort()).toEqual([
       "documentation.json",
       "manifest.json",
@@ -124,7 +124,9 @@ describe("buildProject", () => {
       "search.json",
       "snippets.json",
     ]);
-    expect(await readdir(path.join(project, ".specra"))).toEqual(["artifacts"]);
+    expect(await readdir(path.join(project, ".specistry"))).toEqual([
+      "artifacts",
+    ]);
     const documentation = await readFile(
       path.join(artifactDirectory, "documentation.json"),
       "utf8",
@@ -142,7 +144,7 @@ describe("buildProject", () => {
         search: "search.json",
         snippets: "snippets.json",
       },
-      generator: "specra",
+      generator: "specistry",
       modelVersion: 1,
       project: { id: "Example", name: "Example" },
       search: {
@@ -190,18 +192,18 @@ describe("buildProject", () => {
       await readFile(path.join(artifactDirectory, "manifest.json"), "utf8"),
     ).toBe(manifest);
 
-    const elsewhere = await createProject(VALID, "specra-elsewhere-");
+    const elsewhere = await createProject(VALID, "specistry-elsewhere-");
     const third = await buildProject({ cwd: elsewhere });
     expect(third.ok).toBe(true);
     expect(
       await readFile(
-        path.join(elsewhere, ".specra", "artifacts", "documentation.json"),
+        path.join(elsewhere, ".specistry", "artifacts", "documentation.json"),
         "utf8",
       ),
     ).toBe(documentation);
     expect(
       await readFile(
-        path.join(elsewhere, ".specra", "artifacts", "manifest.json"),
+        path.join(elsewhere, ".specistry", "artifacts", "manifest.json"),
         "utf8",
       ),
     ).toBe(manifest);
@@ -217,16 +219,16 @@ describe("buildProject", () => {
       "SOURCE_UNSUPPORTED_VERSION",
     ]);
     await expect(
-      lstat(path.join(project, ".specra", "artifacts")),
+      lstat(path.join(project, ".specistry", "artifacts")),
     ).rejects.toMatchObject({ code: "ENOENT" });
-    expect(await readdir(path.join(project, ".specra"))).toEqual([]);
+    expect(await readdir(path.join(project, ".specistry"))).toEqual([]);
 
     await writeFile(path.join(project, "openapi.yaml"), VALID);
     const inside = path.join(project, "elsewhere");
     await mkdir(inside);
     await symlink(
       inside,
-      path.join(project, ".specra", "artifacts"),
+      path.join(project, ".specistry", "artifacts"),
       process.platform === "win32" ? "junction" : "dir",
     );
     const refused = await buildProject({ cwd: project });
@@ -299,7 +301,7 @@ describe("buildProject", () => {
     const humanFailure = await invoke(["build"], invalid);
     expect(humanFailure.code).toBe(EXIT_CODES.validationFailure);
     expect(humanFailure.stdout).toBe("");
-    expect(humanFailure.stderr).toContain("Specra build failed");
+    expect(humanFailure.stderr).toContain("Specistry build failed");
     expect(humanFailure.stderr).toContain(
       "SOURCE_INVALID [source/openapi.yaml#/paths/~1no-responses/get/responses]",
     );
@@ -310,7 +312,7 @@ describe("buildProject", () => {
     await cp(path.join(fixtureRoot, "refs"), project, { recursive: true });
     await mkdir(path.join(project, "docs"));
     await writeFile(
-      path.join(project, "specra.config.ts"),
+      path.join(project, "specistry.config.ts"),
       "export default { schemaVersion: 1, name: 'Refs', openapi: './root.yaml' };",
     );
     const result = await validateProject({ cwd: project });
@@ -448,9 +450,9 @@ components:
       ]),
     ).toEqual([["INGESTION_TIMEOUT", "source/openapi.yaml"]]);
     await expect(
-      lstat(path.join(project, ".specra", "artifacts")),
+      lstat(path.join(project, ".specistry", "artifacts")),
     ).rejects.toMatchObject({ code: "ENOENT" });
-    expect(await readdir(path.join(project, ".specra"))).toEqual([]);
+    expect(await readdir(path.join(project, ".specistry"))).toEqual([]);
 
     const aborter = new AbortController();
     const abortTimer = setTimeout(() => aborter.abort(), 300);
@@ -477,14 +479,14 @@ components:
     expect(cancelled.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
       "CANCELLED",
     ]);
-    expect(await readdir(path.join(project, ".specra"))).toEqual([]);
+    expect(await readdir(path.join(project, ".specistry"))).toEqual([]);
   }, 30_000);
 
   it("fails closed when the artifact path is a file or its parent is read-only", async () => {
     const project = await createProject(VALID);
-    const specra = path.join(project, ".specra");
-    await mkdir(specra);
-    await writeFile(path.join(specra, "artifacts"), "not a directory");
+    const specistry = path.join(project, ".specistry");
+    await mkdir(specistry);
+    await writeFile(path.join(specistry, "artifacts"), "not a directory");
     // A regular file at the artifact path is caught while the build context
     // is created, before any ingestion or write is attempted.
     const blocked = await buildProject({ cwd: project });
@@ -498,15 +500,15 @@ components:
       ok: false,
       outcome: "validation-failure",
     });
-    expect(await readFile(path.join(specra, "artifacts"), "utf8")).toBe(
+    expect(await readFile(path.join(specistry, "artifacts"), "utf8")).toBe(
       "not a directory",
     );
-    expect(await readdir(specra)).toEqual(["artifacts"]);
-    await rm(path.join(specra, "artifacts"));
+    expect(await readdir(specistry)).toEqual(["artifacts"]);
+    await rm(path.join(specistry, "artifacts"));
 
     expect((await buildProject({ cwd: project })).ok).toBe(true);
     const documentation = await readFile(
-      path.join(specra, "artifacts", "documentation.json"),
+      path.join(specistry, "artifacts", "documentation.json"),
       "utf8",
     );
     if (process.platform === "win32" || process.getuid?.() === 0) return;
@@ -514,7 +516,7 @@ components:
       path.join(project, "openapi.yaml"),
       VALID.replace("operationId: ping", "operationId: pong"),
     );
-    await chmod(specra, 0o500);
+    await chmod(specistry, 0o500);
     try {
       const readOnly = await buildProject({ cwd: project });
       expect(readOnly).toMatchObject({
@@ -525,15 +527,15 @@ components:
         ["ARTIFACT_WRITE_FAILED"],
       );
     } finally {
-      await chmod(specra, 0o700);
+      await chmod(specistry, 0o700);
     }
     expect(
       await readFile(
-        path.join(specra, "artifacts", "documentation.json"),
+        path.join(specistry, "artifacts", "documentation.json"),
         "utf8",
       ),
     ).toBe(documentation);
-    expect(await readdir(specra)).toEqual(["artifacts"]);
+    expect(await readdir(specistry)).toEqual(["artifacts"]);
   });
 
   it("keeps createBuildContext free of ingestion and honours cancellation", async () => {
@@ -631,20 +633,20 @@ async function invoke(
 
 async function createProject(
   openapi: string,
-  prefix = "specra-build-",
+  prefix = "specistry-build-",
 ): Promise<string> {
   const project = await makeTemporaryDirectory(prefix);
   await mkdir(path.join(project, "docs"));
   await writeFile(path.join(project, "openapi.yaml"), openapi);
   await writeFile(
-    path.join(project, "specra.config.ts"),
+    path.join(project, "specistry.config.ts"),
     "export default { schemaVersion: 1, name: 'Example', openapi: './openapi.yaml' };",
   );
   return project;
 }
 
 async function makeTemporaryDirectory(
-  prefix = "specra-build-",
+  prefix = "specistry-build-",
 ): Promise<string> {
   const directory = await mkdtemp(path.join(tmpdir(), prefix));
   temporaryDirectories.push(directory);

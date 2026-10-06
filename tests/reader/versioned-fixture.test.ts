@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
  * the store from the fixture's sources through the packaged CLI (build,
  * release, build, release, deprecate) and fails on any byte drift, proving
  * releases are deterministic and the fixture describes exactly what
- * `specra release` produces (SPEC-010 §102–§103).
+ * `specistry release` produces (SPEC-010 §102–§103).
  */
 
 const fixture = fileURLToPath(
@@ -49,7 +49,7 @@ async function files(directory: string, prefix = ""): Promise<string[]> {
 describe("versioned fixture", () => {
   it("keeps the committed release store identical to a fresh build-release-release run", async () => {
     const output = await mkdtemp(
-      path.join(tmpdir(), "specra-versioned-drift-"),
+      path.join(tmpdir(), "specistry-versioned-drift-"),
     );
     temporary.push(output);
     const result = spawnSync(process.execPath, [script, fixture, output], {
@@ -57,8 +57,8 @@ describe("versioned fixture", () => {
       timeout: 180_000,
     });
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
-    const committed = path.join(fixture, ".specra");
-    const fresh = path.join(output, ".specra");
+    const committed = path.join(fixture, ".specistry");
+    const fresh = path.join(output, ".specistry");
     const committedFiles = await files(committed);
     expect(await files(fresh)).toEqual(committedFiles);
     for (const file of committedFiles) {

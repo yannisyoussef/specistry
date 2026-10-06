@@ -5,7 +5,7 @@ import type {
   Operation,
   Parameter,
   SchemaNode,
-} from "@specra/model";
+} from "@specistry/model";
 import {
   exampleFor,
   isSensitiveName,
@@ -15,7 +15,7 @@ import {
   type AuthSchemeKind,
   type BodyProjection,
   type RequestProjection,
-} from "@specra/snippets";
+} from "@specistry/snippets";
 
 import {
   isForbiddenRequestHeader,

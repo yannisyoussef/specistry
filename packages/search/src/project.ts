@@ -5,13 +5,13 @@ import {
   type ContentPage,
   type InlineNode,
   type NavigationArtifact,
-} from "@specra/content";
+} from "@specistry/content";
 import type {
   ApiService,
   DocumentationArtifact,
   Operation,
   SchemaNode,
-} from "@specra/model";
+} from "@specistry/model";
 
 import { boundedText } from "./tokenize.js";
 import {

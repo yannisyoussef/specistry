@@ -13,7 +13,7 @@ import {
   type ServerDefinition,
   type ServerId,
   type ServiceId,
-} from "@specra/model";
+} from "@specistry/model";
 
 import type { DiagnosticSink, SourceLocation } from "../diagnostics.js";
 import { resolveReference, type DocumentGraph } from "../documents.js";

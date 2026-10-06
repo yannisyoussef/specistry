@@ -13,7 +13,7 @@ COPY packages/playground/package.json packages/playground/package.json
 COPY packages/release/package.json packages/release/package.json
 COPY packages/search/package.json packages/search/package.json
 COPY packages/snippets/package.json packages/snippets/package.json
-RUN pnpm install --frozen-lockfile --filter @specra/web...
+RUN pnpm install --frozen-lockfile --filter @specistry/web...
 
 COPY apps/web apps/web
 COPY packages/config packages/config
@@ -27,14 +27,14 @@ COPY scripts/clean-package-dist.mjs scripts/clean-package-dist.mjs
 # The image is consumer-neutral: compile the reader without baking a project
 # artifact into the image. Runtime readiness validates the externally mounted
 # candidate or release store before the instance receives traffic.
-RUN pnpm --filter '@specra/web^...' run build && \
-    NEXT_TELEMETRY_DISABLED=1 pnpm --filter @specra/web exec next build
+RUN pnpm --filter '@specistry/web^...' run build && \
+    NEXT_TELEMETRY_DISABLED=1 pnpm --filter @specistry/web exec next build
 
 FROM node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS reader
 ENV HOSTNAME=0.0.0.0 \
     NODE_ENV=production \
     PORT=3000 \
-    SPECRA_PROJECT_ROOT=/data/project
+    SPECISTRY_PROJECT_ROOT=/data/project
 WORKDIR /app
 COPY --from=build --chown=node:node /workspace/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /workspace/apps/web/.next/static ./apps/web/.next/static

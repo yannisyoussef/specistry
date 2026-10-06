@@ -7,8 +7,8 @@ import type {
   Parameter,
   Response,
   SchemaNode,
-} from "@specra/model";
-import { selectVersion } from "@specra/content";
+} from "@specistry/model";
+import { selectVersion } from "@specistry/content";
 
 import { sortKeys } from "./manifest.js";
 

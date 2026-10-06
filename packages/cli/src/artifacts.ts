@@ -6,19 +6,19 @@ import {
   ARTIFACT_ASSETS_DIRECTORY,
   ARTIFACT_CONTENT_FILENAME,
   ARTIFACT_NAVIGATION_FILENAME,
-} from "@specra/content";
+} from "@specistry/content";
 import {
   SEARCH_ARTIFACT_FILENAME,
   SEARCH_FORMAT_VERSION,
-} from "@specra/search";
+} from "@specistry/search";
 import {
   PLAYGROUND_ARTIFACT_FILENAME,
   PLAYGROUND_FORMAT_VERSION,
-} from "@specra/playground";
+} from "@specistry/playground";
 import {
   SNIPPETS_ARTIFACT_FILENAME,
   SNIPPETS_FORMAT_VERSION,
-} from "@specra/snippets";
+} from "@specistry/snippets";
 import {
   ARTIFACT_DOCUMENTATION_FILENAME,
   ARTIFACT_MANIFEST_FILENAME,
@@ -27,7 +27,7 @@ import {
   serializeArtifactManifest,
   type ArtifactBranding,
   type ArtifactManifest,
-} from "@specra/model";
+} from "@specistry/model";
 
 import {
   ARTIFACT_DIRECTORY,
@@ -76,7 +76,7 @@ export type ArtifactWriteResult =
 
 /**
  * Writes the canonical artifact atomically: files are staged in a sibling
- * directory under `.specra`, the previous artifact directory (if any) is moved
+ * directory under `.specistry`, the previous artifact directory (if any) is moved
  * aside, the staged directory is renamed into place, and the old one is
  * removed. Confinement is revalidated immediately before touching the
  * filesystem, and an existing `artifacts` entry that is a symlink fails
@@ -315,7 +315,7 @@ function renderManifest(request: ArtifactWriteRequest): string {
       sha256: createHash("sha256").update(request.snippets.json).digest("hex"),
       version: SNIPPETS_FORMAT_VERSION,
     },
-    generator: "specra",
+    generator: "specistry",
     modelVersion: DOCUMENT_MODEL_VERSION,
     project: { id: request.project.id, name: request.project.name },
     sources,

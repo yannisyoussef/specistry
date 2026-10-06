@@ -1,15 +1,15 @@
 {
-  "name": "@specra/cli",
-  "version": "0.1.0-rc.2",
+  "name": "@specistry/cli",
+  "version": "0.1.0-rc.3",
   "private": true,
-  "description": "Build and operate self-hosted developer documentation",
-  "homepage": "https://github.com/yannisyoussef/specra#readme",
+  "description": "Specistry turns specifications and authored content into structured, searchable developer documentation.",
+  "homepage": "https://github.com/yannisyoussef/specistry#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yannisyoussef/specra.git"
+    "url": "git+https://github.com/yannisyoussef/specistry.git"
   },
   "bugs": {
-    "url": "https://github.com/yannisyoussef/specra/issues"
+    "url": "https://github.com/yannisyoussef/specistry/issues"
   },
   "license": "BUSL-1.1",
   "type": "module",
@@ -17,18 +17,18 @@
     "node": ">=24.20.0 <25"
   },
   "bin": {
-    "specra": "./dist/bin.js"
+    "specistry": "./dist/bin.js"
   },
   "bundleDependencies": [
-    "@specra/config",
-    "@specra/content",
-    "@specra/model",
-    "@specra/openapi",
-    "@specra/playground",
-    "@specra/quality",
-    "@specra/release",
-    "@specra/search",
-    "@specra/snippets",
+    "@specistry/config",
+    "@specistry/content",
+    "@specistry/model",
+    "@specistry/openapi",
+    "@specistry/playground",
+    "@specistry/quality",
+    "@specistry/release",
+    "@specistry/search",
+    "@specistry/snippets",
     "zod"
   ],
   "exports": {
@@ -51,15 +51,15 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@specra/config": "workspace:*",
-    "@specra/content": "workspace:*",
-    "@specra/model": "workspace:*",
-    "@specra/openapi": "workspace:*",
-    "@specra/playground": "workspace:*",
-    "@specra/quality": "workspace:*",
-    "@specra/release": "workspace:*",
-    "@specra/search": "workspace:*",
-    "@specra/snippets": "workspace:*",
+    "@specistry/config": "workspace:*",
+    "@specistry/content": "workspace:*",
+    "@specistry/model": "workspace:*",
+    "@specistry/openapi": "workspace:*",
+    "@specistry/playground": "workspace:*",
+    "@specistry/quality": "workspace:*",
+    "@specistry/release": "workspace:*",
+    "@specistry/search": "workspace:*",
+    "@specistry/snippets": "workspace:*",
     "zod": "4.5.4"
   },
   "devDependencies": {

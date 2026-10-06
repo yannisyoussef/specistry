@@ -8,9 +8,9 @@ import path from "node:path";
 import {
   parseDocumentationArtifact,
   type DocumentationArtifact,
-} from "@specra/model";
-import { parsePlaygroundArtifact } from "@specra/playground";
-import { parseSnippetsArtifact } from "@specra/snippets";
+} from "@specistry/model";
+import { parsePlaygroundArtifact } from "@specistry/playground";
+import { parseSnippetsArtifact } from "@specistry/snippets";
 import {
   act,
   cleanup,
@@ -65,7 +65,7 @@ const directory = path.join(
   "fixtures",
   "reader",
   "testinbox",
-  ".specra",
+  ".specistry",
   "artifacts",
 );
 const artifact: DocumentationArtifact = parseDocumentationArtifact(
@@ -161,7 +161,7 @@ describe("playground view", () => {
       {
         label: "X-Api-Key header + Client certificate (mTLS)",
         reason:
-          "This operation requires a client certificate (mutual TLS) that the Specra playground does not manage.",
+          "This operation requires a client certificate (mutual TLS) that the Specistry playground does not manage.",
       },
     ]);
   });
@@ -359,9 +359,9 @@ describe("Try it island", () => {
     fireEvent.change(screen.getByLabelText("Environment"), {
       target: { value: "strict" },
     });
-    expect(window.sessionStorage.getItem("specra:playground-environment")).toBe(
-      "strict",
-    );
+    expect(
+      window.sessionStorage.getItem("specistry:playground-environment"),
+    ).toBe("strict");
     expect(container.querySelector(".try-it__response")).toBeNull();
     expect(
       (screen.getByLabelText("X-Api-Key header") as HTMLInputElement).value,
@@ -382,14 +382,14 @@ describe("Try it island", () => {
   });
 
   it("restores a remembered environment and ignores an unknown one", () => {
-    window.sessionStorage.setItem("specra:playground-environment", "strict");
+    window.sessionStorage.setItem("specistry:playground-environment", "strict");
     const first = render(<TryIt view={viewFor(["inboxes", "get-inbox"])} />);
     expect(
       (screen.getByLabelText("Environment") as HTMLSelectElement).value,
     ).toBe("strict");
     first.unmount();
     window.sessionStorage.setItem(
-      "specra:playground-environment",
+      "specistry:playground-environment",
       "production",
     );
     render(<TryIt view={viewFor(["inboxes", "get-inbox"])} />);

@@ -32,19 +32,28 @@ const cliDirectory = path.join(repositoryRoot, "packages", "cli");
 const cliManifest = JSON.parse(
   await readFile(path.join(cliDirectory, "package.json"), "utf8"),
 );
+if (
+  cliManifest.name !== "@specistry/cli" ||
+  cliManifest.private !== true ||
+  cliManifest.bin?.specistry !== "./dist/bin.js" ||
+  Object.keys(cliManifest.bin).length !== 1
+)
+  throw new Error(
+    "Source CLI identity or accidental-publication guard drifted.",
+  );
 // The staged tree is assembled explicitly rather than by copying whatever
 // `node_modules` contains. When the CLI gains a dependency, extend this script
 // and the clean-room bundled-dependency assertion together.
 const stagedDependencies = [
-  "@specra/config",
-  "@specra/content",
-  "@specra/model",
-  "@specra/openapi",
-  "@specra/playground",
-  "@specra/quality",
-  "@specra/release",
-  "@specra/search",
-  "@specra/snippets",
+  "@specistry/config",
+  "@specistry/content",
+  "@specistry/model",
+  "@specistry/openapi",
+  "@specistry/playground",
+  "@specistry/quality",
+  "@specistry/release",
+  "@specistry/search",
+  "@specistry/snippets",
   "zod",
 ];
 const declaredDependencies = Object.keys(cliManifest.dependencies ?? {}).sort();
@@ -88,6 +97,17 @@ const manifests = Object.fromEntries(
     ]),
   ),
 );
+for (const name of workspacePackages) {
+  if (
+    manifests[name].name !== `@specistry/${name}` ||
+    manifests[name].private !== true ||
+    manifests[name].version !== cliManifest.version ||
+    manifests[name].license !== cliManifest.license
+  )
+    throw new Error(
+      "Internal workspace identity or private-package guard drifted.",
+    );
+}
 
 await mkdir(destination);
 await cp(path.join(cliDirectory, "dist"), path.join(destination, "dist"), {
@@ -108,7 +128,7 @@ await cp(
 );
 await cp(path.join(repositoryRoot, "NOTICE"), path.join(destination, "NOTICE"));
 for (const name of workspacePackages) {
-  const target = path.join(destination, "node_modules", "@specra", name);
+  const target = path.join(destination, "node_modules", "@specistry", name);
   await mkdir(target, { recursive: true });
   await cp(
     path.join(repositoryRoot, "packages", name, "dist"),
@@ -136,7 +156,7 @@ const closureOrigins = new Map();
 for (const owner of ["content", "search"]) {
   const ownerDirectory = path.join(repositoryRoot, "packages", owner);
   for (const name of Object.keys(manifests[owner].dependencies ?? {})) {
-    if (name.startsWith("@specra/") || closureOrigins.has(name)) continue;
+    if (name.startsWith("@specistry/") || closureOrigins.has(name)) continue;
     closureOrigins.set(name, ownerDirectory);
     pendingClosure.push(name);
   }
@@ -226,7 +246,9 @@ async function findPackageDirectory(fromDirectory, name) {
 const stagedCliManifest = {
   name: cliManifest.name,
   version: cliManifest.version,
-  private: cliManifest.private,
+  // Only this generated, explicitly assembled artifact may be published.
+  private: false,
+  publishConfig: { access: "public", registry: "https://registry.npmjs.org" },
   license: cliManifest.license,
   description: cliManifest.description,
   homepage: cliManifest.homepage,
@@ -241,15 +263,15 @@ const stagedCliManifest = {
   exports: cliManifest.exports,
   files: cliManifest.files,
   dependencies: {
-    "@specra/config": manifests.config.version,
-    "@specra/content": manifests.content.version,
-    "@specra/model": manifests.model.version,
-    "@specra/openapi": manifests.openapi.version,
-    "@specra/playground": manifests.playground.version,
-    "@specra/quality": manifests.quality.version,
-    "@specra/release": manifests.release.version,
-    "@specra/search": manifests.search.version,
-    "@specra/snippets": manifests.snippets.version,
+    "@specistry/config": manifests.config.version,
+    "@specistry/content": manifests.content.version,
+    "@specistry/model": manifests.model.version,
+    "@specistry/openapi": manifests.openapi.version,
+    "@specistry/playground": manifests.playground.version,
+    "@specistry/quality": manifests.quality.version,
+    "@specistry/release": manifests.release.version,
+    "@specistry/search": manifests.search.version,
+    "@specistry/snippets": manifests.snippets.version,
     zod: cliManifest.dependencies.zod,
   },
 };
@@ -259,7 +281,7 @@ const stagedWorkspaceManifest = (name) => {
     Object.entries(manifest.dependencies ?? {}).map(([dependency, range]) => [
       dependency,
       range === "workspace:*"
-        ? manifests[dependency.replace("@specra/", "")].version
+        ? manifests[dependency.replace("@specistry/", "")].version
         : range,
     ]),
   );
@@ -281,7 +303,13 @@ await Promise.all([
   ),
   ...workspacePackages.map((name) =>
     writeFile(
-      path.join(destination, "node_modules", "@specra", name, "package.json"),
+      path.join(
+        destination,
+        "node_modules",
+        "@specistry",
+        name,
+        "package.json",
+      ),
       `${JSON.stringify(stagedWorkspaceManifest(name), null, 2)}\n`,
     ),
   ),

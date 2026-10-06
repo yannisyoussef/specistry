@@ -3,19 +3,19 @@ import {
   buildApiRouteTree,
   UNTAGGED_GROUP_NAME,
   UNTAGGED_GROUP_SLUG,
-} from "@specra/content";
+} from "@specistry/content";
 import type {
   ApiService,
   DocumentationArtifact,
   DocumentationVersion,
   HttpMethod,
   Operation,
-} from "@specra/model";
+} from "@specistry/model";
 
 /**
  * Reader projection: the route identity and navigation grouping derived once
  * from a canonical artifact. Route identity (slugs, hrefs, group order) comes
- * from the shared route tree in `@specra/content` so authored links and the
+ * from the shared route tree in `@specistry/content` so authored links and the
  * reader agree; this module adds the presentation data the shell and pages
  * need (names, descriptions, operation summaries). Deterministic for a given
  * artifact.

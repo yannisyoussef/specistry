@@ -7,7 +7,7 @@ import { routeOf } from "./slug.js";
 import type { ContentPage, NavigationNode } from "./types.js";
 
 /**
- * Configured navigation. The consumer's `specra.config.ts` lists pages by
+ * Configured navigation. The consumer's `specistry.config.ts` lists pages by
  * slug in the order and hierarchy readers should see; the build validates it
  * against the compiled pages and resolves labels, producing a navigation
  * artifact that describes structure only (no runtime state). Without a

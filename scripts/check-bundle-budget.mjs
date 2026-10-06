@@ -151,7 +151,7 @@ export function measure(route = OPERATION_ROUTE) {
     ...(build.lowPriorityFiles ?? []),
   ].map((file) => `/_next/${file}`);
   // Polyfills are referenced with `nomodule` and never downloaded by the
-  // browsers Specra supports; they are reported but not budgeted.
+  // browsers Specistry supports; they are reported but not budgeted.
   const polyfills = (build.polyfillFiles ?? []).map((file) => `/_next/${file}`);
   const routeChunks = routeClientChunks(route).filter(
     (chunk) => !bootstrap.includes(chunk) && !polyfills.includes(chunk),

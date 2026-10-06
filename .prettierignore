@@ -9,7 +9,7 @@ tests/fixtures/openapi/adversarial/malformed.yaml
 .agent
 prompts
 # Canonical artifacts are byte-exact CLI output, never reformatted.
-tests/fixtures/reader/*/.specra/
+tests/fixtures/reader/*/.specistry/
 # Performance evidence is written by the perf suite with JSON.stringify, which
 # does not collapse short arrays the way Prettier does; reformatting it would
 # make every perf run dirty the working tree.

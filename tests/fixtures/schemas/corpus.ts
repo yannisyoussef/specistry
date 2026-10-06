@@ -1,4 +1,4 @@
-import type { ApiService, SchemaId, SchemaNode } from "@specra/model";
+import type { ApiService, SchemaId, SchemaNode } from "@specistry/model";
 
 /**
  * Canonical schema corpus for the SPEC-005 renderer (prompt §70). Every entry

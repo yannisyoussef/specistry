@@ -1,6 +1,6 @@
 {
-  "name": "@specra/web",
-  "version": "0.1.0-rc.2",
+  "name": "@specistry/web",
+  "version": "0.1.0-rc.3",
   "private": true,
   "license": "BUSL-1.1",
   "scripts": {
@@ -13,12 +13,12 @@
     "@fontsource-variable/ibm-plex-sans": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.3.0",
     "@fontsource-variable/space-grotesk": "5.3.0",
-    "@specra/content": "workspace:*",
-    "@specra/model": "workspace:*",
-    "@specra/playground": "workspace:*",
-    "@specra/release": "workspace:*",
-    "@specra/search": "workspace:*",
-    "@specra/snippets": "workspace:*",
+    "@specistry/content": "workspace:*",
+    "@specistry/model": "workspace:*",
+    "@specistry/playground": "workspace:*",
+    "@specistry/release": "workspace:*",
+    "@specistry/search": "workspace:*",
+    "@specistry/snippets": "workspace:*",
     "next": "16.3.6",
     "react": "19.2.8",
     "react-dom": "19.2.8"

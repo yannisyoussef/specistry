@@ -329,7 +329,7 @@ function valueNote(
         ? "The reference could not be resolved; see the build diagnostics."
         : view.reason === "invalid"
           ? "The source schema is invalid; see the build diagnostics."
-          : "This schema uses vocabulary Specra does not represent yet; see the build diagnostics.";
+          : "This schema uses vocabulary Specistry does not represent yet; see the build diagnostics.";
     default:
       return undefined;
   }

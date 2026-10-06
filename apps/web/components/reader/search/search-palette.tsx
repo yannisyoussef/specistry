@@ -7,7 +7,7 @@ import {
   type SearchDocument,
   type SearchHit,
   type TextSegment,
-} from "@specra/search/client";
+} from "@specistry/search/client";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { SearchIcon } from "./search-trigger";

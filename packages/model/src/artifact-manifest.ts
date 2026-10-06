@@ -71,7 +71,7 @@ export interface ArtifactBranding {
 export interface ArtifactManifest {
   readonly artifactFormat: typeof ARTIFACT_MANIFEST_FORMAT;
   readonly modelVersion: typeof DOCUMENT_MODEL_VERSION;
-  readonly generator: "specra";
+  readonly generator: "specistry";
   readonly project: { readonly id: string; readonly name: string };
   readonly files: {
     readonly documentation: typeof ARTIFACT_DOCUMENTATION_FILENAME;
@@ -119,7 +119,7 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
   if (
     value.artifactFormat !== ARTIFACT_MANIFEST_FORMAT ||
     value.modelVersion !== DOCUMENT_MODEL_VERSION ||
-    value.generator !== "specra"
+    value.generator !== "specistry"
   ) {
     throw new TypeError(
       "Artifact manifest format or model version is unsupported.",
@@ -364,7 +364,7 @@ export function parseArtifactManifest(text: string): ArtifactManifest {
         ? {}
         : { playground: value.files.playground as string }),
     },
-    generator: "specra",
+    generator: "specistry",
     modelVersion: DOCUMENT_MODEL_VERSION,
     project: { id: value.project.id, name: value.project.name },
     ...(search === undefined ? {} : { search }),

@@ -10,12 +10,12 @@ import { resetReaderArtifactCache } from "../../apps/web/lib/reader/artifact";
 import { resetReleaseCaches } from "../../apps/web/lib/reader/release";
 
 const fixture = path.resolve("tests/fixtures/reader/testinbox");
-const previousRoot = process.env.SPECRA_PROJECT_ROOT;
+const previousRoot = process.env.SPECISTRY_PROJECT_ROOT;
 const temporary: string[] = [];
 
 afterEach(async () => {
-  if (previousRoot === undefined) delete process.env.SPECRA_PROJECT_ROOT;
-  else process.env.SPECRA_PROJECT_ROOT = previousRoot;
+  if (previousRoot === undefined) delete process.env.SPECISTRY_PROJECT_ROOT;
+  else process.env.SPECISTRY_PROJECT_ROOT = previousRoot;
   resetReaderArtifactCache();
   resetReleaseCaches();
   await Promise.all(
@@ -34,7 +34,7 @@ describe("reader health", () => {
   });
 
   it("proves the configured artifact set is readable", async () => {
-    process.env.SPECRA_PROJECT_ROOT = fixture;
+    process.env.SPECISTRY_PROJECT_ROOT = fixture;
     const response = await ready();
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
@@ -46,9 +46,9 @@ describe("reader health", () => {
   });
 
   it("fails closed without exposing the invalid path", async () => {
-    const missing = await mkdtemp(path.join(tmpdir(), "specra-ready-"));
+    const missing = await mkdtemp(path.join(tmpdir(), "specistry-ready-"));
     temporary.push(missing);
-    process.env.SPECRA_PROJECT_ROOT = missing;
+    process.env.SPECISTRY_PROJECT_ROOT = missing;
     const response = await ready();
     expect(response.status).toBe(503);
     expect(await response.text()).toBe('{"status":"not-ready"}');

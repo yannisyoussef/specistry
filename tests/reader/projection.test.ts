@@ -6,7 +6,7 @@ import {
   parseDocumentationArtifact,
   type DocumentationArtifact,
   type Operation,
-} from "@specra/model";
+} from "@specistry/model";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -46,7 +46,7 @@ function loadArtifact(name: string): DocumentationArtifact {
       path.join(
         fixtureRoot,
         name,
-        ".specra",
+        ".specistry",
         "artifacts",
         "documentation.json",
       ),
@@ -655,19 +655,21 @@ describe("metadata", () => {
   it("derives the site origin only from trusted absolute http(s) values", () => {
     expect(siteUrl(index, {})).toBeUndefined();
     expect(
-      siteUrl(index, { SPECRA_SITE_URL: "https://docs.example.test" })?.href,
+      siteUrl(index, { SPECISTRY_SITE_URL: "https://docs.example.test" })?.href,
     ).toBe("https://docs.example.test/");
     // Only an origin is accepted: paths, queries, and credentials are rejected.
     expect(
-      siteUrl(index, { SPECRA_SITE_URL: "https://docs.example.test/base" }),
+      siteUrl(index, { SPECISTRY_SITE_URL: "https://docs.example.test/base" }),
     ).toBeUndefined();
     expect(
-      siteUrl(index, { SPECRA_SITE_URL: "https://user:pw@docs.example.test" }),
+      siteUrl(index, {
+        SPECISTRY_SITE_URL: "https://user:pw@docs.example.test",
+      }),
     ).toBeUndefined();
     expect(
-      siteUrl(index, { SPECRA_SITE_URL: "javascript:alert(1)" }),
+      siteUrl(index, { SPECISTRY_SITE_URL: "javascript:alert(1)" }),
     ).toBeUndefined();
-    expect(siteUrl(index, { SPECRA_SITE_URL: "not a url" })).toBeUndefined();
+    expect(siteUrl(index, { SPECISTRY_SITE_URL: "not a url" })).toBeUndefined();
   });
 });
 

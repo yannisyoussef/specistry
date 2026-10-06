@@ -1,4 +1,8 @@
-import type { ServerDefinition, ServerId, ServerVariable } from "@specra/model";
+import type {
+  ServerDefinition,
+  ServerId,
+  ServerVariable,
+} from "@specistry/model";
 
 import type { SourceLocation } from "../diagnostics.js";
 import { stableHash } from "../identity.js";

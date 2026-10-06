@@ -11,7 +11,7 @@ const executable = path.join(packageDirectory, "dist", "bin.js");
 const source = await readFile(executable, "utf8");
 if (!source.startsWith("#!/usr/bin/env node\n")) {
   throw new Error(
-    "The compiled Specra executable is missing its Node shebang.",
+    "The compiled Specistry executable is missing its Node shebang.",
   );
 }
 await chmod(executable, 0o755);

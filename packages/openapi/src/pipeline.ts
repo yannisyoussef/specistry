@@ -10,7 +10,7 @@ import {
   type ModelLimits,
   type ProjectId,
   type ServiceId,
-} from "@specra/model";
+} from "@specistry/model";
 
 import type { SourceAcquisition } from "./acquisition.js";
 import {

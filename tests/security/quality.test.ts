@@ -8,13 +8,16 @@ import {
   RULE_IDS,
   RULES,
   serializeEvaluation,
-} from "@specra/quality";
-import { parseContentArtifact, parseNavigationArtifact } from "@specra/content";
+} from "@specistry/quality";
+import {
+  parseContentArtifact,
+  parseNavigationArtifact,
+} from "@specistry/content";
 import {
   parseDocumentationArtifact,
   serializeDocumentationArtifact,
   type DocumentationArtifact,
-} from "@specra/model";
+} from "@specistry/model";
 import { describe, expect, it } from "vitest";
 
 import { formatHumanResult } from "../../packages/cli/src/presentation";
@@ -33,7 +36,7 @@ const NOW = new Date("2026-09-07T00:00:00Z");
 function artifact(name: string): DocumentationArtifact {
   return parseDocumentationArtifact(
     readFileSync(
-      path.join(fixtures, name, ".specra/artifacts/documentation.json"),
+      path.join(fixtures, name, ".specistry/artifacts/documentation.json"),
       "utf8",
     ),
   );
@@ -183,13 +186,13 @@ describe("value and secret safety", () => {
   it("reports no machine path for an authored finding", () => {
     const content = parseContentArtifact(
       readFileSync(
-        path.join(fixtures, "testinbox/.specra/artifacts/content.json"),
+        path.join(fixtures, "testinbox/.specistry/artifacts/content.json"),
         "utf8",
       ),
     );
     const navigation = parseNavigationArtifact(
       readFileSync(
-        path.join(fixtures, "testinbox/.specra/artifacts/navigation.json"),
+        path.join(fixtures, "testinbox/.specistry/artifacts/navigation.json"),
         "utf8",
       ),
     );
@@ -312,7 +315,7 @@ describe("no dynamic behaviour", () => {
     for (const directory of ["apps/web/app", "apps/web/lib"]) {
       for (const file of walk(path.join(root, directory))) {
         expect(readFileSync(file, "utf8"), file).not.toContain(
-          "@specra/quality",
+          "@specistry/quality",
         );
       }
     }
@@ -320,7 +323,7 @@ describe("no dynamic behaviour", () => {
       readFileSync(path.join(root, "apps/web/package.json"), "utf8"),
     ) as { dependencies?: Record<string, string> };
     expect(Object.keys(manifest.dependencies ?? {})).not.toContain(
-      "@specra/quality",
+      "@specistry/quality",
     );
   });
 });

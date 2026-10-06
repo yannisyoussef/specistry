@@ -6,8 +6,8 @@ import path from "node:path";
 import {
   parseDocumentationArtifact,
   type DocumentationArtifact,
-} from "@specra/model";
-import { parseSnippetsArtifact } from "@specra/snippets";
+} from "@specistry/model";
+import { parseSnippetsArtifact } from "@specistry/snippets";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -46,7 +46,7 @@ function load(name: string): {
   artifact: DocumentationArtifact;
   snippets: ReaderSnippets;
 } {
-  const directory = path.join(fixtureRoot, name, ".specra", "artifacts");
+  const directory = path.join(fixtureRoot, name, ".specistry", "artifacts");
   const snippetsText = readFileSync(
     path.join(directory, "snippets.json"),
     "utf8",
@@ -295,7 +295,7 @@ describe("code rail", () => {
     });
     expect(screen.getByRole("group", { name: "Python example" })).toBeDefined();
     expect(screen.queryByRole("group", { name: "cURL example" })).toBeNull();
-    expect(window.sessionStorage.getItem("specra:code-language")).toBe(
+    expect(window.sessionStorage.getItem("specistry:code-language")).toBe(
       "python",
     );
   });

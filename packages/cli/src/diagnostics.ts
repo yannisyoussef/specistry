@@ -3,14 +3,14 @@ import {
   contentSeverity,
   type ContentDiagnostic,
   type ContentDiagnosticCode,
-} from "@specra/content";
-import { QUALITY_MESSAGES } from "@specra/quality";
+} from "@specistry/content";
+import { QUALITY_MESSAGES } from "@specistry/quality";
 import {
   SOURCE_DIAGNOSTIC_MESSAGES,
   SOURCE_DIAGNOSTIC_SEVERITY,
   comparePointers,
   escapeSegment,
-} from "@specra/openapi";
+} from "@specistry/openapi";
 
 import type {
   Diagnostic,
@@ -46,7 +46,7 @@ const messages: Readonly<Record<DiagnosticCode, string>> = {
   CATALOG_INVALID:
     "The release catalog is corrupt or unsupported; restore it from backup.",
   CANDIDATE_MISSING:
-    "No candidate artifact was found; run `specra build` before releasing.",
+    "No candidate artifact was found; run `specistry build` before releasing.",
   CANDIDATE_INVALID:
     "The candidate artifact does not match its manifest; rebuild it before releasing.",
   RELEASE_MANIFEST_INVALID:
@@ -74,7 +74,7 @@ const messages: Readonly<Record<DiagnosticCode, string>> = {
   CHANGELOG_CANDIDATE_UNKNOWN:
     "The changelog references a diff candidate that does not exist.",
   CHANGELOG_CANDIDATE_UNREVIEWED:
-    "A structured diff candidate is neither described by a changelog item nor listed as omitted; review .specra/candidates/diff.json and write changelog/<version>.json.",
+    "A structured diff candidate is neither described by a changelog item nor listed as omitted; review .specistry/candidates/diff.json and write changelog/<version>.json.",
   CHANGELOG_INVALID:
     "The changelog source does not match the changelog contract.",
   CHANGELOG_OPERATION_NOT_FOUND:
@@ -103,7 +103,8 @@ const messages: Readonly<Record<DiagnosticCode, string>> = {
   CANCELLED: "The command was cancelled.",
   CONFIG_INVALID: "The configuration does not match schema version 1.",
   CONFIG_LOAD_FAILED: "The trusted configuration could not be evaluated.",
-  CONFIG_NOT_FOUND: "No specra.config.ts file was found at the project root.",
+  CONFIG_NOT_FOUND:
+    "No specistry.config.ts file was found at the project root.",
   CONFIG_NOT_SERIALIZABLE:
     "The configuration must contain only bounded JSON-serializable data.",
   CONFIG_PATH_INVALID:
@@ -117,7 +118,7 @@ const messages: Readonly<Record<DiagnosticCode, string>> = {
     "The OpenAPI ingestion process failed, crashed, or returned an unusable result.",
   INGESTION_TIMEOUT: "OpenAPI ingestion exceeded the allowed time.",
   INTERNAL_ERROR:
-    "Specra could not complete the command due to an internal error.",
+    "Specistry could not complete the command due to an internal error.",
   PROJECT_ROOT_INVALID:
     "The project root must resolve to an accessible directory.",
 };

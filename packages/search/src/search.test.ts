@@ -1,8 +1,11 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { parseContentArtifact, parseNavigationArtifact } from "@specra/content";
-import { parseDocumentationArtifact } from "@specra/model";
+import {
+  parseContentArtifact,
+  parseNavigationArtifact,
+} from "@specistry/content";
+import { parseDocumentationArtifact } from "@specistry/model";
 import { describe, expect, it } from "vitest";
 
 import { parseSearchArtifact, serializeSearchArtifact } from "./artifact.js";
@@ -30,7 +33,7 @@ const fixture = path.join(
   "fixtures",
   "reader",
   "testinbox",
-  ".specra",
+  ".specistry",
   "artifacts",
 );
 const read = (name: string) => readFileSync(path.join(fixture, name), "utf8");
@@ -222,7 +225,7 @@ describe("projection", () => {
           "..",
           "..",
           "multi",
-          ".specra",
+          ".specistry",
           "artifacts",
           "documentation.json",
         ),

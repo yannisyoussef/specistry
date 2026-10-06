@@ -12,10 +12,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseArtifactManifest } from "@specra/model";
-import { parseSearchArtifact } from "@specra/search";
-import { createSearchClient } from "@specra/search/client";
-import { parseSnippetsArtifact } from "@specra/snippets";
+import { parseArtifactManifest } from "@specistry/model";
+import { parseSearchArtifact } from "@specistry/search";
+import { createSearchClient } from "@specistry/search/client";
+import { parseSnippetsArtifact } from "@specistry/snippets";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildProject, validateProject } from "../../packages/cli/src/index";
@@ -44,12 +44,12 @@ afterEach(async () => {
 
 async function copyFixture(name: string): Promise<string> {
   const parent = await realpath(
-    await mkdtemp(path.join(tmpdir(), "specra-snippets-")),
+    await mkdtemp(path.join(tmpdir(), "specistry-snippets-")),
   );
   temporary.push(parent);
   const project = path.join(parent, name);
   await cp(path.join(fixtureRoot, name), project, {
-    filter: (entry) => !entry.includes(`${path.sep}.specra`),
+    filter: (entry) => !entry.includes(`${path.sep}.specistry`),
     recursive: true,
   });
   return project;
@@ -76,12 +76,12 @@ async function writeConfig(
   openapi = MULTI_OPENAPI,
 ): Promise<void> {
   await writeFile(
-    path.join(project, "specra.config.ts"),
+    path.join(project, "specistry.config.ts"),
     `export default { schemaVersion: 1, name: "Mapped", openapi: ${openapi}, sdks: ${sdks} };`,
   );
 }
 
-describe("specra build with code samples and SDK mappings", () => {
+describe("specistry build with code samples and SDK mappings", () => {
   it("writes snippets.json with projections, environments, and highlighted SDK examples", async () => {
     const project = await copyFixture("testinbox");
     const result = await buildProject({ cwd: project });
@@ -89,7 +89,7 @@ describe("specra build with code samples and SDK mappings", () => {
     if (!result.ok) return;
     expect(result.snippets).toEqual({ operations: 25, sdkExamples: 5 });
     expect(result.artifacts.files).toContain("snippets.json");
-    const artifacts = path.join(project, ".specra", "artifacts");
+    const artifacts = path.join(project, ".specistry", "artifacts");
     const manifest = parseArtifactManifest(
       await readFile(path.join(artifacts, "manifest.json"), "utf8"),
     );
@@ -153,8 +153,12 @@ describe("specra build with code samples and SDK mappings", () => {
     expect((await buildProject({ cwd: first })).ok).toBe(true);
     expect((await buildProject({ cwd: second })).ok).toBe(true);
     for (const file of ["snippets.json", "search.json", "manifest.json"]) {
-      const a = await readFile(path.join(first, ".specra", "artifacts", file));
-      const b = await readFile(path.join(second, ".specra", "artifacts", file));
+      const a = await readFile(
+        path.join(first, ".specistry", "artifacts", file),
+      );
+      const b = await readFile(
+        path.join(second, ".specistry", "artifacts", file),
+      );
       expect(a.equals(b), file).toBe(true);
       expect(a.toString("latin1")).not.toContain(first);
     }
@@ -210,7 +214,7 @@ describe("specra build with code samples and SDK mappings", () => {
     const built = await buildProject({ cwd: project });
     expect(built.ok).toBe(false);
     await expect(
-      readFile(path.join(project, ".specra", "artifacts", "manifest.json")),
+      readFile(path.join(project, ".specistry", "artifacts", "manifest.json")),
     ).rejects.toMatchObject({
       code: "ENOENT",
     });
@@ -237,7 +241,7 @@ describe("specra build with code samples and SDK mappings", () => {
     ).toBe(true);
     const snippets = parseSnippetsArtifact(
       await readFile(
-        path.join(project, ".specra", "artifacts", "snippets.json"),
+        path.join(project, ".specistry", "artifacts", "snippets.json"),
         "utf8",
       ),
     );

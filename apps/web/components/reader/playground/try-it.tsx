@@ -13,7 +13,7 @@ import {
   type ParameterField,
   type PlaygroundResult,
   type ValidationError,
-} from "@specra/playground/client";
+} from "@specistry/playground/client";
 import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 
 import type { PlaygroundView } from "../../../lib/reader/playground-view";
@@ -29,7 +29,7 @@ import { CopyButton } from "../copy-button";
  * controller the timeout uses.
  */
 
-const ENVIRONMENT_KEY = "specra:playground-environment";
+const ENVIRONMENT_KEY = "specistry:playground-environment";
 
 type Phase =
   | { readonly kind: "idle" }
@@ -712,7 +712,7 @@ export default function TryIt({ view }: Readonly<{ view: PlaygroundView }>) {
       ) : null}
       <p className="code-rail__note">
         Requests go directly from your browser to the selected environment;
-        Specra does not proxy them, and credentials stay in this page&apos;s
+        Specistry does not proxy them, and credentials stay in this page&apos;s
         memory. Cancelling stops waiting for the response; it does not undo a
         request the API already received.
       </p>

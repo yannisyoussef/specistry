@@ -23,11 +23,11 @@ describe("runCli", () => {
     expect(rootHelp).toEqual(
       expect.objectContaining({ code: EXIT_CODES.success, stderr: "" }),
     );
-    expect(rootHelp.stdout).toContain("specra <command>");
+    expect(rootHelp.stdout).toContain("specistry <command>");
 
     const commandHelp = await invoke(["validate", "--help"]);
     expect(commandHelp.code).toBe(EXIT_CODES.success);
-    expect(commandHelp.stdout).toContain("specra validate [options]");
+    expect(commandHelp.stdout).toContain("specistry validate [options]");
 
     const usage = await invoke(["unknown"]);
     expect(usage.code).toBe(EXIT_CODES.usage);
@@ -101,14 +101,14 @@ async function createProject(): Promise<string> {
     "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n",
   );
   await writeFile(
-    path.join(project, "specra.config.ts"),
+    path.join(project, "specistry.config.ts"),
     "export default { schemaVersion: 1, name: 'Example', openapi: './openapi.yaml' };",
   );
   return project;
 }
 
 async function makeTemporaryDirectory(): Promise<string> {
-  const directory = await mkdtemp(path.join(tmpdir(), "specra-cli-unit-"));
+  const directory = await mkdtemp(path.join(tmpdir(), "specistry-cli-unit-"));
   temporaryDirectories.push(directory);
   return directory;
 }

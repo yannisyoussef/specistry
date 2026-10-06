@@ -25,15 +25,15 @@ afterEach(async () => {
   );
 });
 
-describe("packaged specra executable", () => {
+describe("packaged specistry executable", () => {
   it("does not leave the config host orphaned when the parent disappears", async () => {
     const project = await createProject();
     const host = spawn(
       process.execPath,
       [
         configHostPath,
-        import.meta.resolve("@specra/config"),
-        pathToFileURL(path.join(project, "specra.config.ts")).href,
+        import.meta.resolve("@specistry/config"),
+        pathToFileURL(path.join(project, "specistry.config.ts")).href,
       ],
       { stdio: ["ignore", "pipe", "pipe", "pipe"] },
     );
@@ -91,7 +91,7 @@ describe("packaged specra executable", () => {
     expect(command.stdout).toContain("--source-timeout");
     const build = run(["build", "--help"]);
     expect(build.status).toBe(EXIT_CODES.success);
-    expect(build.stdout).toContain("specra build [options]");
+    expect(build.stdout).toContain("specistry build [options]");
     expect(command.stderr).toBe("");
   });
 
@@ -100,8 +100,8 @@ describe("packaged specra executable", () => {
     const started = performance.now();
     const fromCwd = run(["validate"], project);
     expect(fromCwd.status).toBe(EXIT_CODES.success);
-    expect(fromCwd.stdout).toContain("Specra project is valid.");
-    expect(fromCwd.stdout).toContain("Artifacts: .specra/artifacts");
+    expect(fromCwd.stdout).toContain("Specistry project is valid.");
+    expect(fromCwd.stdout).toContain("Artifacts: .specistry/artifacts");
     expect(fromCwd.stderr).toBe("");
     expect(performance.now() - started).toBeLessThan(3_000);
 
@@ -111,7 +111,7 @@ describe("packaged specra executable", () => {
 
   it("keeps successful and failed JSON isolated on stdout", async () => {
     const valid = await createProject(
-      `import { defineConfig } from "@specra/config";
+      `import { defineConfig } from "@specistry/config";
        import { writeSync } from "node:fs";
        console.log("config noise that must not reach stdout");
        writeSync(1, process.env.SPEC_TEST_SECRET ?? "raw stdout noise");
@@ -124,7 +124,7 @@ describe("packaged specra executable", () => {
     expect(success.status).toBe(EXIT_CODES.success);
     expect(success.stderr).toBe("");
     expect(JSON.parse(success.stdout)).toEqual({
-      artifacts: { directory: ".specra/artifacts" },
+      artifacts: { directory: ".specistry/artifacts" },
       content: { assets: 0, pages: 0 },
       search: { documents: expect.any(Number) as number },
       playground: { enabled: false, environments: 0, operations: 0 },
@@ -156,7 +156,7 @@ describe("packaged specra executable", () => {
     const result = run(["validate"], project);
     expect(result.status).toBe(EXIT_CODES.validationFailure);
     expect(result.stdout).toBe("");
-    expect(result.stderr).toContain("Specra validation failed");
+    expect(result.stderr).toContain("Specistry validation failed");
     expect(result.stderr).toContain("CONFIG_NOT_FOUND [config]");
     expect(result.stderr).not.toMatch(/\n\s+at /);
   });
@@ -237,7 +237,7 @@ describe("packaged specra executable", () => {
     const project = await createProject();
     const human = run(["build"], project);
     expect(human.status).toBe(EXIT_CODES.success);
-    expect(human.stdout).toContain("Specra build succeeded.");
+    expect(human.stdout).toContain("Specistry build succeeded.");
     expect(human.stderr).toBe("");
 
     const json = run(["build", "--json"], project);
@@ -274,7 +274,7 @@ describe("packaged specra executable", () => {
     const humanFailure = run(["build"], project);
     expect(humanFailure.status).toBe(EXIT_CODES.validationFailure);
     expect(humanFailure.stdout).toBe("");
-    expect(humanFailure.stderr).toContain("Specra build failed");
+    expect(humanFailure.stderr).toContain("Specistry build failed");
 
     await writeFile(path.join(project, "openapi.yaml"), VALID_DOCUMENT);
     const child = spawn(process.execPath, [cliPath, "build", "--json"], {
@@ -417,16 +417,18 @@ async function createProject(configSource?: string): Promise<string> {
   await mkdir(path.join(project, "docs"));
   await writeFile(path.join(project, "openapi.yaml"), VALID_DOCUMENT);
   await writeFile(
-    path.join(project, "specra.config.ts"),
+    path.join(project, "specistry.config.ts"),
     configSource ??
-      `import { defineConfig } from "@specra/config";
+      `import { defineConfig } from "@specistry/config";
        export default defineConfig({ schemaVersion: 1, name: "Example", openapi: "./openapi.yaml" });`,
   );
   return project;
 }
 
 async function makeTemporaryDirectory(): Promise<string> {
-  const directory = await mkdtemp(path.join(tmpdir(), "specra-cli-process-"));
+  const directory = await mkdtemp(
+    path.join(tmpdir(), "specistry-cli-process-"),
+  );
   temporaryDirectories.push(directory);
   return directory;
 }

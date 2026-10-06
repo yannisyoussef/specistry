@@ -1,6 +1,6 @@
 # Content authoring reference
 
-Authored pages live under the configured `docs` directory (default `./docs`) as Markdown (`.md`) or MDX-flavoured Markdown (`.mdx`). `specra validate` and `specra build` compile them into a bounded content model that the reader renders next to the generated API reference. Nothing an author writes ever executes: the compiler parses text into an abstract syntax tree, validates it against a fixed vocabulary, and the reader renders that tree through React components. There is no HTML pass-through, no expression evaluation, no imports, and no client-side Markdown.
+Authored pages live under the configured `docs` directory (default `./docs`) as Markdown (`.md`) or MDX-flavoured Markdown (`.mdx`). `specistry validate` and `specistry build` compile them into a bounded content model that the reader renders next to the generated API reference. Nothing an author writes ever executes: the compiler parses text into an abstract syntax tree, validates it against a fixed vocabulary, and the reader renders that tree through React components. There is no HTML pass-through, no expression evaluation, no imports, and no client-side Markdown.
 
 ## Files and routes
 
@@ -52,7 +52,7 @@ A link to a page or API route that does not exist is an error (`CONTENT_LINK_TAR
 
 ### Images and assets
 
-`![Alternative text](./images/diagram.png)` references a file under the docs directory, relative to the page. The build reads the file, checks its bytes (PNG, JPEG, WebP, or GIF by signature, never by extension), enforces 2 MiB per file and 20 MiB per project, copies it to `.specra/artifacts/assets/<sha256 prefix>.<ext>`, and rewrites the source to that content-addressed name. The reader serves assets only by manifest name with an immutable cache policy, `nosniff`, and a sandboxing policy of their own. References outside the docs directory (`CONTENT_ASSET_OUTSIDE_ROOT`), missing files (`CONTENT_ASSET_NOT_FOUND`), absolute or malformed paths (`CONTENT_ASSET_INVALID`), other types including SVG (`CONTENT_ASSET_UNSUPPORTED`), and oversized files (`CONTENT_ASSET_TOO_LARGE`) are errors. Alternative text is required to be meaningful; decorative images are better omitted.
+`![Alternative text](./images/diagram.png)` references a file under the docs directory, relative to the page. The build reads the file, checks its bytes (PNG, JPEG, WebP, or GIF by signature, never by extension), enforces 2 MiB per file and 20 MiB per project, copies it to `.specistry/artifacts/assets/<sha256 prefix>.<ext>`, and rewrites the source to that content-addressed name. The reader serves assets only by manifest name with an immutable cache policy, `nosniff`, and a sandboxing policy of their own. References outside the docs directory (`CONTENT_ASSET_OUTSIDE_ROOT`), missing files (`CONTENT_ASSET_NOT_FOUND`), absolute or malformed paths (`CONTENT_ASSET_INVALID`), other types including SVG (`CONTENT_ASSET_UNSUPPORTED`), and oversized files (`CONTENT_ASSET_TOO_LARGE`) are errors. Alternative text is required to be meaningful; decorative images are better omitted.
 
 ### Code blocks
 
@@ -225,7 +225,7 @@ const client = new TestInbox({ apiKey: process.env.TESTINBOX_API_KEY });
 
 ## Navigation
 
-Without configuration, the sidebar lists authored pages by route followed by the API reference. `navigation` in `specra.config.ts` sets the order and grouping:
+Without configuration, the sidebar lists authored pages by route followed by the API reference. `navigation` in `specistry.config.ts` sets the order and grouping:
 
 ```ts
 navigation: [
@@ -273,11 +273,11 @@ A breached budget is `CONTENT_BUDGET_EXCEEDED` at the offending location; the bu
 
 ## Changelog
 
-Release notes are authored, not generated. `changelog/<version>.json` holds dated entries of `added`, `changed`, `deprecated`, `removed`, and `fixed` items with plain text, an optional operation reference, and the structured diff candidates each item reviews; `specra release` publishes exactly that text at `/docs/{version}/changelog` once every candidate is dispositioned. The format and workflow are in the [versioning reference](versioning.md#writing-the-changelog).
+Release notes are authored, not generated. `changelog/<version>.json` holds dated entries of `added`, `changed`, `deprecated`, `removed`, and `fixed` items with plain text, an optional operation reference, and the structured diff candidates each item reviews; `specistry release` publishes exactly that text at `/docs/{version}/changelog` once every candidate is dispositioned. The format and workflow are in the [versioning reference](versioning.md#writing-the-changelog).
 
 ## Diagnostics
 
-Content diagnostics use the CLI's path grammar with a source location: `source/docs/guides/attachments.md:42:7` names the line and column of the offending node; navigation diagnostics point at the configuration (`config#/navigation/1/items/0`). Messages are fixed text and never quote the authored value. `specra validate` reports every problem in one run so a large migration can be fixed in one pass, and `specra build` refuses to write artifacts while any error remains. See the [CLI reference](cli.md#output-and-exit-contract) for the full code list.
+Content diagnostics use the CLI's path grammar with a source location: `source/docs/guides/attachments.md:42:7` names the line and column of the offending node; navigation diagnostics point at the configuration (`config#/navigation/1/items/0`). Messages are fixed text and never quote the authored value. `specistry validate` reports every problem in one run so a large migration can be fixed in one pass, and `specistry build` refuses to write artifacts while any error remains. See the [CLI reference](cli.md#output-and-exit-contract) for the full code list.
 
 ## What the reader guarantees
 

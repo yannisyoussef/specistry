@@ -14,11 +14,14 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseContentArtifact, parseNavigationArtifact } from "@specra/content";
+import {
+  parseContentArtifact,
+  parseNavigationArtifact,
+} from "@specistry/content";
 import {
   parseArtifactManifest,
   parseDocumentationArtifact,
-} from "@specra/model";
+} from "@specistry/model";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildProject, validateProject } from "../../packages/cli/src/index";
@@ -43,7 +46,7 @@ afterEach(async () => {
   );
 });
 
-async function copyFixture(name: string, prefix = "specra-content-") {
+async function copyFixture(name: string, prefix = "specistry-content-") {
   const parent = await realpath(await mkdtemp(path.join(tmpdir(), prefix)));
   temporary.push(parent);
   const project = path.join(parent, name);
@@ -79,7 +82,7 @@ async function filesUnder(directory: string): Promise<readonly string[]> {
   return files.sort();
 }
 
-describe("specra validate with authored content", () => {
+describe("specistry validate with authored content", () => {
   it("reports every authoring error with a source location and keeps going", async () => {
     const project = await copyFixture("edge");
     const result = await validateProject({ cwd: project });
@@ -159,7 +162,7 @@ describe("specra validate with authored content", () => {
     );
     await writeFile(path.join(project, "logo.svg"), "<svg><script/></svg>");
     await writeFile(
-      path.join(project, "specra.config.ts"),
+      path.join(project, "specistry.config.ts"),
       `export default { schemaVersion: 1, name: "Navigation", openapi: "./openapi.yaml", branding: { logo: "./logo.svg" } };`,
     );
     const result = await validateProject({ cwd: project });
@@ -173,7 +176,7 @@ describe("specra validate with authored content", () => {
   });
 });
 
-describe("specra build with authored content", () => {
+describe("specistry build with authored content", () => {
   it("writes content, navigation, assets, and manifest records for the navigation fixture", async () => {
     const project = await copyFixture("navigation");
     const result = await buildProject({ cwd: project });
@@ -193,7 +196,7 @@ describe("specra build with authored content", () => {
       "playground.json",
       "assets/8a8489932558b153.png",
     ]);
-    const artifacts = path.join(project, ".specra", "artifacts");
+    const artifacts = path.join(project, ".specistry", "artifacts");
     const manifest = parseArtifactManifest(
       await readFile(path.join(artifacts, "manifest.json"), "utf8"),
     );
@@ -326,22 +329,26 @@ describe("specra build with authored content", () => {
   });
 
   it("produces byte-identical artifacts from different working directories", async () => {
-    const first = await copyFixture("navigation", "specra-a-");
-    const second = await copyFixture("navigation", "specra-bbbbbbbb-");
+    const first = await copyFixture("navigation", "specistry-a-");
+    const second = await copyFixture("navigation", "specistry-bbbbbbbb-");
     const results = await Promise.all([
       buildProject({ cwd: first }),
       buildProject({ cwd: second }),
     ]);
     expect(results.every((result) => result.ok)).toBe(true);
     const firstFiles = await filesUnder(
-      path.join(first, ".specra", "artifacts"),
+      path.join(first, ".specistry", "artifacts"),
     );
     expect(firstFiles).toEqual(
-      await filesUnder(path.join(second, ".specra", "artifacts")),
+      await filesUnder(path.join(second, ".specistry", "artifacts")),
     );
     for (const file of firstFiles) {
-      const a = await readFile(path.join(first, ".specra", "artifacts", file));
-      const b = await readFile(path.join(second, ".specra", "artifacts", file));
+      const a = await readFile(
+        path.join(first, ".specistry", "artifacts", file),
+      );
+      const b = await readFile(
+        path.join(second, ".specistry", "artifacts", file),
+      );
       expect(a.equals(b), file).toBe(true);
       // No absolute path from either temporary parent leaks into the output.
       expect(a.toString("latin1")).not.toContain(first);
@@ -351,7 +358,7 @@ describe("specra build with authored content", () => {
 
   it("removes stale artifacts when a later build fails and never leaves partial output", async () => {
     const project = await copyFixture("navigation");
-    const artifacts = path.join(project, ".specra", "artifacts");
+    const artifacts = path.join(project, ".specistry", "artifacts");
     expect((await buildProject({ cwd: project })).ok).toBe(true);
     expect(await filesUnder(artifacts)).toHaveLength(8);
     await writeFile(
@@ -378,7 +385,7 @@ describe("specra build with authored content", () => {
     await rm(path.join(project, "docs"), { recursive: true });
     await mkdir(path.join(project, "docs"));
     await writeFile(
-      path.join(project, "specra.config.ts"),
+      path.join(project, "specistry.config.ts"),
       `export default { schemaVersion: 1, name: "Navigation", openapi: "./openapi.yaml" };`,
     );
     const result = await buildProject({ cwd: project });
@@ -396,7 +403,7 @@ describe("specra build with authored content", () => {
     ]);
     const manifest = parseArtifactManifest(
       await readFile(
-        path.join(project, ".specra", "artifacts", "manifest.json"),
+        path.join(project, ".specistry", "artifacts", "manifest.json"),
         "utf8",
       ),
     );

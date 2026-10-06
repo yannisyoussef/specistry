@@ -28,10 +28,10 @@ docker run --rm --platform linux/amd64 \
     corepack prepare pnpm@11.19.0 --activate
     pnpm install --frozen-lockfile
     pnpm exec playwright install --with-deps chromium
-    export SPECRA_PROJECT_ROOT=/work/tests/fixtures/reader/testinbox
-    export SPECRA_SITE_URL=https://docs.example.test
-    pnpm --filter @specra/cli... build
-    pnpm --filter @specra/web build
+    export SPECISTRY_PROJECT_ROOT=/work/tests/fixtures/reader/testinbox
+    export SPECISTRY_SITE_URL=https://docs.example.test
+    pnpm --filter @specistry/cli... build
+    pnpm --filter @specistry/web build
     pnpm exec playwright test --project visual --update-snapshots all
     cp -R tests/visual/__screenshots__/. /out/
   '

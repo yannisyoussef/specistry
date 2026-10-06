@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { parseDocumentationArtifact } from "@specra/model";
+import { parseDocumentationArtifact } from "@specistry/model";
 import { render } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { describe, expect, it } from "vitest";
@@ -15,7 +15,7 @@ const artifact = parseDocumentationArtifact(
   readFileSync(
     path.join(
       process.cwd(),
-      "tests/fixtures/reader/testinbox/.specra/artifacts/documentation.json",
+      "tests/fixtures/reader/testinbox/.specistry/artifacts/documentation.json",
     ),
     "utf8",
   ),

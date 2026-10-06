@@ -1,12 +1,12 @@
 # Code samples and SDK mappings
 
-Specra shows two kinds of code on every operation page (SPEC-008):
+Specistry shows two kinds of code on every operation page (SPEC-008):
 
 - **Protocol examples**: cURL, raw HTTP, JavaScript, TypeScript, Java, and
   Python requests generated from the canonical operation. They are
   projections of the contract, never of an SDK.
 - **SDK examples**: code the project author wrote for a declared SDK and
-  mapped to an operation explicitly. Specra renders it verbatim and never
+  mapped to an operation explicitly. Specistry renders it verbatim and never
   infers, generates, or executes SDK calls.
 
 The two share the Code rail and the code surface; they never share semantic
@@ -16,19 +16,19 @@ authority. This document is the reference for both.
 
 ```text
 canonical operation (documentation.json)
-  → request projection (@specra/snippets, at build time)
+  → request projection (@specistry/snippets, at build time)
       path · query · headers · cookies · bodies · auth alternatives · usable servers
   → snippets.json (+ manifest record with digest)
   → reader (server render): environment/body/auth selection → six generators
   → Code rail: one panel per language, selected in the browser
 
-specra.config.ts `sdks` + example files
+specistry.config.ts `sdks` + example files
   → validated, resolved to canonical operation identity, highlighted (build)
   → snippets.json `sdkExamples`
   → Code rail SDK panels
 ```
 
-`@specra/snippets` depends on `@specra/model` only. The generators are pure:
+`@specistry/snippets` depends on `@specistry/model` only. The generators are pure:
 the same projection, environment, and selection always produce the same
 text; nothing reads the clock, the environment, or the network. Generation
 runs on the server when an operation page renders and is memoized per
@@ -54,7 +54,7 @@ under the rail and never labels anything "live".
 
 The base URL comes from, in order:
 
-1. `environments` in `specra.config.ts` (author order; the first is the
+1. `environments` in `specistry.config.ts` (author order; the first is the
    default). Names are identifiers (`[A-Za-z0-9][A-Za-z0-9._~-]*`).
 2. Otherwise the contract servers the operation applies to, with server
    variables replaced by their defaults, when the URL passes the same policy
@@ -178,7 +178,7 @@ and announce politely; code regions are labelled scrollable groups.
 
 ## SDK mappings
 
-Declare each SDK and its examples in `specra.config.ts`:
+Declare each SDK and its examples in `specistry.config.ts`:
 
 ```ts
 export default defineConfig({
@@ -230,8 +230,8 @@ Resolution happens at build time against canonical identity. Diagnostics
 `SDK_EXAMPLE_TARGET_AMBIGUOUS` (add `service`), `SDK_EXAMPLE_DUPLICATE` (one
 example per SDK per operation), `SDK_EXAMPLE_CODE_EMPTY`,
 `SDK_EXAMPLE_CODE_TOO_LARGE`, `SDK_EXAMPLE_FILE_INVALID` (missing, outside the
-project, not a file, or not the expected shape). Errors fail `specra
-validate` and `specra build`; missing examples of a complete SDK are
+project, not a file, or not the expected shape). Errors fail `specistry
+validate` and `specistry build`; missing examples of a complete SDK are
 warnings. There are no scores or percentages (SPEC-011 owns quality gates).
 
 Behaviour in the reader: SDK panels appear only for operations that have a
@@ -248,7 +248,7 @@ real matches.
 
 ## Artifact
 
-`.specra/artifacts/snippets.json` (`snippetsVersion` 1): configured
+`.specistry/artifacts/snippets.json` (`snippetsVersion` 1): configured
 `environments`, per-operation `operations` keyed by `<service id>~<operation id>`,
 `sdks`, and `sdkExamples` (highlighted token lines and code). The manifest
 records `files.snippets` and `snippets { version, bytes, sha256, operations,

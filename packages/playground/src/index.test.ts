@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseDocumentationArtifact } from "@specra/model";
-import { parseSnippetsArtifact } from "@specra/snippets";
+import { parseDocumentationArtifact } from "@specistry/model";
+import { parseSnippetsArtifact } from "@specistry/snippets";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -23,7 +23,7 @@ import { PLAYGROUND_HARD_LIMITS } from "./types.js";
 
 const fixture = fileURLToPath(
   new URL(
-    "../../../tests/fixtures/reader/testinbox/.specra/artifacts/",
+    "../../../tests/fixtures/reader/testinbox/.specistry/artifacts/",
     import.meta.url,
   ),
 );

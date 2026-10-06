@@ -1,6 +1,6 @@
 {
-  "name": "@specra/content",
-  "version": "0.1.0-rc.2",
+  "name": "@specistry/content",
+  "version": "0.1.0-rc.3",
   "private": true,
   "license": "BUSL-1.1",
   "type": "module",
@@ -23,7 +23,7 @@
     "@shikijs/engine-javascript": "4.4.3",
     "@shikijs/langs": "4.4.3",
     "@shikijs/themes": "4.4.3",
-    "@specra/model": "workspace:*",
+    "@specistry/model": "workspace:*",
     "mdast-util-from-markdown": "2.0.3",
     "mdast-util-frontmatter": "2.0.1",
     "mdast-util-gfm": "3.1.0",

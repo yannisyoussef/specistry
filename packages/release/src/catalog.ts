@@ -19,8 +19,8 @@ import { validateVersionId, versionKey } from "./version.js";
 
 export const CATALOG_FORMAT_VERSION = 1 as const;
 export const CATALOG_FILENAME = "catalog.json";
-export const RELEASES_DIRECTORY = ".specra/releases";
-export const CANDIDATES_DIRECTORY = ".specra/candidates";
+export const RELEASES_DIRECTORY = ".specistry/releases";
+export const CANDIDATES_DIRECTORY = ".specistry/candidates";
 export const MAX_RETAINED_RELEASES = 200;
 
 export type ReleaseState = "deprecated" | "supported";

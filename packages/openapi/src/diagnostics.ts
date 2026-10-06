@@ -1,4 +1,4 @@
-import type { DiagnosticId } from "@specra/model";
+import type { DiagnosticId } from "@specistry/model";
 
 import { comparePointers } from "./pointer.js";
 import { boundPointer } from "./pointer.js";
@@ -57,7 +57,7 @@ export const SOURCE_DIAGNOSTIC_MESSAGES: Readonly<
   SOURCE_REFERENCE_OUTSIDE_ROOT:
     "The reference resolves outside the project root or through an escaping symlink.",
   SOURCE_REFERENCE_REMOTE_DISABLED:
-    "Remote references are disabled; Specra does not fetch referenced URLs.",
+    "Remote references are disabled; Specistry does not fetch referenced URLs.",
   SOURCE_REFERENCE_UNRESOLVED:
     "The reference target does not exist in the referenced document.",
   SOURCE_REFERENCE_UNSUPPORTED:

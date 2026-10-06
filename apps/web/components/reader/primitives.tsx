@@ -1,4 +1,4 @@
-import type { HttpMethod } from "@specra/model";
+import type { HttpMethod } from "@specistry/model";
 import type { ReactNode } from "react";
 
 /**

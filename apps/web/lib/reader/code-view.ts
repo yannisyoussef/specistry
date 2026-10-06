@@ -1,4 +1,4 @@
-import type { JsonValue } from "@specra/model";
+import type { JsonValue } from "@specistry/model";
 import {
   generateAll,
   jsonLines,
@@ -9,7 +9,7 @@ import {
   type SelectionOption,
   type Snippet,
   type SnippetToken,
-} from "@specra/snippets";
+} from "@specistry/snippets";
 
 import type { ReaderSnippets } from "./artifact";
 import type { OperationView } from "./operation-view";

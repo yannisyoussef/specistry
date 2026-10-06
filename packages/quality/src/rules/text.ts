@@ -4,7 +4,7 @@
  * they never read a value into a finding.
  */
 
-import type { JsonValue, ResponseStatus } from "@specra/model";
+import type { JsonValue, ResponseStatus } from "@specistry/model";
 
 /** True when a string carries readable text rather than whitespace. */
 export function hasText(value: string | undefined): boolean {

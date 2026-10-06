@@ -1,0 +1,71 @@
+{
+  "artifactFormat": 1,
+  "diagnostics": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "files": {
+    "content": "content.json",
+    "documentation": "documentation.json",
+    "navigation": "navigation.json",
+    "playground": "playground.json",
+    "search": "search.json",
+    "snippets": "snippets.json"
+  },
+  "generator": "specistry",
+  "modelVersion": 1,
+  "playground": {
+    "bytes": 2232,
+    "enabled": true,
+    "environments": 1,
+    "operations": 3,
+    "sha256": "a157d3897151f2e5e0e0046a4d5ae0e9d07a7721617f920f4868b468ec4d6d6d",
+    "version": 1
+  },
+  "project": {
+    "id": "Versioned",
+    "name": "Versioned"
+  },
+  "search": {
+    "bytes": 5328,
+    "documents": 10,
+    "sha256": "46567c439b566c2d991bc5e7310c7834412944bc17b4a854c5633d7240542755",
+    "version": 1
+  },
+  "snippets": {
+    "bytes": 2886,
+    "operations": 3,
+    "sdkExamples": 1,
+    "sha256": "4fbc334be94d9d40ebdc7e214fde024d1c95ef83b7baf1e1d73e3eb92559e536",
+    "version": 1
+  },
+  "sources": [
+    {
+      "bytes": 215,
+      "path": "docs/authentication.md",
+      "sha256": "e34c9a7485dbdb8eee85882b6c795e43e51264503b0e2983e4d59e053117ce4f"
+    },
+    {
+      "bytes": 274,
+      "path": "docs/index.md",
+      "sha256": "c73e7cfbf48359096df65c1078bb2e7cf1aef8be0218ab7a1f44501922db7c3d"
+    },
+    {
+      "bytes": 328,
+      "path": "docs/quickstart.md",
+      "sha256": "292c8c6f1c4d7f528c87bddc7d5cf26d74f80468d79558f745c4345fd00fc48f"
+    },
+    {
+      "bytes": 2022,
+      "path": "openapi.yaml",
+      "sha256": "c9e197a47b2cf97a207abfa99547f4dd03765167ff941b42255fb62979599958"
+    }
+  ],
+  "statistics": {
+    "documents": 1,
+    "operations": 3,
+    "pages": 3,
+    "references": 2,
+    "schemas": 1
+  }
+}

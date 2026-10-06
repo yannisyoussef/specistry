@@ -4,14 +4,14 @@ import type {
   CodeBlock,
   InlineNode,
   MediaNode,
-} from "@specra/content";
+} from "@specistry/content";
 import type { ReactNode } from "react";
 
 import { CopyButton } from "../copy-button";
 import { Tabs } from "./tabs";
 
 /**
- * Renders the Specra content model as HTML. Every node kind is explicit;
+ * Renders the Specistry content model as HTML. Every node kind is explicit;
  * there is no HTML pass-through and no attribute is spread from authored
  * data. Text, code, links, and image sources come from the validated
  * artifact, which the build already bounded and classified.

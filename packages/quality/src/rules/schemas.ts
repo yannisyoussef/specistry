@@ -5,7 +5,7 @@
  * rules.
  */
 
-import type { SchemaNode } from "@specra/model";
+import type { SchemaNode } from "@specistry/model";
 
 import type { QualityRule } from "../contracts.js";
 import type { SchemaFacts } from "../facts.js";

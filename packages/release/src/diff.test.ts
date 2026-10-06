@@ -6,7 +6,7 @@ import {
   serializeDocumentationArtifact,
   type DocumentationArtifact,
   type Operation,
-} from "@specra/model";
+} from "@specistry/model";
 import { describe, expect, it } from "vitest";
 
 import { diffArtifacts, serializeContractDiff } from "./diff.js";
@@ -19,7 +19,7 @@ import { diffArtifacts, serializeContractDiff } from "./diff.js";
 
 const fixture = fileURLToPath(
   new URL(
-    "../../../tests/fixtures/reader/testinbox/.specra/artifacts/documentation.json",
+    "../../../tests/fixtures/reader/testinbox/.specistry/artifacts/documentation.json",
     import.meta.url,
   ),
 );

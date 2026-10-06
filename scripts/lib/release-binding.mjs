@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { releaseIdentity } from "./release-identity.mjs";
 
 import {
   confirmedLicensor,
@@ -30,7 +31,7 @@ export function verifyPreparationBinding({
     run.conclusion !== "success" ||
     !jobs.some(
       (job) =>
-        job.name === "Private candidate preparation" &&
+        job.name === "Reviewed candidate preparation" &&
         job.conclusion === "success",
     ) ||
     !["ahead", "identical"].includes(sourceToLedger.status) ||
@@ -41,7 +42,7 @@ export function verifyPreparationBinding({
     );
   const matches = artifacts.filter(
     (artifact) =>
-      artifact.name === `prepared-specra-${sourceTag.slice(1)}` &&
+      artifact.name === releaseIdentity(sourceTag.slice(1)).preparedArtifact &&
       artifact.expired === false,
   );
   if (
@@ -67,9 +68,10 @@ export async function finalizePreparedCandidate({
   );
   if (!/^[a-f0-9]{40}$/.test(sourceCommit ?? "") || sourceTag !== `v${version}`)
     throw new Error("Candidate source/tag does not match the release version.");
+  const identity = releaseIdentity(version);
   const names = [
-    `specra-cli-${version}.tgz`,
-    "specra-cli.cdx.json",
+    identity.tarball,
+    identity.sbom,
     "license-metadata.json",
     "release-audit.json",
   ];

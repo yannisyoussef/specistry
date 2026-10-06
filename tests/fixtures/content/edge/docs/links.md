@@ -10,6 +10,6 @@ title: Links and assets
 
 ![Not an image](./images/not-an-image.png)
 
-![Outside root](../specra.config.ts)
+![Outside root](../specistry.config.ts)
 
 ![Absolute](/etc/hosts)

@@ -5,7 +5,7 @@ import {
   parseConfig,
   parseSdkExamplesFile,
   redactIssuePath,
-  specraConfigSchema,
+  specistryConfigSchema,
 } from "./index.js";
 
 describe("navigation and branding", () => {
@@ -395,7 +395,7 @@ describe("issue path redaction", () => {
   });
 
   it("round-trips every schema key and rejects labels the schema cannot produce", () => {
-    for (const key of Object.keys(specraConfigSchema.shape)) {
+    for (const key of Object.keys(specistryConfigSchema.shape)) {
       expect(schemaLabels).toContain(key);
       expect(redactIssuePath([key])).toBe(key);
     }
@@ -420,7 +420,7 @@ describe("issue path redaction", () => {
   });
 
   it("labels real validation issues without leaking values", () => {
-    const result = specraConfigSchema.safeParse({
+    const result = specistryConfigSchema.safeParse({
       environments: { "hunter2-secret": { baseUrl: "ftp://x" } },
       name: "",
       openapi: ["./ok.yaml", "../escape.yaml"],

@@ -1,15 +1,15 @@
-import type { ContentPage } from "@specra/content";
+import type { ContentPage } from "@specistry/content";
 import type { ReaderIndex, ReaderOperationSummary } from "./projection";
 import { LEGACY_ROOTS, type ReaderRoots } from "./scope";
 
 /**
  * Page metadata rules: every route gets a unique title in the form
  * `<page> | <project> API`, a plain-text description trimmed to a sentence,
- * and a canonical path. Absolute URLs come from `SPECRA_SITE_URL`, then the
+ * and a canonical path. Absolute URLs come from `SPECISTRY_SITE_URL`, then the
  * artifact's `canonicalUrl`, and are otherwise omitted rather than guessed.
  */
 
-export const SITE_URL_VARIABLE = "SPECRA_SITE_URL";
+export const SITE_URL_VARIABLE = "SPECISTRY_SITE_URL";
 const MAX_DESCRIPTION_LENGTH = 160;
 
 export interface PageMetadata {

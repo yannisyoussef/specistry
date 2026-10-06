@@ -146,7 +146,7 @@ test.describe("playground", () => {
       session: JSON.stringify({ ...sessionStorage }),
       url: location.href,
     }));
-    expect(stored.session).toBe('{"specra:playground-environment":"local"}');
+    expect(stored.session).toBe('{"specistry:playground-environment":"local"}');
     expect(stored.local).not.toContain(SECRET);
     expect(stored.cookie).not.toContain(SECRET);
     expect(stored.url).not.toContain(SECRET);

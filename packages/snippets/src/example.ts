@@ -1,4 +1,4 @@
-import type { ApiService, JsonValue, SchemaNode } from "@specra/model";
+import type { ApiService, JsonValue, SchemaNode } from "@specistry/model";
 
 import {
   isSensitiveName,

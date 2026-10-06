@@ -1,6 +1,6 @@
 {
-  "name": "@specra/config",
-  "version": "0.1.0-rc.2",
+  "name": "@specistry/config",
+  "version": "0.1.0-rc.3",
   "private": true,
   "license": "BUSL-1.1",
   "type": "module",

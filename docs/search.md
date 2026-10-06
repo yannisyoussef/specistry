@@ -1,6 +1,6 @@
 # Search
 
-Specra generates search at build time and answers queries in the reader's browser. There is nothing to configure, no account, and no service: `specra build` writes a search artifact next to the other artifacts, the reader serves it, and the ⌘K palette queries it locally. **Search queries remain in the user's browser.** They are never sent to Specra, to the documentation host, or to any third party, and the reader records no search telemetry, history, or analytics.
+Specistry generates search at build time and answers queries in the reader's browser. There is nothing to configure, no account, and no service: `specistry build` writes a search artifact next to the other artifacts, the reader serves it, and the ⌘K palette queries it locally. **Search queries remain in the user's browser.** They are never sent to Specistry, to the documentation host, or to any third party, and the reader records no search telemetry, history, or analytics.
 
 ## What is searchable
 
@@ -34,10 +34,10 @@ The relevance policy is guarded by a committed golden corpus (`tests/search/rele
 
 ## The artifact and deployment
 
-`specra build` writes `.specra/artifacts/search.json` (`searchVersion: 1`) and records it in `manifest.json` with its byte size and SHA-256 digest. The bytes are deterministic: the same sources produce the same artifact on any machine. The reader validates the file against the manifest at start-up (digest, size, document count, strict shape, every route a reader route) and refuses to start on a mismatch, so a stale index can never pair with fresh content. It serves the validated bytes under a content-addressed path, `/search/index.<digest prefix>.json`, with `Cache-Control: immutable`; a rebuild changes the path, so browsers never keep an old index. The palette and engine load on first open only; ordinary pages ship no search code beyond the header control.
+`specistry build` writes `.specistry/artifacts/search.json` (`searchVersion: 1`) and records it in `manifest.json` with its byte size and SHA-256 digest. The bytes are deterministic: the same sources produce the same artifact on any machine. The reader validates the file against the manifest at start-up (digest, size, document count, strict shape, every route a reader route) and refuses to start on a mismatch, so a stale index can never pair with fresh content. It serves the validated bytes under a content-addressed path, `/search/index.<digest prefix>.json`, with `Cache-Control: immutable`; a rebuild changes the path, so browsers never keep an old index. The palette and engine load on first open only; ordinary pages ship no search code beyond the header control.
 
 Index size scales with the corpus. Measured on the TestInbox fixture: 63 documents, 52 KB (12 KB gzip). Measured on synthetic corpora: 1,000 pages produce about 7,000 documents and 0.5 MB gzip; 10,000 operations produce about 10,000 documents and 0.5 MB gzip; both together produce 17,000 documents and 1.0 MB gzip, hydrated in about 70 ms with queries under 25 ms (`tests/performance/search-measurements.json`). Standard HTTP compression on the host applies; no proprietary compression is used.
 
 ## Diagnostics
 
-Search adds no validation rules to authoring. `specra validate` reports how many search documents the project produces; `specra build` reports the same and fails with `SEARCH_BUILD_FAILED` (an internal failure that removes stale artifacts) only if indexing itself fails.
+Search adds no validation rules to authoring. `specistry validate` reports how many search documents the project produces; `specistry build` reports the same and fails with `SEARCH_BUILD_FAILED` (an internal failure that removes stale artifacts) only if indexing itself fails.

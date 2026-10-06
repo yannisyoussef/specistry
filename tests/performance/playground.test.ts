@@ -5,13 +5,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
-import { parseDocumentationArtifact } from "@specra/model";
+import { parseDocumentationArtifact } from "@specistry/model";
 import {
   parsePlaygroundArtifact,
   projectPlayground,
   serializePlaygroundArtifact,
-} from "@specra/playground";
-import { parseSnippetsArtifact } from "@specra/snippets";
+} from "@specistry/playground";
+import { parseSnippetsArtifact } from "@specistry/snippets";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { leanOperationsDocument } from "./ingestion-generator.mjs";
@@ -106,7 +106,7 @@ function measure(
 
 async function buildSynthetic(name: string, document: object | string) {
   const project = await mkdtemp(
-    path.join(tmpdir(), `specra-playground-${name}-`),
+    path.join(tmpdir(), `specistry-playground-${name}-`),
   );
   temporary.push(project);
   await mkdir(path.join(project, "docs"));
@@ -115,7 +115,7 @@ async function buildSynthetic(name: string, document: object | string) {
     typeof document === "string" ? document : JSON.stringify(document),
   );
   await writeFile(
-    path.join(project, "specra.config.ts"),
+    path.join(project, "specistry.config.ts"),
     `export default { schemaVersion: 1, name: "${name}", openapi: "./openapi.json", environments: { a: { baseUrl: "https://a.example.com" }, b: { baseUrl: "https://b.example.com" }, c: { baseUrl: "https://c.example.com" } }, playground: { mode: "browser", environments: ["a", "b", "c"] } };`,
   );
   const started = performance.now();
@@ -155,7 +155,7 @@ async function buildSynthetic(name: string, document: object | string) {
     operations: 10_000,
   });
   return {
-    artifacts: path.join(project, ".specra", "artifacts"),
+    artifacts: path.join(project, ".specistry", "artifacts"),
     buildMs,
     maxRssBytes: parsed.rss * 1024,
   };
@@ -163,7 +163,7 @@ async function buildSynthetic(name: string, document: object | string) {
 
 describe("playground policy at scale", () => {
   it("projects the TestInbox policy quickly and matches the committed artifact", async () => {
-    const artifacts = path.join(fixtureRoot, ".specra", "artifacts");
+    const artifacts = path.join(fixtureRoot, ".specistry", "artifacts");
     const documentation = await readFile(
       path.join(artifacts, "documentation.json"),
       "utf8",

@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseDocumentationArtifact } from "@specra/model";
+import { parseDocumentationArtifact } from "@specistry/model";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -160,7 +160,7 @@ describe("schema renderer performance", () => {
         path.join(
           fixtureRoot,
           "edge",
-          ".specra",
+          ".specistry",
           "artifacts",
           "documentation.json",
         ),

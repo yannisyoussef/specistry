@@ -33,12 +33,12 @@ async function main() {
   }
   if (violations.length > 0) {
     console.error(
-      `Private Specra boundary references found:\n${violations.join("\n")}`,
+      `Private Specistry boundary references found:\n${violations.join("\n")}`,
     );
     process.exitCode = 1;
   } else {
     console.log(
-      `Public Specra boundary passed (${roots.length} consumer${roots.length === 1 ? "" : "s"}).`,
+      `Public Specistry boundary passed (${roots.length} consumer${roots.length === 1 ? "" : "s"}).`,
     );
   }
 }
@@ -53,11 +53,15 @@ const inspectedExtensions = new Set([
   ".ts",
   ".yaml",
   ".yml",
+  ".md",
+  ".mdx",
+  ".py",
 ]);
 const ignoredDirectories = new Set([
   ".git",
-  ".specra",
-  ".specra-tooling",
+  ".specistry",
+  ".specra", // Historical local RC2 output; never a current configuration alias.
+  ".specistry-tooling",
   "build",
   "coverage",
   "dist",
@@ -85,6 +89,21 @@ async function implementationFiles(directory) {
 }
 
 function inspect(source, file, violations) {
+  // Historical prose must opt in locally; executable files cannot exempt
+  // themselves. This is a migration note, not a compatibility alias.
+  const prose = /\.mdx?$/.test(file);
+  const currentSource = prose
+    ? source.replace(
+        /<!-- specistry:historical -->[\s\S]*?<!-- \/specistry:historical -->/g,
+        "",
+      )
+    : source;
+  if (
+    /@specra\/|\bspecra\s+(?:build|check)\b|\bSPECRA_[A-Z0-9_]+\b/.test(
+      currentSource,
+    )
+  )
+    violations.push(`${file}: active branding regression`);
   const rules = [
     [
       /(?:^|["'`/])packages\/[^/\s]+\/src(?:\/|["'`\s]|$)/m,
@@ -92,21 +111,23 @@ function inspect(source, file, violations) {
     ],
     [/(?:^|["'`/])tests\/fixtures(?:\/|["'`\s]|$)/m, "private fixture path"],
     [
-      /@specra\/[a-z-]+\/(?:src|dist)(?:\/|["'`\s]|$)/m,
+      /@specistry\/[a-z-]+\/(?:src|dist)(?:\/|["'`\s]|$)/m,
       "private package subpath",
     ],
     [/\b(?:workspace:|link:|file:\.\.?\/)/m, "local dependency protocol"],
     [/\b(?:test-helper|fixtures\.test-helper)\b/m, "test-helper import"],
   ];
+  if (prose) return;
   for (const [pattern, label] of rules) {
     if (pattern.test(source)) violations.push(`${file}: ${label}`);
   }
   const allowedVariables = new Set([
-    "SPECRA_PROJECT_ROOT",
-    "SPECRA_SERVE",
-    "SPECRA_SITE_URL",
+    "SPECISTRY_PROJECT_ROOT",
+    "SPECISTRY_SERVE",
+    "SPECISTRY_SITE_URL",
+    "SPECISTRY_CLI_TARBALL", // Documented Odexa integration artifact input.
   ]);
-  for (const match of source.matchAll(/\bSPECRA_[A-Z0-9_]+\b/g)) {
+  for (const match of source.matchAll(/\bSPECISTRY_[A-Z0-9_]+\b/g)) {
     if (!allowedVariables.has(match[0])) {
       violations.push(`${file}: undocumented environment override ${match[0]}`);
     }

@@ -1,4 +1,4 @@
-import type { JsonValue } from "@specra/model";
+import type { JsonValue } from "@specistry/model";
 
 import { writeJsonText } from "./escape.js";
 import { generateCurl } from "./generators/curl.js";

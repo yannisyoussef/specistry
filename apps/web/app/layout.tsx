@@ -23,7 +23,7 @@ import { THEME_COOKIE, readThemeMode, safeReturnPath } from "../lib/theme";
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const { content, index } = await loadReaderFor(
-    safeReturnPath(requestHeaders.get("x-specra-pathname") ?? "/"),
+    safeReturnPath(requestHeaders.get("x-specistry-pathname") ?? "/"),
   );
   const base = siteUrl(index);
   const favicon = content?.branding?.favicon;
@@ -54,7 +54,7 @@ export default async function RootLayout({
     cookies(),
     headers(),
   ]);
-  const forwarded = requestHeaders.get("x-specra-pathname") ?? "/";
+  const forwarded = requestHeaders.get("x-specistry-pathname") ?? "/";
   const currentPath = safeReturnPath(forwarded);
   const { content, index, roots, search, version } =
     await loadReaderFor(currentPath);

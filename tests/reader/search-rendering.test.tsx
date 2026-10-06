@@ -31,7 +31,7 @@ const artifactJson = readFileSync(
     "fixtures",
     "reader",
     "testinbox",
-    ".specra",
+    ".specistry",
     "artifacts",
     "search.json",
   ),

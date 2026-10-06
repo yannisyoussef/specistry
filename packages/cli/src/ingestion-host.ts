@@ -5,7 +5,7 @@ import {
   ingestOpenApi,
   snapshotIngestionLimits,
   type IngestionLimits,
-} from "@specra/openapi";
+} from "@specistry/openapi";
 
 import { createProjectAcquisition, isDocumentId } from "./acquisition.js";
 import {

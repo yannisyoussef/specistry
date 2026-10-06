@@ -8,7 +8,7 @@ import type {
   SchemaMetadata,
   SchemaNode,
   StringConstraints,
-} from "@specra/model";
+} from "@specistry/model";
 
 import type { SourceLocation } from "../diagnostics.js";
 import { compareText } from "../identity.js";

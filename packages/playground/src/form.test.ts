@@ -4,8 +4,8 @@ import type {
   Parameter,
   SchemaNode,
   SecurityScheme,
-} from "@specra/model";
-import { projectOperation } from "@specra/snippets";
+} from "@specistry/model";
+import { projectOperation } from "@specistry/snippets";
 import { describe, expect, it } from "vitest";
 
 import { projectOperationForm } from "./form.js";

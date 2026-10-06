@@ -180,7 +180,7 @@ describe("schema renderer: special forms and context", () => {
       "the constraints apply to integer, number, or string values",
     );
     expect(markup(block("unknown").view)).toContain(
-      "vocabulary Specra does not represent yet",
+      "vocabulary Specistry does not represent yet",
     );
   });
 
@@ -276,7 +276,7 @@ describe("schema focus page", () => {
   it("renders the trail, the focused node as root, and a way back", async () => {
     const { SchemaFocusPage } =
       await import("../../apps/web/components/reader/schema/schema-focus-page");
-    const { parseDocumentationArtifact } = await import("@specra/model");
+    const { parseDocumentationArtifact } = await import("@specistry/model");
     const { readFileSync } = await import("node:fs");
     const path = await import("node:path");
     const { createReaderIndex, resolveRoute } =
@@ -293,7 +293,7 @@ describe("schema focus page", () => {
           "fixtures",
           "reader",
           "testinbox",
-          ".specra",
+          ".specistry",
           "artifacts",
           "documentation.json",
         ),

@@ -8,8 +8,8 @@
  * candidates once: no rule compares every operation with every candidate.
  */
 
-import type { Operation, SecurityRequirement } from "@specra/model";
-import type { ChangeAspect } from "@specra/release";
+import type { Operation, SecurityRequirement } from "@specistry/model";
+import type { ChangeAspect } from "@specistry/release";
 
 import type { QualityRule, RuleFinding } from "../contracts.js";
 import type {
@@ -221,7 +221,7 @@ export const apiSchemaChanged: QualityRule = {
       if (candidate.kind !== "schema-changed") continue;
       emit({
         message:
-          "The reusable schema changed; Specra does not classify the change, so review it against your compatibility policy.",
+          "The reusable schema changed; Specistry does not classify the change, so review it against your compatibility policy.",
         target: {
           identity: candidate.identity,
           kind: "schema",
@@ -235,7 +235,7 @@ export const apiSchemaChanged: QualityRule = {
         emit({
           locator: `${where} ${detail}`.trim(),
           message:
-            "A payload schema changed; Specra does not classify the change, so review it against your compatibility policy.",
+            "A payload schema changed; Specistry does not classify the change, so review it against your compatibility policy.",
           target: operationTarget(entry),
         });
       });
@@ -244,7 +244,7 @@ export const apiSchemaChanged: QualityRule = {
   id: "api-schema-changed",
   requiresComparison: true,
   summary:
-    "A schema changed in a way Specra deliberately does not classify; a human decides whether it breaks callers.",
+    "A schema changed in a way Specistry deliberately does not classify; a human decides whether it breaks callers.",
   title: "Schema changed, review required",
 };
 

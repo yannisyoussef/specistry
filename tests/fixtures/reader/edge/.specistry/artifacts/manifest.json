@@ -1,0 +1,53 @@
+{
+  "artifactFormat": 1,
+  "diagnostics": {
+    "errors": 0,
+    "warnings": 16
+  },
+  "files": {
+    "documentation": "documentation.json",
+    "playground": "playground.json",
+    "search": "search.json",
+    "snippets": "snippets.json"
+  },
+  "generator": "specistry",
+  "modelVersion": 1,
+  "playground": {
+    "bytes": 7831,
+    "enabled": false,
+    "environments": 0,
+    "operations": 14,
+    "sha256": "20b822e2f505048c6946d1def272b117bb8b0c6b05ac256d20caad6df4f4f202",
+    "version": 1
+  },
+  "project": {
+    "id": "project_a3922714c2d7065a",
+    "name": "Edge cases"
+  },
+  "search": {
+    "bytes": 11745,
+    "documents": 18,
+    "sha256": "856efb9bf33c45e1c4e27c751a0c34f254d34f489ee273f02cab54e1e7bb3cc0",
+    "version": 1
+  },
+  "snippets": {
+    "bytes": 6047,
+    "operations": 14,
+    "sdkExamples": 0,
+    "sha256": "6f695a8090d37d87b895fea703f26054b5880ec05b4ccf11acdfb11dd38d3e40",
+    "version": 1
+  },
+  "sources": [
+    {
+      "bytes": 33255,
+      "path": "openapi.yaml",
+      "sha256": "64bd6df794fc56556cb61c4b6ba518ba60bac9677c1899f22d79d31b37004b08"
+    }
+  ],
+  "statistics": {
+    "documents": 1,
+    "operations": 14,
+    "references": 20,
+    "schemas": 14
+  }
+}

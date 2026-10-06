@@ -1,4 +1,4 @@
-import type { HttpMethod, JsonValue } from "@specra/model";
+import type { HttpMethod, JsonValue } from "@specistry/model";
 
 /**
  * SPEC-008 contracts. Two data paths share this module but never share

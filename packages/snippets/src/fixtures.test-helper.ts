@@ -4,7 +4,7 @@ import type {
   Parameter,
   SchemaNode,
   SecurityScheme,
-} from "@specra/model";
+} from "@specistry/model";
 
 /**
  * A hand-built canonical service covering the SPEC-008 golden matrix:

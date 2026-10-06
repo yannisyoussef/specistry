@@ -1,4 +1,4 @@
-# Specra implementation roadmap
+# Specistry implementation roadmap
 
 Each slice is a deployable or author-visible vertical increment. Its work item must retain the fields below; scope changes update this roadmap rather than reusing an identifier. Completion requires implementation, semantic tests, threat-model/ADR review, documentation, Principal Engineer self-review, independent named specialist review, no open P0, and no unresolved/undispositioned P1.
 
@@ -23,17 +23,17 @@ Each slice is a deployable or author-visible vertical increment. Its work item m
 
 ## SPEC-002 — Thin CLI and build orchestrator
 
-- **Objective/scope:** deliver the first author workflow: `specra validate`, programmatic build context, config loading/diagnostics, project-root confinement, and deterministic artifact directories. Reserve `dev`/`build` command surfaces for the next ingest-to-reader integration.
+- **Objective/scope:** deliver the first author workflow: `specistry validate`, programmatic build context, config loading/diagnostics, project-root confinement, and deterministic artifact directories. Reserve `dev`/`build` command surfaces for the next ingest-to-reader integration.
 - **Non-goals:** documentation scoring, contract diffing, content rendering, or full OpenAPI normalization.
 - **Architecture impact:** creates a thin orchestration package over stable ports; it coordinates packages but owns no parser/content/rendering semantics.
-- **Acceptance:** a sample project loads trusted `specra.config.ts` in an isolated process, emits only validated serializable config, validates paths without symlink escape, supports human and JSON diagnostics, deterministic exit codes, cancellation, and `--help`.
+- **Acceptance:** a sample project loads trusted `specistry.config.ts` in an isolated process, emits only validated serializable config, validates paths without symlink escape, supports human and JSON diagnostics, deterministic exit codes, cancellation, and `--help`.
 - **Tests/security:** CLI subprocess/golden diagnostics, Windows/POSIX path cases, malicious config/path/symlink cases, environment-secret redaction, config-process timeout, and clean-room package test.
 - **Docs/DoD:** command/config reference and troubleshooting are complete; executable config trust is explicit.
 - **Dependencies/risks/reviewers:** SPEC-001; risks are build-code authority and CLI contract churn; Product/DX, security, QA, and architecture reviewers.
 
 ## SPEC-003 — OpenAPI ingestion
 
-- **Objective/scope:** parse, resolve, validate, and normalize OpenAPI 3.0/3.1 into canonical artifacts; wire `specra validate`/`build` through that pipeline. `dev` stays reserved until SPEC-004 gives it a reader to serve.
+- **Objective/scope:** parse, resolve, validate, and normalize OpenAPI 3.0/3.1 into canonical artifacts; wire `specistry validate`/`build` through that pipeline. `dev` stays reserved until SPEC-004 gives it a reader to serve.
 - **Non-goals:** polished API routes, remote refs by default, AsyncAPI/GraphQL, or runtime conformance.
 - **Architecture impact:** selects an adapter-private resolver/validator behind one mandatory acquisition policy; raw models end at the adapter.
 - **Acceptance:** the [dialect map](architecture/openapi-dialects.md) and fixture matrix map correctly; local cycles terminate; invalid refs diagnose; remote retrieval stays off unless every hardened policy test passes; output bytes are deterministic; 10 MiB/10k-operation budgets are measured.
@@ -110,29 +110,29 @@ Each slice is a deployable or author-visible vertical increment. Its work item m
 - **Tests/security:** historical build reproducibility, cross-version links, redirect/open-redirect cases, sitemap/canonical SEO, diff semantics, unpublished-candidate isolation.
 - **Docs/DoD:** release/retention/migration/changelog workflow and operational guidance for the selected canonical-URL policy are complete.
 - **Dependencies/risks/reviewers:** SPEC-006 through SPEC-009; risks are duplicate indexing, stale links, and misleading diffs; Product/DX, SEO/frontend, OpenAPI, QA, security.
-- **Outcome:** implemented ([ADR-016](adr/016-immutable-documentation-releases.md), [versioning reference](versioning.md)): `specra release`/`current`/`deprecate`, an immutable release store with manifests and an explicit catalog, versioned self-canonical routes with 307 aliases and frozen 308 redirects, release-scoped reader loading, structured diff candidates under `.specra/candidates`, and the human-reviewed changelog; the structural diff port is what SPEC-011 consumes.
+- **Outcome:** implemented ([ADR-016](adr/016-immutable-documentation-releases.md), [versioning reference](versioning.md)): `specistry release`/`current`/`deprecate`, an immutable release store with manifests and an explicit catalog, versioned self-canonical routes with 307 aliases and frozen 308 redirects, release-scoped reader loading, structured diff candidates under `.specistry/candidates`, and the human-reviewed changelog; the structural diff port is what SPEC-011 consumes.
 
 ## SPEC-011 — Documentation quality gates and diff CLI
 
-- **Objective/scope:** add `specra check`, configurable rules/severities/thresholds, deterministic reporting, and reviewed `specra diff` support.
+- **Objective/scope:** add `specistry check`, configurable rules/severities/thresholds, deterministic reporting, and reviewed `specistry diff` support.
 - **Non-goals:** runtime API conformance or an arbitrary rule-plugin marketplace.
 - **Architecture impact:** quality rules consume canonical artifacts and authored metadata through stable ports; CLI remains an orchestrator.
 - **Acceptance:** operation/schema/example/auth/SDK rules have defined weights or no percentage; any score formula is deterministic and documented; warning/failure modes and exit codes work in CI; machine output is stable.
 - **Tests/security:** rule unit/goldens, threshold math, config compatibility, huge diagnostic sets, terminal-control/secret redaction, CLI subprocess and example-project CI.
 - **Docs/DoD:** rule catalog, scoring formula if used, CI recipes, suppression governance, and migration policy are complete.
 - **Dependencies/risks/reviewers:** SPEC-003, SPEC-006, SPEC-008, SPEC-010; risks are vanity metrics and noisy gates; Product/DX, QA, OpenAPI, security.
-- **Outcome:** implemented ([ADR-017](adr/017-documentation-quality-facts-rules-policy.md), [quality reference](quality.md)): the pure `@specra/quality` engine with a static 25-rule registry across operations, schemas, examples, authentication, SDK mappings, authored content, compatibility, and suppression governance; `specra check` (exit 3 on a failed gate, 2 on a policy error) and public `specra diff` over the SPEC-010 port; severity overrides, `failOn`, `maxWarnings`, and governed suppressions with expiry and stale detection. **No percentage score**, by decision. The public commands are dogfooded in CI with self-tests that prove the gate can fail.
+- **Outcome:** implemented ([ADR-017](adr/017-documentation-quality-facts-rules-policy.md), [quality reference](quality.md)): the pure `@specistry/quality` engine with a static 25-rule registry across operations, schemas, examples, authentication, SDK mappings, authored content, compatibility, and suppression governance; `specistry check` (exit 3 on a failed gate, 2 on a policy error) and public `specistry diff` over the SPEC-010 port; severity overrides, `failOn`, `maxWarnings`, and governed suppressions with expiry and stale detection. **No percentage score**, by decision. The public commands are dogfooded in CI with self-tests that prove the gate can fail.
 
 ## SPEC-012 — Odexa dogfooding and release readiness
 
-- **Objective/scope:** build Odexa and Specra's own docs using only the packed public CLI, public config, contracts, authored content, and branding; close production-readiness gaps.
+- **Objective/scope:** build Odexa and Specistry's own docs using only the packed public CLI, public config, contracts, authored content, and branding; close production-readiness gaps.
 - **Non-goals:** Odexa branches in core, AsyncAPI ingestion, invented SDK mappings, unrelated API conformance, SaaS hosting, or a plugin marketplace.
 - **Architecture impact:** validates public boundaries and deployment artifacts; product-specific behavior stays in the consumer project.
 - **Acceptance:** both portals build without private hooks; no `if (project === "testinbox")`; real-scale budgets, broken-link/accessibility/visual/E2E/quality gates, rollback, provenance, and deployment runbooks pass.
 - **Tests/security:** full example builds, contract/content drift integration, cross-browser/manual AT, load/bundle/build benchmarks, supply-chain/release audit, disaster/rollback exercise.
 - **Docs/DoD:** operator/release/support policy, public compatibility and license decisions, dogfood findings, and residual-risk acceptance are complete.
 - **Dependencies/risks/reviewers:** SPEC-011; risks are hidden coupling, real-spec scale, and release operations; all specialists and Odexa owners.
-- **Outcome:** technically ready with release gates. Odexa's six real OpenAPI 3.1 services and fourteen authored pages, plus Specra's authored-content-only self-documentation, build through the packed `0.1.0-rc.2` public CLI. Production Node/container deployment, liveness/readiness, rollback/restore, cross-browser critical flows, package audit, CycloneDX SBOM, checksums, and the public-boundary gate are implemented. The BSL 1.1 policy, Licensor identity, ownership, licensing authority, and final parameters are owner-confirmed. The owner accepts manual AT qualification as P2 A11Y-R01 for pre-1.0 RCs; it remains required before stable `1.0.0` and comprehensive accessibility claims. Public RC release requires verified protected provenance and a committed public-distribution ledger. AsyncAPI ingestion remains a future capability and Odexa documents its events from the authoritative source without pretending Specra ingests it.
+- **Outcome:** technically ready with release gates. Odexa's six real OpenAPI 3.1 services and fourteen authored pages, plus Specistry's authored-content-only self-documentation, build through the packed `0.1.0-rc.3` public CLI. Production Node/container deployment, liveness/readiness, rollback/restore, cross-browser critical flows, package audit, CycloneDX SBOM, checksums, and the public-boundary gate are implemented. The BSL 1.1 policy, Licensor identity, ownership, licensing authority, and final parameters are owner-confirmed. The owner accepts manual AT qualification as P2 A11Y-R01 for pre-1.0 RCs; it remains required before stable `1.0.0` and comprehensive accessibility claims. Public RC release requires verified protected provenance and a committed public-distribution ledger. AsyncAPI ingestion remains a future capability and Odexa documents its events from the authoritative source without pretending Specistry ingests it.
 
 ## Deferred dedicated proxy
 

@@ -12,8 +12,8 @@ permissions:
 env:
   # The reader is built and browser-tested against the committed TestInbox
   # fixture project; consumers point these at their own project and origin.
-  SPECRA_PROJECT_ROOT: ${{ github.workspace }}/tests/fixtures/reader/testinbox
-  SPECRA_SITE_URL: https://docs.example.test
+  SPECISTRY_PROJECT_ROOT: ${{ github.workspace }}/tests/fixtures/reader/testinbox
+  SPECISTRY_SITE_URL: https://docs.example.test
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -43,6 +43,7 @@ jobs:
       - run: pnpm check:architecture
       - run: pnpm check:licenses
       - run: pnpm check:secrets
+      - run: pnpm check:public-boundary
 
   build:
     name: Build, coverage, and audit
@@ -63,7 +64,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm check:bundle
-      # Dogfoods the public `specra check` on a realistic project and proves
+      # Dogfoods the public `specistry check` on a realistic project and proves
       # the gate can fail (SPEC-011).
       - run: pnpm check:quality
       - run: pnpm test:coverage
@@ -146,25 +147,25 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: yannisyoussef/odexa
-          ref: 13a472e527dc6ba899cf48e72a38e4ff1b6ee39c
-          path: .specra-tooling/odexa
+          ref: ddba1548f592bea481b2233bf5c946ae2a246558
+          path: .specistry-tooling/odexa
           persist-credentials: false
       - run: pnpm install --frozen-lockfile
       - name: Pack the reviewed public CLI boundary
         run: |
-          pnpm --filter @specra/cli... build
-          node scripts/build-release-candidate.mjs "$RUNNER_TEMP/specra-candidate"
+          pnpm --filter @specistry/cli... build
+          node scripts/build-release-candidate.mjs "$RUNNER_TEMP/specistry-candidate"
       - name: Reject private coupling in both consumers
-        run: node scripts/check-public-boundary.mjs dogfood/specra-docs .specra-tooling/odexa
-      - name: Verify Specra self-documentation through the package
+        run: node scripts/check-public-boundary.mjs dogfood/specistry-docs .specistry-tooling/odexa
+      - name: Verify Specistry self-documentation through the package
         run: |
-          mkdir -p "$RUNNER_TEMP/specra-self"
-          npm install --prefix "$RUNNER_TEMP/specra-self" "$RUNNER_TEMP/specra-candidate/specra-cli-0.1.0-rc.2.tgz" --ignore-scripts --no-audit --no-fund --cache "$RUNNER_TEMP/specra-self-cache"
-          node "$RUNNER_TEMP/specra-self/node_modules/@specra/cli/dist/bin.js" validate --root dogfood/specra-docs
-          node "$RUNNER_TEMP/specra-self/node_modules/@specra/cli/dist/bin.js" build --root dogfood/specra-docs
-          node "$RUNNER_TEMP/specra-self/node_modules/@specra/cli/dist/bin.js" check --root dogfood/specra-docs
+          mkdir -p "$RUNNER_TEMP/specistry-self"
+          npm install --prefix "$RUNNER_TEMP/specistry-self" "$RUNNER_TEMP/specistry-candidate/specistry-cli-0.1.0-rc.3.tgz" --ignore-scripts --no-audit --no-fund --cache "$RUNNER_TEMP/specistry-self-cache"
+          node "$RUNNER_TEMP/specistry-self/node_modules/@specistry/cli/dist/bin.js" validate --root dogfood/specistry-docs
+          node "$RUNNER_TEMP/specistry-self/node_modules/@specistry/cli/dist/bin.js" build --root dogfood/specistry-docs
+          node "$RUNNER_TEMP/specistry-self/node_modules/@specistry/cli/dist/bin.js" check --root dogfood/specistry-docs
       - name: Verify Odexa through the same package
-        run: python3 -B .specra-tooling/odexa/scripts/specra-docs.py --tarball "$RUNNER_TEMP/specra-candidate/specra-cli-0.1.0-rc.2.tgz"
+        run: python3 -B .specistry-tooling/odexa/scripts/specistry-docs.py --tarball "$RUNNER_TEMP/specistry-candidate/specistry-cli-0.1.0-rc.3.tgz"
 
   performance:
     name: Resource and performance evidence

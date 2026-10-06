@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Prepare privately, or attest the identical prepared bytes publicly
+        description: Prepare reviewed production source, or attest identical qualified bytes
         type: choice
         options: [prepare, attest]
         default: prepare
@@ -25,13 +25,14 @@ concurrency:
 
 jobs:
   prepare:
-    name: Private candidate preparation
-    if: inputs.mode == 'prepare' && github.event.repository.private
+    name: Reviewed candidate preparation
+    if: inputs.mode == 'prepare' && github.repository == 'yannisyoussef/specistry'
     runs-on: ubuntu-latest
+    environment: release
     timeout-minutes: 25
     env:
-      SPECRA_PROJECT_ROOT: ${{ github.workspace }}/tests/fixtures/reader/testinbox
-      SPECRA_SITE_URL: https://docs.example.test
+      SPECISTRY_PROJECT_ROOT: ${{ github.workspace }}/tests/fixtures/reader/testinbox
+      SPECISTRY_SITE_URL: https://docs.example.test
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -40,7 +41,17 @@ jobs:
         with:
           node-version-file: .node-version
       - name: Require the frozen release tag
+        id: identity
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/verify-release-tag.mjs
+      - name: Check out the reviewed Odexa integration
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: yannisyoussef/odexa
+          ref: ddba1548f592bea481b2233bf5c946ae2a246558
+          path: .specistry-tooling/odexa
+          persist-credentials: false
       - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9 # v6.0.8
         with:
           version: 11.19.0
@@ -50,10 +61,12 @@ jobs:
       - run: pnpm audit --audit-level high
       - run: pnpm check:release-license
       - run: pnpm release:candidate
+      - name: Qualify these exact bytes with npm, pnpm, self-docs and Odexa
+        run: node scripts/qualify-cli-candidate.mjs .release/candidate .specistry-tooling/odexa
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: prepared-specra-0.1.0-rc.2
-          path: .release/specra-0.1.0-rc.2/
+          name: ${{ steps.identity.outputs.prepared_artifact }}
+          path: .release/candidate/
           if-no-files-found: error
           retention-days: 30
 
@@ -76,6 +89,9 @@ jobs:
         with:
           node-version-file: .node-version
       - name: Require the frozen release tag
+        id: identity
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: node scripts/verify-release-tag.mjs
       - name: Bind preparation and reviewed ledger to this source
         id: binding
@@ -87,7 +103,7 @@ jobs:
       - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           artifact-ids: ${{ steps.binding.outputs.artifact_id }}
-          path: .release/specra-0.1.0-rc.2
+          path: .release/candidate
           github-token: ${{ github.token }}
           run-id: ${{ inputs.candidate_run_id }}
           digest-mismatch: error
@@ -98,25 +114,25 @@ jobs:
           path: .release/ledger-source
           persist-credentials: false
       - name: Verify all prepared subjects and the committed distribution record
-        run: node scripts/finalize-release-candidate.mjs .release/specra-0.1.0-rc.2 .release/ledger-source
+        run: node scripts/finalize-release-candidate.mjs .release/candidate .release/ledger-source
       - name: Attest exact release subjects
         id: provenance
         uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
         with:
           subject-path: |
-            .release/specra-0.1.0-rc.2/*.tgz
-            .release/specra-0.1.0-rc.2/specra-cli.cdx.json
-            .release/specra-0.1.0-rc.2/license-metadata.json
-            .release/specra-0.1.0-rc.2/release-audit.json
-            .release/specra-0.1.0-rc.2/SHA256SUMS
-            .release/specra-0.1.0-rc.2/public-distribution-0.1.0-rc.2.json
+            .release/candidate/${{ steps.identity.outputs.tarball }}
+            .release/candidate/${{ steps.identity.outputs.sbom }}
+            .release/candidate/license-metadata.json
+            .release/candidate/release-audit.json
+            .release/candidate/SHA256SUMS
+            .release/candidate/public-distribution-${{ steps.identity.outputs.version }}.json
       - name: Preserve the signed verification bundle
         env:
           BUNDLE_PATH: ${{ steps.provenance.outputs.bundle-path }}
-        run: cp -- "$BUNDLE_PATH" .release/specra-0.1.0-rc.2/provenance.sigstore.json
+        run: cp -- "$BUNDLE_PATH" .release/candidate/provenance.sigstore.json
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: specra-0.1.0-rc.2
-          path: .release/specra-0.1.0-rc.2/
+          name: ${{ steps.identity.outputs.artifact }}
+          path: .release/candidate/
           if-no-files-found: error
           retention-days: 30

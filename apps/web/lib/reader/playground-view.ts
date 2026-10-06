@@ -3,8 +3,8 @@ import {
   type OperationForm,
   type PlaygroundEnvironment,
   type PlaygroundLimits,
-} from "@specra/playground";
-import { operationKey } from "@specra/snippets";
+} from "@specistry/playground";
+import { operationKey } from "@specistry/snippets";
 
 import type { ReaderPlayground } from "./artifact";
 import type { OperationView } from "./operation-view";
