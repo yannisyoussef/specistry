@@ -3,6 +3,7 @@ import {
   cp,
   mkdtemp,
   readFile,
+  readdir,
   realpath,
   rm,
   writeFile,
@@ -18,6 +19,37 @@ if (!directory || !odexaRoot || process.argv.length !== 4)
     "Usage: node scripts/qualify-cli-candidate.mjs <candidate> <reviewed-odexa>",
   );
 const identity = await readReleaseIdentity(process.cwd());
+const expectedFiles = [
+  identity.tarball,
+  identity.sbom,
+  "license-metadata.json",
+  "release-audit.json",
+  "SHA256SUMS",
+].sort();
+if (
+  JSON.stringify((await readdir(directory)).sort()) !==
+  JSON.stringify(expectedFiles)
+)
+  throw new Error(
+    "Qualification accepts only the unsigned five-file prepared candidate.",
+  );
+const sums = (await readFile(path.join(directory, "SHA256SUMS"), "utf8"))
+  .trim()
+  .split("\n");
+const checked = new Set();
+for (const line of sums) {
+  const match = /^([a-f0-9]{64})  ([A-Za-z0-9_.-]+)$/.exec(line);
+  if (
+    !match ||
+    match[2] === "SHA256SUMS" ||
+    !expectedFiles.includes(match[2]) ||
+    checked.has(match[2]) ||
+    digest(await readFile(path.join(directory, match[2]))) !== match[1]
+  )
+    throw new Error("Candidate checksum drift before consumer qualification.");
+  checked.add(match[2]);
+}
+if (checked.size !== 4) throw new Error("Incomplete prepared checksums.");
 const tarball = path.resolve(directory, identity.tarball);
 const before = digest(await readFile(tarball));
 verifyPublishableManifest(
@@ -31,7 +63,15 @@ verifyPublishableManifest(
 const audit = JSON.parse(
   await readFile(path.join(directory, "release-audit.json"), "utf8"),
 );
-if (audit.version !== identity.version || audit.artifact !== identity.tarball)
+if (
+  audit.version !== identity.version ||
+  audit.artifact !== identity.tarball ||
+  audit.package !== identity.package ||
+  audit.qualification !== undefined ||
+  audit.sourceCommit !==
+    (process.env.GITHUB_SHA ??
+      execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim())
+)
   throw new Error("Candidate identity mismatch.");
 const odexaSource = execFileSync(
   "git",
@@ -57,6 +97,7 @@ if (
 const work = await realpath(
   await mkdtemp(path.join(tmpdir(), "specistry-qualification-")),
 );
+const { packageManager } = JSON.parse(await readFile("package.json", "utf8"));
 try {
   execFileSync(
     process.execPath,
@@ -71,7 +112,7 @@ try {
     });
     await writeFile(
       path.join(consumer, "package.json"),
-      '{"name":"qualified-consumer","private":true,"version":"1.0.0"}\n',
+      `${JSON.stringify({ name: "qualified-consumer", private: true, version: "1.0.0", packageManager })}\n`,
     );
     const args =
       manager === "npm"
