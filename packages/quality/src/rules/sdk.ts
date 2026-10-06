@@ -1,5 +1,5 @@
 /**
- * SDK rules (SPEC-011 §31). Specra knows the mappings a project declared
+ * SDK rules (SPEC-011 §31). Specistry knows the mappings a project declared
  * (SPEC-008), never the real package: no rule claims an SDK method exists,
  * is missing, or was removed. These rules only hold a declaration to what
  * it promises.

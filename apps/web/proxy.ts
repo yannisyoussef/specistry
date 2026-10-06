@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   requestHeaders.set("content-security-policy", policy);
   // Layouts cannot read the URL; the pathname drives active navigation state
   // and the theme form's return path.
-  requestHeaders.set("x-specra-pathname", pathname);
+  requestHeaders.set("x-specistry-pathname", pathname);
   if (releases && isDocumentationRoute(pathname)) {
     // Version resolution happens before any component loads (SPEC-010 §5):
     // aliases redirect, frozen redirects redirect, unknown versions 404.

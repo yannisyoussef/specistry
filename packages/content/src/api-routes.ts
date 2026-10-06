@@ -4,7 +4,7 @@ import type {
   HttpMethod,
   Operation,
   TagDefinition,
-} from "@specra/model";
+} from "@specistry/model";
 
 /**
  * API reference route identity (ADR-010), shared by the reader (which renders

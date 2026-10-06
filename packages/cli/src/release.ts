@@ -19,7 +19,7 @@ import {
   parseNavigationArtifact,
   type ContentArtifact,
   type NavigationArtifact,
-} from "@specra/content";
+} from "@specistry/content";
 import {
   ARTIFACT_MANIFEST_FILENAME,
   ARTIFACT_MANIFEST_FORMAT,
@@ -28,7 +28,7 @@ import {
   parseDocumentationArtifact,
   type ArtifactManifest,
   type DocumentationArtifact,
-} from "@specra/model";
+} from "@specistry/model";
 import {
   CANDIDATES_DIRECTORY,
   CATALOG_FILENAME,
@@ -68,7 +68,7 @@ import {
   type ReleaseComponent,
   type ReleaseComponentName,
   type ReleaseManifest,
-} from "@specra/release";
+} from "@specistry/release";
 
 import {
   ARTIFACT_DIRECTORY,
@@ -95,8 +95,8 @@ import { isPathWithin, resolveFutureProjectPath } from "./path-policy.js";
 
 /**
  * Immutable release promotion (SPEC-010 §6–§7, §11–§17, §96–§98, §114).
- * `specra release <version>` freezes the exact candidate under
- * `.specra/artifacts` into `.specra/releases/<version>`: every candidate
+ * `specistry release <version>` freezes the exact candidate under
+ * `.specistry/artifacts` into `.specistry/releases/<version>`: every candidate
  * file is verified against its manifest, the route table, redirects, and
  * the reviewed changelog are derived, the set is staged, fsynced, verified
  * again, and promoted with one atomic rename. A version that already
@@ -396,7 +396,7 @@ export async function releaseProject(
   };
 }
 
-/** `specra current <version>`: rewrites the catalog pointer only. */
+/** `specistry current <version>`: rewrites the catalog pointer only. */
 export async function selectCurrentRelease(
   options: ValidationOptions & { readonly version: string },
 ): Promise<CatalogResult> {
@@ -407,7 +407,7 @@ export async function selectCurrentRelease(
   });
 }
 
-/** `specra deprecate <version>`: lifecycle state only; the current release cannot be deprecated. */
+/** `specistry deprecate <version>`: lifecycle state only; the current release cannot be deprecated. */
 export async function deprecateRelease(
   options: ValidationOptions & { readonly version: string },
 ): Promise<CatalogResult> {
@@ -489,7 +489,7 @@ function summarize(catalog: ReleaseCatalog): CatalogSummary {
 }
 
 /**
- * `specra build` companion: when a catalog exists, compare the candidate
+ * `specistry build` companion: when a catalog exists, compare the candidate
  * with the comparison base and write the structured candidates to the
  * private candidates directory, which the reader never serves.
  */

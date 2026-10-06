@@ -1,4 +1,4 @@
-import { validateBaseUrl } from "@specra/snippets/protocol";
+import { validateBaseUrl } from "@specistry/snippets/protocol";
 
 import {
   PLAYGROUND_FORMAT_VERSION,

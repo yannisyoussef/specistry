@@ -1,17 +1,20 @@
-import type { SpecraConfig } from "@specra/config";
-import type { ContentDiagnosticCode } from "@specra/content";
-import type { QualityDiagnosticCode, QualityEvaluation } from "@specra/quality";
-import type { ContractDiff } from "@specra/release";
+import type { SpecistryConfig } from "@specistry/config";
+import type { ContentDiagnosticCode } from "@specistry/content";
+import type {
+  QualityDiagnosticCode,
+  QualityEvaluation,
+} from "@specistry/quality";
+import type { ContractDiff } from "@specistry/release";
 import {
   ARTIFACT_DOCUMENTATION_FILENAME,
   ARTIFACT_MANIFEST_FILENAME,
   ARTIFACT_MANIFEST_FORMAT,
-} from "@specra/model";
+} from "@specistry/model";
 import type {
   IngestionSourceRecord,
   IngestionStatistics,
   SourceDiagnosticCode,
-} from "@specra/openapi";
+} from "@specistry/openapi";
 
 export const DEFAULT_CONFIG_TIMEOUT_MS = 5_000;
 export const MIN_CONFIG_TIMEOUT_MS = 100;
@@ -19,7 +22,7 @@ export const MAX_CONFIG_TIMEOUT_MS = 60_000;
 export const DEFAULT_SOURCE_TIMEOUT_MS = 30_000;
 export const MIN_SOURCE_TIMEOUT_MS = 100;
 export const MAX_SOURCE_TIMEOUT_MS = 600_000;
-export const ARTIFACT_DIRECTORY = ".specra/artifacts";
+export const ARTIFACT_DIRECTORY = ".specistry/artifacts";
 export const ARTIFACT_FORMAT_VERSION = ARTIFACT_MANIFEST_FORMAT;
 export { ARTIFACT_DOCUMENTATION_FILENAME, ARTIFACT_MANIFEST_FILENAME };
 /**
@@ -36,7 +39,7 @@ export const EXIT_CODES = {
   success: 0,
   validationFailure: 2,
   /**
-   * `specra check` ran and the quality gate failed (SPEC-011 §54, §180). It
+   * `specistry check` ran and the quality gate failed (SPEC-011 §54, §180). It
    * is deliberately distinct from `validationFailure`, which means the
    * project or its policy could not be read.
    */
@@ -152,7 +155,7 @@ export type DeepReadonly<T> = T extends (...args: never[]) => unknown
       : T;
 
 /** Validated config v1 as an immutable snapshot inside a `BuildContext`. */
-export type ValidatedConfig = DeepReadonly<SpecraConfig>;
+export type ValidatedConfig = DeepReadonly<SpecistryConfig>;
 
 export interface BuildContext {
   readonly config: ValidatedConfig;

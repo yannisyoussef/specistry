@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
-import { parseDocumentationArtifact } from "@specra/model";
+import { parseDocumentationArtifact } from "@specistry/model";
 import {
   generateAll,
   parseSnippetsArtifact,
@@ -13,7 +13,7 @@ import {
   PROTOCOL_LANGUAGES,
   serializeSnippetsArtifact,
   type EnvironmentProjection,
-} from "@specra/snippets";
+} from "@specistry/snippets";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -138,7 +138,7 @@ function measure(
 
 async function buildSynthetic(name: string, document: object | string) {
   const project = await mkdtemp(
-    path.join(tmpdir(), `specra-snippets-${name}-`),
+    path.join(tmpdir(), `specistry-snippets-${name}-`),
   );
   temporary.push(project);
   await mkdir(path.join(project, "docs"));
@@ -148,7 +148,7 @@ async function buildSynthetic(name: string, document: object | string) {
     typeof document === "string" ? document : JSON.stringify(document),
   );
   await writeFile(
-    path.join(project, "specra.config.ts"),
+    path.join(project, "specistry.config.ts"),
     `export default { schemaVersion: 1, name: "${name}", openapi: "./openapi.json", environments: { a: { baseUrl: "https://a.example.com" }, b: { baseUrl: "https://b.example.com" }, c: { baseUrl: "https://c.example.com" } } };`,
   );
   const started = performance.now();
@@ -179,7 +179,7 @@ async function buildSynthetic(name: string, document: object | string) {
   };
   expect(parsed.ok).toBe(true);
   return {
-    artifacts: path.join(project, ".specra", "artifacts"),
+    artifacts: path.join(project, ".specistry", "artifacts"),
     buildMs,
     maxRssBytes: parsed.rss * 1024,
   };
@@ -188,11 +188,11 @@ async function buildSynthetic(name: string, document: object | string) {
 describe("code samples at scale", () => {
   it("projects and generates the TestInbox fixture quickly", async () => {
     const documentation = await readFile(
-      path.join(fixtureRoot, ".specra", "artifacts", "documentation.json"),
+      path.join(fixtureRoot, ".specistry", "artifacts", "documentation.json"),
       "utf8",
     );
     const written = await readFile(
-      path.join(fixtureRoot, ".specra", "artifacts", "snippets.json"),
+      path.join(fixtureRoot, ".specistry", "artifacts", "snippets.json"),
       "utf8",
     );
     const measurement = measure("testinbox", documentation, {

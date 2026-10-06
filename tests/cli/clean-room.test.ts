@@ -12,8 +12,8 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { parseSearchArtifact } from "@specra/search";
-import { createSearchClient } from "@specra/search/client";
+import { parseSearchArtifact } from "@specistry/search";
+import { createSearchClient } from "@specistry/search/client";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -32,7 +32,7 @@ describe("CLI clean-room package", () => {
     // `/var` -> `/private/var`) therefore silently drops every bundled
     // dependency, so the clean room must be canonical before staging.
     const cleanRoom = await realpath(
-      await mkdtemp(path.join(tmpdir(), "specra-clean-room-")),
+      await mkdtemp(path.join(tmpdir(), "specistry-clean-room-")),
     );
     try {
       const packages = path.join(cleanRoom, "packages");
@@ -70,8 +70,8 @@ describe("CLI clean-room package", () => {
         'import { CleanRoom } from "@clean-room/sdk";\n\nconst client = new CleanRoom();\nawait client.ping();\n',
       );
       await writeFile(
-        path.join(project, "specra.config.ts"),
-        `import { defineConfig } from "@specra/config";
+        path.join(project, "specistry.config.ts"),
+        `import { defineConfig } from "@specistry/config";
          export default defineConfig({
            schemaVersion: 1,
            name: "Clean room",
@@ -139,16 +139,30 @@ describe("CLI clean-room package", () => {
       const stagedManifest = JSON.parse(
         await readFile(path.join(staged, "package.json"), "utf8"),
       ) as {
+        readonly private: boolean;
+        readonly name: string;
+        readonly bin: Readonly<Record<string, string>>;
+        readonly publishConfig: Readonly<Record<string, string>>;
         readonly bundleDependencies: readonly string[];
         readonly dependencies: Readonly<Record<string, string>>;
       };
+      expect(stagedManifest).toMatchObject({
+        name: "@specistry/cli",
+        private: false,
+        bin: { specistry: "./dist/bin.js" },
+        publishConfig: {
+          access: "public",
+          registry: "https://registry.npmjs.org",
+        },
+      });
+      expect(Object.keys(stagedManifest.bin)).toEqual(["specistry"]);
       // npm bundles exactly the staged closure: the declared dependencies,
-      // the workspace packages' own dependencies (yaml under @specra/openapi,
-      // the parser and highlighter trees under @specra/content), and every
+      // the workspace packages' own dependencies (yaml under @specistry/openapi,
+      // the parser and highlighter trees under @specistry/content), and every
       // transitive package those need, all resolved offline from the tree.
       const expectedBundled = new Set(Object.keys(stagedManifest.dependencies));
       for (const name of Object.keys(stagedManifest.dependencies)) {
-        if (!name.startsWith("@specra/")) continue;
+        if (!name.startsWith("@specistry/")) continue;
         const nested = JSON.parse(
           await readFile(
             path.join(staged, "node_modules", name, "package.json"),
@@ -168,9 +182,9 @@ describe("CLI clean-room package", () => {
           "micromark",
           "@shikijs/core",
           "@shikijs/engine-javascript",
-          "@specra/playground",
-          "@specra/search",
-          "@specra/snippets",
+          "@specistry/playground",
+          "@specistry/search",
+          "@specistry/snippets",
           "minisearch",
         ]),
       );
@@ -192,7 +206,13 @@ describe("CLI clean-room package", () => {
 
       const installedManifest = JSON.parse(
         await readFile(
-          path.join(project, "node_modules", "@specra", "cli", "package.json"),
+          path.join(
+            project,
+            "node_modules",
+            "@specistry",
+            "cli",
+            "package.json",
+          ),
           "utf8",
         ),
       );
@@ -204,7 +224,7 @@ describe("CLI clean-room package", () => {
         project,
         "node_modules",
         ".bin",
-        process.platform === "win32" ? "specra.cmd" : "specra",
+        process.platform === "win32" ? "specistry.cmd" : "specistry",
       );
       const validated = command(executable, ["validate", "--json"], project);
       if (validated.status !== 0) {
@@ -215,7 +235,7 @@ describe("CLI clean-room package", () => {
       }
       expect(JSON.parse(validated.stdout)).toEqual(
         expect.objectContaining({
-          artifacts: { directory: ".specra/artifacts" },
+          artifacts: { directory: ".specistry/artifacts" },
           content: { assets: 1, pages: 2 },
           diagnostics: [],
           ok: true,
@@ -235,7 +255,7 @@ describe("CLI clean-room package", () => {
       expect(JSON.parse(built.stdout)).toEqual(
         expect.objectContaining({
           artifacts: expect.objectContaining({
-            directory: ".specra/artifacts",
+            directory: ".specistry/artifacts",
             files: [
               "documentation.json",
               "manifest.json",
@@ -255,7 +275,7 @@ describe("CLI clean-room package", () => {
       // the SDK label. All of it was produced offline by the packed CLI.
       const snippets = JSON.parse(
         await readFile(
-          path.join(project, ".specra", "artifacts", "snippets.json"),
+          path.join(project, ".specistry", "artifacts", "snippets.json"),
           "utf8",
         ),
       ) as {
@@ -286,7 +306,7 @@ describe("CLI clean-room package", () => {
       const searchClient = createSearchClient(
         parseSearchArtifact(
           await readFile(
-            path.join(project, ".specra", "artifacts", "search.json"),
+            path.join(project, ".specistry", "artifacts", "search.json"),
             "utf8",
           ),
         ),
@@ -297,7 +317,7 @@ describe("CLI clean-room package", () => {
       ).toBe("/api/operations/ping");
       const content = JSON.parse(
         await readFile(
-          path.join(project, ".specra", "artifacts", "content.json"),
+          path.join(project, ".specistry", "artifacts", "content.json"),
           "utf8",
         ),
       ) as { readonly pages: readonly { readonly route: string }[] };
@@ -307,7 +327,7 @@ describe("CLI clean-room package", () => {
       ]);
       const manifest = JSON.parse(
         await readFile(
-          path.join(project, ".specra", "artifacts", "manifest.json"),
+          path.join(project, ".specistry", "artifacts", "manifest.json"),
           "utf8",
         ),
       );
@@ -315,7 +335,7 @@ describe("CLI clean-room package", () => {
         expect.objectContaining({ artifactFormat: 1, modelVersion: 1 }),
       );
       const documentation = await readFile(
-        path.join(project, ".specra", "artifacts", "documentation.json"),
+        path.join(project, ".specistry", "artifacts", "documentation.json"),
         "utf8",
       );
       expect(JSON.parse(documentation).model.modelVersion).toBe(1);
@@ -326,9 +346,9 @@ describe("CLI clean-room package", () => {
           "--input-type=module",
           "--eval",
           `import path from "node:path";
-           import { validateProject } from "@specra/cli";
+           import { validateProject } from "@specistry/cli";
            const result = await validateProject({ root: process.cwd() });
-           console.log(JSON.stringify({ ok: result.ok, artifact: result.ok ? result.context.paths.artifactRoot.endsWith(path.join(".specra", "artifacts")) : false, diagnostics: result.diagnostics }));`,
+           console.log(JSON.stringify({ ok: result.ok, artifact: result.ok ? result.context.paths.artifactRoot.endsWith(path.join(".specistry", "artifacts")) : false, diagnostics: result.diagnostics }));`,
         ],
         project,
       );
@@ -369,7 +389,7 @@ describe("CLI clean-room package", () => {
         violation,
         JSON.stringify(evaluation.quality.summary),
       ).toBeDefined();
-      const failingConfig = `import { defineConfig } from "@specra/config";
+      const failingConfig = `import { defineConfig } from "@specistry/config";
          export default defineConfig({
            schemaVersion: 1,
            name: "Clean room",
@@ -379,7 +399,7 @@ describe("CLI clean-room package", () => {
            quality: { rules: { "operation-description": "error" } },
            sdks: [{ id: "typescript", label: "TypeScript SDK", language: "typescript", package: "@clean-room/sdk", coverage: "complete", examples: [{ operation: "ping", file: "./sdk/ping.ts" }] }],
          });`;
-      await writeFile(path.join(project, "specra.config.ts"), failingConfig);
+      await writeFile(path.join(project, "specistry.config.ts"), failingConfig);
       const failed = command(executable, ["check"], project);
       expect(failed.status).toBe(3);
       expect(failed.stderr).toContain("Quality gate failed");
@@ -387,7 +407,7 @@ describe("CLI clean-room package", () => {
 
       // A typo in the policy is a configuration error, not a quiet pass.
       await writeFile(
-        path.join(project, "specra.config.ts"),
+        path.join(project, "specistry.config.ts"),
         failingConfig.replace("operation-description", "operation-descriptin"),
       );
       const typo = command(executable, ["check", "--json"], project);
@@ -398,7 +418,7 @@ describe("CLI clean-room package", () => {
       });
 
       await writeFile(
-        path.join(project, "specra.config.ts"),
+        path.join(project, "specistry.config.ts"),
         failingConfig.replace(
           `quality: { rules: { "operation-description": "error" } },`,
           `quality: { rules: { "operation-description": "error" }, suppressions: [{ rule: "operation-description", target: ${JSON.stringify(violation?.target.identity ?? "")}, reason: "Tracked in DOC-14; prose lands with the next release." }] },`,
@@ -415,7 +435,7 @@ describe("CLI clean-room package", () => {
       });
       // Restore the project's own configuration for the release workflow.
       await writeFile(
-        path.join(project, "specra.config.ts"),
+        path.join(project, "specistry.config.ts"),
         failingConfig.replace(
           `quality: { rules: { "operation-description": "error" } },`,
           "",
@@ -447,13 +467,13 @@ describe("CLI clean-room package", () => {
           release: expect.objectContaining({
             changelog: false,
             current: "v1",
-            directory: ".specra/releases/v1",
+            directory: ".specistry/releases/v1",
             unchanged: false,
             version: "v1",
           }),
         }),
       );
-      const store = path.join(project, ".specra", "releases");
+      const store = path.join(project, ".specistry", "releases");
       const digestsOf = async (version: string) => {
         const directory = path.join(store, version);
         const digests: Record<string, string> = {};
@@ -496,8 +516,8 @@ describe("CLI clean-room package", () => {
         "---\ntitle: Migration\n---\n\nCall [pong](/api/operations/pong) after [ping](/api/operations/ping).\n",
       );
       await writeFile(
-        path.join(project, "specra.config.ts"),
-        `import { defineConfig } from "@specra/config";
+        path.join(project, "specistry.config.ts"),
+        `import { defineConfig } from "@specistry/config";
          export default defineConfig({
            schemaVersion: 1,
            name: "Clean room",
@@ -518,7 +538,7 @@ describe("CLI clean-room package", () => {
       );
       const candidates = JSON.parse(
         await readFile(
-          path.join(project, ".specra", "candidates", "diff.json"),
+          path.join(project, ".specistry", "candidates", "diff.json"),
           "utf8",
         ),
       ) as { candidates: readonly { id: string; label: string }[] };
@@ -689,7 +709,7 @@ describe("CLI clean-room package", () => {
         project,
       );
       expect(humanDiff.status, humanDiff.stderr).toBe(0);
-      expect(humanDiff.stdout).toContain("Specra diff v1 → v2");
+      expect(humanDiff.stdout).toContain("Specistry diff v1 → v2");
       expect(humanDiff.stdout).toContain("+ GET /pong");
       const jsonDiff = command(
         executable,
@@ -762,7 +782,7 @@ describe("CLI clean-room package", () => {
         pnpmProject,
         "node_modules",
         ".bin",
-        process.platform === "win32" ? "specra.cmd" : "specra",
+        process.platform === "win32" ? "specistry.cmd" : "specistry",
       );
       const help = command(pnpmExecutable, ["--help"], pnpmProject);
       expect(help.status, help.stderr).toBe(0);
@@ -782,19 +802,19 @@ function command(
   args: readonly string[],
   cwd: string,
 ): ReturnType<typeof spawnSync> & { stderr: string; stdout: string } {
-  // npm and pnpm may be installed by a host runtime older than Specra's
+  // npm and pnpm may be installed by a host runtime older than Specistry's
   // supported Node line. Package installation is still useful evidence, but
   // execute their linked public bin with this test process's validated Node.
-  const linkedSpecra = new Set(["specra", "specra.cmd"]).has(
+  const linkedSpecistry = new Set(["specistry", "specistry.cmd"]).has(
     path.basename(executable),
   );
   const installedEntry = path.resolve(
     path.dirname(executable),
-    "../@specra/cli/dist/bin.js",
+    "../@specistry/cli/dist/bin.js",
   );
   const result = spawnSync(
-    linkedSpecra ? process.execPath : executable,
-    linkedSpecra ? [installedEntry, ...args] : args,
+    linkedSpecistry ? process.execPath : executable,
+    linkedSpecistry ? [installedEntry, ...args] : args,
     {
       cwd,
       encoding: "utf8",

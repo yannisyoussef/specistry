@@ -1,6 +1,6 @@
 {
-  "name": "@specra/release",
-  "version": "0.1.0-rc.2",
+  "name": "@specistry/release",
+  "version": "0.1.0-rc.3",
   "private": true,
   "license": "BUSL-1.1",
   "type": "module",
@@ -19,8 +19,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@specra/content": "workspace:*",
-    "@specra/model": "workspace:*"
+    "@specistry/content": "workspace:*",
+    "@specistry/model": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "24.13.3"

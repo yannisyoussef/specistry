@@ -1,5 +1,5 @@
 /**
- * `@specra/release`: the immutable documentation release contracts of
+ * `@specistry/release`: the immutable documentation release contracts of
  * SPEC-010. Pure data logic over the canonical and content artifacts:
  * version identifiers, the release manifest and catalog, the canonical
  * versioned route table, validated internal redirects, structured

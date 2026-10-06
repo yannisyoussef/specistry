@@ -1,9 +1,9 @@
 /**
- * Specra content model (SPEC-006). A small, source-independent, JSON-safe
+ * Specistry content model (SPEC-006). A small, source-independent, JSON-safe
  * representation of authored documentation: what a Markdown page *means*
  * (paragraphs, headings, lists, code, tables, images, links, and the curated
- * Specra components), never how a parser represented it and never arbitrary
- * HTML. It is the contract between the build (`specra build`), the reader,
+ * Specistry components), never how a parser represented it and never arbitrary
+ * HTML. It is the contract between the build (`specistry build`), the reader,
  * and later consumers such as search. Every node is deterministic data.
  */
 

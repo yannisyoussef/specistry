@@ -6,7 +6,7 @@ import type {
   Parameter,
   SchemaNode,
   SecurityScheme,
-} from "@specra/model";
+} from "@specistry/model";
 
 import {
   createBudget,

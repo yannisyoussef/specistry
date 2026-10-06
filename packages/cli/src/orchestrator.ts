@@ -1,8 +1,8 @@
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-import type { SpecraConfig } from "@specra/config";
-import { DEFAULT_INGESTION_LIMITS } from "@specra/openapi";
+import type { SpecistryConfig } from "@specistry/config";
+import { DEFAULT_INGESTION_LIMITS } from "@specistry/openapi";
 
 import { toDocumentId } from "./acquisition.js";
 import { removeStaleArtifacts, writeArtifacts } from "./artifacts.js";
@@ -51,7 +51,7 @@ import {
   type ExistingPathResult,
 } from "./path-policy.js";
 
-const CONFIG_FILENAME = "specra.config.ts";
+const CONFIG_FILENAME = "specistry.config.ts";
 
 /**
  * Loads and confines the project without touching OpenAPI sources. Public
@@ -141,7 +141,7 @@ export async function validateProject(
 
 /**
  * Validates, then writes the canonical artifact atomically to the fixed
- * `.specra/artifacts` directory. A failed build removes any previous artifact
+ * `.specistry/artifacts` directory. A failed build removes any previous artifact
  * directory so stale output can never masquerade as the current input.
  */
 export async function buildProject(
@@ -491,7 +491,7 @@ type ConfiguredPathsResult =
 
 async function resolveConfiguredPaths(
   projectRoot: string,
-  config: SpecraConfig,
+  config: SpecistryConfig,
 ): Promise<ConfiguredPathsResult> {
   const diagnostics: Diagnostic[] = [];
   const openapiInput = Array.isArray(config.openapi)

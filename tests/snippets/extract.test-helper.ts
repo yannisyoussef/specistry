@@ -1,4 +1,4 @@
-import type { ProtocolLanguage, ResolvedRequest } from "@specra/snippets";
+import type { ProtocolLanguage, ResolvedRequest } from "@specistry/snippets";
 
 /**
  * Reverse extractors for the cross-language semantic matrix (SPEC-008 §111,

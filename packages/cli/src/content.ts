@@ -13,13 +13,13 @@ import {
   type ContentPage,
   type MediaNode,
   type NavigationConfigNode,
-} from "@specra/content";
+} from "@specistry/content";
 import {
   createCanonicalId,
   parseDocumentationArtifact,
   serializeDocumentationArtifact,
   type AuthoredPageMetadata,
-} from "@specra/model";
+} from "@specistry/model";
 
 import type { BuildContext, Diagnostic, SourceSummary } from "./contracts.js";
 import {
@@ -32,7 +32,7 @@ import { isPathWithin, resolveExistingProjectPath } from "./path-policy.js";
 
 /**
  * Authored-content build step (SPEC-006). Discovers Markdown sources under
- * the configured docs root, compiles them through `@specra/content`, validates
+ * the configured docs root, compiles them through `@specistry/content`, validates
  * the configured navigation, confines and copies image assets and branding
  * files, and folds page metadata into the canonical documentation artifact.
  * Everything here is deterministic and offline; nothing executes author text.

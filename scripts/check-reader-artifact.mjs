@@ -1,8 +1,8 @@
 // Build-time gate for the reader: `next build` does not touch the canonical
 // artifact because every documentation route renders on demand, so this
-// script validates `.specra/artifacts` for the configured project before the
+// script validates `.specistry/artifacts` for the configured project before the
 // build starts and fails with the same actionable message the server uses.
-// Usage: node scripts/check-reader-artifact.mjs (honours SPECRA_PROJECT_ROOT)
+// Usage: node scripts/check-reader-artifact.mjs (honours SPECISTRY_PROJECT_ROOT)
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -16,14 +16,15 @@ import {
   parseDocumentationArtifact,
 } from "../packages/model/dist/index.js";
 
-const ARTIFACT_DIRECTORY = ".specra/artifacts";
+const ARTIFACT_DIRECTORY = ".specistry/artifacts";
 const root = path.resolve(
-  process.env.SPECRA_PROJECT_ROOT && process.env.SPECRA_PROJECT_ROOT.length > 0
-    ? process.env.SPECRA_PROJECT_ROOT
+  process.env.SPECISTRY_PROJECT_ROOT &&
+    process.env.SPECISTRY_PROJECT_ROOT.length > 0
+    ? process.env.SPECISTRY_PROJECT_ROOT
     : process.cwd(),
 );
 const hint =
-  "Run `specra build` in the project and point SPECRA_PROJECT_ROOT at it before building the reader.";
+  "Run `specistry build` in the project and point SPECISTRY_PROJECT_ROOT at it before building the reader.";
 
 function fail(message) {
   process.stderr.write(`[reader] ${message} ${hint}\n`);
@@ -51,7 +52,7 @@ try {
   manifest = parseArtifactManifest(read("manifest.json"));
 } catch (error) {
   fail(
-    `The artifact manifest is not a supported Specra manifest (${error.message}).`,
+    `The artifact manifest is not a supported Specistry manifest (${error.message}).`,
   );
 }
 let artifact;

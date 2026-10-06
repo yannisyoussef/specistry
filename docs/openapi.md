@@ -1,6 +1,6 @@
 # OpenAPI ingestion reference
 
-SPEC-003 turns the configured OpenAPI 3.0.x and 3.1.x sources into Specra's canonical documentation model v1. `specra validate` runs the complete pipeline without writing anything; `specra build` writes the resulting artifact atomically. This page is the support contract: anything not listed as supported is either projected with a warning or rejected with an error, never silently narrowed.
+SPEC-003 turns the configured OpenAPI 3.0.x and 3.1.x sources into Specistry's canonical documentation model v1. `specistry validate` runs the complete pipeline without writing anything; `specistry build` writes the resulting artifact atomically. This page is the support contract: anything not listed as supported is either projected with a warning or rejected with an error, never silently narrowed.
 
 ## Pipeline
 
@@ -142,7 +142,7 @@ Every diagnostic has a stable code, a fixed value-free message, a severity (`err
 
 | Scope           | Meaning                                                     | Example                                   |
 | --------------- | ----------------------------------------------------------- | ----------------------------------------- |
-| `config`        | `specra.config.ts` data; `*` is a user-chosen record key    | `config#/environments/*/baseUrl`          |
+| `config`        | `specistry.config.ts` data; `*` is a user-chosen record key | `config#/environments/*/baseUrl`          |
 | `cli`           | Command options                                             | `cli#/root`                               |
 | `source/<path>` | A source document (project-relative POSIX path) and pointer | `source/schemas/user.yaml#/properties/id` |
 | `artifact`      | The artifact directory or a canonical model pointer         | `artifact#/model/versions/0`              |
@@ -167,18 +167,18 @@ Errors sort before warnings, then by code, then by path (scope, then pointer seg
 | `INGESTION_TIMEOUT`                | error    | Raise `--source-timeout` or reduce the source                             |
 | `INGESTION_FAILED`                 | error    | Re-run; report a reproducible failure without secrets                     |
 | `ARTIFACT_INVALID`                 | error    | Report: the adapter produced a model the contract rejects                 |
-| `ARTIFACT_WRITE_FAILED`            | error    | Check permissions and remove any symlinked `.specra/artifacts`            |
+| `ARTIFACT_WRITE_FAILED`            | error    | Check permissions and remove any symlinked `.specistry/artifacts`         |
 
 Diagnostics never include source values, exception text, absolute machine paths, or secrets. Canonical capability diagnostics inside the artifact keep their own source-independent locations; the CLI mirrors warnings and errors to source pointers. Pointers are bounded to 2 KiB: a location deeper than that is reported at its nearest ancestor within the bound, so an over-long author key can never turn a diagnostic into a failed ingestion.
 
 ## Build artifact
 
-`specra build` writes two files into the fixed `.specra/artifacts` directory:
+`specistry build` writes two files into the fixed `.specistry/artifacts` directory:
 
 - `documentation.json`: the canonical artifact, serialized by the model's deterministic serializer (compact JSON, sorted keys, semantic ordering), `modelVersion: 1`.
-- `manifest.json`: `artifactFormat: 1`, `modelVersion: 1`, project id/name, the ordered source list with byte sizes and SHA-256 digests, statistics, and diagnostic counts. Its typed contract (`ArtifactManifest`, `parseArtifactManifest`, `serializeArtifactManifest`) is exported by `@specra/model`, so readers consume the directory without depending on the CLI.
+- `manifest.json`: `artifactFormat: 1`, `modelVersion: 1`, project id/name, the ordered source list with byte sizes and SHA-256 digests, statistics, and diagnostic counts. Its typed contract (`ArtifactManifest`, `parseArtifactManifest`, `serializeArtifactManifest`) is exported by `@specistry/model`, so readers consume the directory without depending on the CLI.
 
-Files are written into a staging directory next to the target, then promoted by rename; the previous artifact directory is moved aside and removed only after promotion succeeds. A failed build removes any previous artifact directory so stale output never represents the current input. A symlink at any component of `.specra/artifacts` is refused, a regular file at that path fails configuration validation before ingestion, and a read-only `.specra` fails the write while leaving the previous artifact intact. Artifact bytes contain no timestamps, random identifiers, or machine paths: building the same project twice, in a fresh process, or in a different parent directory produces identical bytes.
+Files are written into a staging directory next to the target, then promoted by rename; the previous artifact directory is moved aside and removed only after promotion succeeds. A failed build removes any previous artifact directory so stale output never represents the current input. A symlink at any component of `.specistry/artifacts` is refused, a regular file at that path fails configuration validation before ingestion, and a read-only `.specistry` fails the write while leaving the previous artifact intact. Artifact bytes contain no timestamps, random identifiers, or machine paths: building the same project twice, in a fresh process, or in a different parent directory produces identical bytes.
 
 ## Troubleshooting
 

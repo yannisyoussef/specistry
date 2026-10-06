@@ -29,7 +29,7 @@ test.describe("security headers", () => {
       { purpose: "prefetch" },
       { "sec-purpose": "prefetch" },
       { "next-router-prefetch": "1" },
-      { "x-specra-pathname": "/api/inboxes/get-inbox" },
+      { "x-specistry-pathname": "/api/inboxes/get-inbox" },
     ]) {
       const response = await request.get(OPERATION, { headers });
       expect(response.status(), JSON.stringify(headers)).toBe(200);
@@ -66,7 +66,9 @@ test.describe("security headers", () => {
     });
     expect(openRedirect.status()).toBe(303);
     expect(openRedirect.headers()["location"]).toBe("/");
-    expect(openRedirect.headers()["set-cookie"]).toContain("specra-mode=dark");
+    expect(openRedirect.headers()["set-cookie"]).toContain(
+      "specistry-mode=dark",
+    );
     expect(openRedirect.headers()["set-cookie"]).toContain("HttpOnly");
     expect(openRedirect.headers()["set-cookie"]).toContain("SameSite=lax");
   });
@@ -362,7 +364,7 @@ test.describe("desktop reader", () => {
       "<loc>https://docs.example.test/api/inboxes/create-inbox</loc>",
     );
     expect(xml).toContain("<loc>https://docs.example.test/api/inboxes</loc>");
-    expect(xml).not.toContain(".specra");
+    expect(xml).not.toContain(".specistry");
     // Home, API index, six groups, 25 operations, and eight authored pages.
     expect((xml.match(/<loc>/g) ?? []).length).toBe(2 + 6 + 25 + 8);
     const robots = await request.get("/robots.txt");

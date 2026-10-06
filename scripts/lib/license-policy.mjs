@@ -4,11 +4,11 @@ import path from "node:path";
 export const CURRENT_LICENSE = "BUSL-1.1";
 export const CHANGE_LICENSE = "Apache-2.0";
 export const CHANGE_DATE_YEARS = 3;
-export const LICENSED_WORK = "Specra";
+export const LICENSED_WORK = "Specistry";
 export const ADDITIONAL_USE_GRANT =
   "You may make production use of the Licensed Work to create, host, and publish documentation for products, services, APIs, projects, or internal systems owned or operated by you or your organization, including for commercial purposes, provided that you do not offer the Licensed Work itself, or a service whose primary value is the functionality of the Licensed Work, as a hosted or managed service to third parties.";
 export const TRADEMARK_NOTICE =
-  "The Specra name, Specra logo, and associated branding are trademarks or brand assets of their respective owner. The software license does not grant trademark rights except as expressly required by the license.";
+  "The Specistry name, Specistry logo, and associated branding are trademarks or brand assets of their respective owner. The software license does not grant trademark rights except as expressly required by the license.";
 
 export async function readLicensePolicy(repositoryRoot) {
   return JSON.parse(
@@ -77,11 +77,11 @@ export function expectedNotice(policy) {
 ${confirmed} is a société par actions simplifiée unipersonnelle (${policy.licensor.legalForm}).`
     : `The exact legal entity name and licensing authority for the proposed licensor,
 ${policy.licensor.proposedName}, must be confirmed by the owner before public distribution.`;
-  return `Specra
+  return `Specistry
 
 ${identity}
 
-The Specra name, Specra logo, and associated branding are trademarks or brand
+The Specistry name, Specistry logo, and associated branding are trademarks or brand
 assets of their respective owner. The software license does not grant
 trademark rights except as expressly required by the license.
 `;

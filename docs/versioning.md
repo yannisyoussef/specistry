@@ -11,41 +11,41 @@ controls.
 ## The model in one picture
 
 ```text
-edit sources → specra validate → specra build → .specra/artifacts (mutable candidate)
+edit sources → specistry validate → specistry build → .specistry/artifacts (mutable candidate)
                                               ↓
-                             review .specra/candidates/diff.json
+                             review .specistry/candidates/diff.json
                                               ↓
                              write changelog/<version>.json
                                               ↓
-                  specra release <version> [--current] → .specra/releases/<version> (immutable)
+                  specistry release <version> [--current] → .specistry/releases/<version> (immutable)
                                               ↓
-                  specra current <version>  → catalog.json (the only mutable file)
+                  specistry current <version>  → catalog.json (the only mutable file)
                                               ↓
                              deploy the reader with the project root
 ```
 
-`specra build` stays a candidate build: run it as often as you like while
+`specistry build` stays a candidate build: run it as often as you like while
 editing. Nothing becomes a release until you say so.
 
 ## Creating a documentation version
 
 ```bash
-specra build
-specra release v1 --current --label "1.0" --date 2026-08-01
+specistry build
+specistry release v1 --current --label "1.0" --date 2026-08-01
 ```
 
-`specra release <version>` verifies the candidate in `.specra/artifacts`
+`specistry release <version>` verifies the candidate in `.specistry/artifacts`
 against its manifest byte for byte, derives the release's route table and
 frozen redirects, validates the changelog against the structured diff
 candidates, stages the exact files, fsyncs and re-reads them, and promotes
-the directory with one atomic rename into `.specra/releases/<version>`.
+the directory with one atomic rename into `.specistry/releases/<version>`.
 Nothing is rebuilt from sources during a release. The release manifest
 (`release.json`) records every component's format version, size, and
 SHA-256, the assets, and an aggregate digest; the catalog records the
 digest again.
 
 The first release becomes current. Later releases become current only with
-`--current`, or later through `specra current <version>`.
+`--current`, or later through `specistry current <version>`.
 
 Version ids are documentation-release identities: `v1`, `v1.2`, `1.2.0`,
 `2026-09` are all valid. They use ASCII letters, digits, dots, underscores,
@@ -58,22 +58,22 @@ versions, container tags, or API deployment versions.
 
 ## Modifying an old release
 
-You cannot. Re-running `specra release v1` with an identical candidate is a
+You cannot. Re-running `specistry release v1` with an identical candidate is a
 no-op; with different content it fails with `VERSION_ALREADY_EXISTS` and the
 retained release is untouched. To correct a mistake, publish a new release
 (`v1.1`, `2026-09-b`) and, if the old one should stop being recommended,
-`specra deprecate v1`. Deprecation is catalog metadata: the release still
+`specistry deprecate v1`. Deprecation is catalog metadata: the release still
 renders, with a deprecation notice and a `Deprecated` label in the version
 menu; the current release cannot be deprecated.
 
 ## Making a release current, and rolling back
 
 ```bash
-specra current v2
-specra current v1   # documentation rollback
+specistry current v2
+specistry current v1   # documentation rollback
 ```
 
-Both commands rewrite `.specra/releases/catalog.json` under a lock and
+Both commands rewrite `.specistry/releases/catalog.json` under a lock and
 touch no release directory. `/`, `/docs`, and `/api` redirect (307) to the
 current release; canonical versioned URLs do not change, so rolling back is
 safe for search engines and bookmarks.
@@ -82,7 +82,7 @@ safe for search engines and bookmarks.
 
 Every published release is retained. There is no automatic pruning, no
 "keep last N", and no delete command in this slice; back up the whole
-`.specra/releases` directory and restore it as a unit. Assets are copied
+`.specistry/releases` directory and restore it as a unit. Assets are copied
 into each release (content-addressed, small) and served by name across
 releases, so removing a release directory by hand can only break that
 release. If you ever remove one, its canonical URLs become real 404s; they
@@ -111,7 +111,7 @@ policy are the release's own. Without a catalog (a project that never
 released) the reader keeps the previous unversioned routes unchanged.
 
 To preview the candidate instead of the releases on a machine that has a
-catalog, start the reader with `SPECRA_SERVE=candidate`.
+catalog, start the reader with `SPECISTRY_SERVE=candidate`.
 
 ## Historical playground policy
 
@@ -126,7 +126,7 @@ between pages is validated against the release being read.
 
 ## Redirects
 
-Redirects are data in `specra.config.ts`, validated at build and release
+Redirects are data in `specistry.config.ts`, validated at build and release
 time and frozen with each release:
 
 ```ts
@@ -147,9 +147,9 @@ redirect can never leave the site. At most 10,000 redirects per release.
 
 ## Reviewing diff candidates
 
-When a catalog exists, `specra build` compares the candidate with the
+When a catalog exists, `specistry build` compares the candidate with the
 current release (or `--from <version>`) and writes structured candidates to
-`.specra/candidates/diff.json`. The reader never reads that directory and
+`.specistry/candidates/diff.json`. The reader never reads that directory and
 no artifact includes it. Candidates are identity-based and value-free:
 
 | Kind                                               | Identity                                                                                                                                                                                                                                                            |
@@ -160,7 +160,7 @@ no artifact includes it. Candidates are identity-based and value-free:
 | `operation-changed`                                | same, with `changes` by aspect: method, path, title, description, deprecated, tags, parameter added/removed/changed, request media added/removed, request required, request schema, response added/removed, response media added/removed, response schema, security |
 | `schema-added`, `schema-removed`, `schema-changed` | `service~schema id`                                                                                                                                                                                                                                                 |
 
-An operation whose id changed appears as removed plus added; Specra never
+An operation whose id changed appears as removed plus added; Specistry never
 guesses a rename. Schema and example changes are reported as digest
 changes, never as values. There is no breaking-change label or score
 (SPEC-011 owns that policy). Output is bounded to 10,000 candidates
@@ -206,26 +206,26 @@ listed under `omitted`, or covered by `"omitted": "all"`; otherwise the
 release fails with `CHANGELOG_CANDIDATE_UNREVIEWED`. A release with no
 comparison base (`--no-diff`, or the first release) needs no changelog.
 
-Specra publishes exactly what you wrote as `changelog.json`, at
+Specistry publishes exactly what you wrote as `changelog.json`, at
 `/docs/{version}/changelog`, with a Changelog tab in the header and,
-once several releases publish notes, a release-history list. Specra does not automatically publish generated
+once several releases publish notes, a release-history list. Specistry does not automatically publish generated
 changelog prose, and the private candidates never reach the reader, the
 search index, the sitemap, or a browser bundle.
 
 ## Public and private
 
-| Path                            | Visibility                                                 |
-| ------------------------------- | ---------------------------------------------------------- |
-| `.specra/artifacts`             | The candidate; served only in candidate mode               |
-| `.specra/candidates/diff.json`  | Private review data; never served                          |
-| `changelog/<version>.json`      | Author source; never served (the published copy is frozen) |
-| `.specra/releases/<version>/*`  | Served under `/docs/{version}` and `/api/{version}`        |
-| `.specra/releases/catalog.json` | Read by the reader; never served as a file                 |
+| Path                               | Visibility                                                 |
+| ---------------------------------- | ---------------------------------------------------------- |
+| `.specistry/artifacts`             | The candidate; served only in candidate mode               |
+| `.specistry/candidates/diff.json`  | Private review data; never served                          |
+| `changelog/<version>.json`         | Author source; never served (the published copy is frozen) |
+| `.specistry/releases/<version>/*`  | Served under `/docs/{version}` and `/api/{version}`        |
+| `.specistry/releases/catalog.json` | Read by the reader; never served as a file                 |
 
 ## Migrating an existing site
 
-A project with today's `.specra/artifacts` creates its first release with
-`specra release <version>` (the candidate is promoted as is) and deploys the
+A project with today's `.specistry/artifacts` creates its first release with
+`specistry release <version>` (the candidate is promoted as is) and deploys the
 reader with the same project root. From then on `/docs/<slug>` and
 `/api/<...>` links redirect to the current release's routes with 307, `/`
 and `/docs` redirect to the release home, and canonical URLs carry the
@@ -234,16 +234,16 @@ version. Nothing changes for a project that never releases.
 ## Operations
 
 - **Deployment:** copy the whole project root (or at least
-  `.specra/releases` and, for candidate mode, `.specra/artifacts`) to the
+  `.specistry/releases` and, for candidate mode, `.specistry/artifacts`) to the
   reader host; the reader needs no historical sources.
-- **Backup and restore:** back up `.specra/releases` as a unit; restore
+- **Backup and restore:** back up `.specistry/releases` as a unit; restore
   `catalog.json` to roll the current pointer back.
 - **Integrity:** the reader refuses a release whose components do not
   match `release.json`, a manifest that does not match the catalog, and a
   catalog that names a missing current; restore from backup rather than
   editing by hand.
 - **Memory:** the reader parses the catalog on first request and re-reads
-  it only when the file changes (so `specra current` takes effect without a
+  it only when the file changes (so `specistry current` takes effect without a
   restart), loads each release on first request, and keeps at most four
   parsed releases; route tables and redirects are cached separately.
 - **Sitemaps:** `/sitemap.xml` is an index of one sitemap per release

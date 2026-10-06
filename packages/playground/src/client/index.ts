@@ -1,5 +1,5 @@
 /**
- * `@specra/playground/client`: the browser half of the playground. No
+ * `@specistry/playground/client`: the browser half of the playground. No
  * React, no Node, no parser; only the form contract, the destination
  * assertion, the request builder, the memory-only credential vault, the
  * bounded executor, and presentation redaction.

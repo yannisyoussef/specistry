@@ -1,4 +1,4 @@
-import type { BlockNode, ContentPage } from "@specra/content";
+import type { BlockNode, ContentPage } from "@specistry/content";
 import type { ReactNode } from "react";
 
 import {

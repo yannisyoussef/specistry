@@ -4,8 +4,8 @@ import {
   type NavigationArtifact,
   type NavigationEntry,
   type NavigationNode,
-} from "@specra/content";
-import type { ArtifactBranding } from "@specra/model";
+} from "@specistry/content";
+import type { ArtifactBranding } from "@specistry/model";
 
 import type { ReaderIndex } from "./projection";
 import { LEGACY_ROOTS, scopeContentValue, type ReaderRoots } from "./scope";

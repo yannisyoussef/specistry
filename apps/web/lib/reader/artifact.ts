@@ -5,7 +5,7 @@ import {
   ContentArtifactError,
   parseContentArtifact,
   parseNavigationArtifact,
-} from "@specra/content";
+} from "@specistry/content";
 import {
   ARTIFACT_MANIFEST_FILENAME,
   CanonicalModelError,
@@ -13,33 +13,36 @@ import {
   parseDocumentationArtifact,
   type ArtifactManifest,
   type DocumentationArtifact,
-} from "@specra/model";
+} from "@specistry/model";
 
 import { createHash } from "node:crypto";
 
-import { parseSearchArtifact } from "@specra/search";
+import { parseSearchArtifact } from "@specistry/search";
 import {
   parsePlaygroundArtifact,
   type PlaygroundArtifact,
-} from "@specra/playground";
-import { parseSnippetsArtifact, type SnippetsArtifact } from "@specra/snippets";
+} from "@specistry/playground";
+import {
+  parseSnippetsArtifact,
+  type SnippetsArtifact,
+} from "@specistry/snippets";
 
-import type { ReleaseManifest } from "@specra/release";
+import type { ReleaseManifest } from "@specistry/release";
 
 import { createReaderContent, type ReaderContent } from "./content";
 import { createReaderIndex, type ReaderIndex } from "./projection";
 import { LEGACY_ROOTS, type ReaderRoots, type ReaderVersion } from "./scope";
 
 /**
- * The reader's only input: the artifact directory written by `specra build`.
+ * The reader's only input: the artifact directory written by `specistry build`.
  * Both files are validated through the model's contracts before anything is
  * rendered, and the result is memoized per process so every route shares one
  * validated artifact. Failures are actionable build/start errors; the reader
  * never renders an empty site in place of a broken artifact.
  */
 
-export const ARTIFACT_DIRECTORY = ".specra/artifacts";
-export const PROJECT_ROOT_VARIABLE = "SPECRA_PROJECT_ROOT";
+export const ARTIFACT_DIRECTORY = ".specistry/artifacts";
+export const PROJECT_ROOT_VARIABLE = "SPECISTRY_PROJECT_ROOT";
 
 export interface ReaderArtifact {
   readonly artifact: DocumentationArtifact;
@@ -156,12 +159,12 @@ export async function readArtifactSet(
 ): Promise<ReaderArtifact> {
   const hint =
     options.release === undefined
-      ? `Run \`specra build\` in the project (${PROJECT_ROOT_VARIABLE} currently resolves to the ${
+      ? `Run \`specistry build\` in the project (${PROJECT_ROOT_VARIABLE} currently resolves to the ${
           process.env[PROJECT_ROOT_VARIABLE]
             ? "configured root"
             : "working directory"
         }) and rebuild the reader.`
-      : "Restore the release store from backup or re-run `specra release`; the reader never falls back to another version.";
+      : "Restore the release store from backup or re-run `specistry release`; the reader never falls back to another version.";
   const files = new ArtifactFiles(absolute, directory, hint, options.release);
   const manifestText = await files.read(ARTIFACT_MANIFEST_FILENAME, "manifest");
   let manifest: ArtifactManifest;
@@ -169,7 +172,7 @@ export async function readArtifactSet(
     manifest = parseArtifactManifest(manifestText);
   } catch (error) {
     throw new ReaderArtifactError(
-      `The artifact manifest in ${directory} is not a supported Specra manifest (${describe(error)}).`,
+      `The artifact manifest in ${directory} is not a supported Specistry manifest (${describe(error)}).`,
       hint,
     );
   }

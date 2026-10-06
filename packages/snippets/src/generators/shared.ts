@@ -49,7 +49,7 @@ export function writeComments(
   for (const note of notes) writer.cmt(`${prefix}${note}`).nl();
 }
 
-export const MULTIPART_BOUNDARY = "----SpecraFormBoundary";
+export const MULTIPART_BOUNDARY = "----SpecistryFormBoundary";
 export const CLIENT_CERT = "<CLIENT_CERT_PATH>";
 export const CLIENT_KEY = "<CLIENT_KEY_PATH>";
 export const FILE_CONTENTS = "<FILE_CONTENTS>";

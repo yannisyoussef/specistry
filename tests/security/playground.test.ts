@@ -1,12 +1,12 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
-import { parseConfig } from "@specra/config";
+import { parseConfig } from "@specistry/config";
 import {
   parsePlaygroundArtifact,
   PlaygroundArtifactError,
   serializePlaygroundArtifact,
-} from "@specra/playground";
+} from "@specistry/playground";
 import { describe, expect, it } from "vitest";
 
 import { contentSecurityPolicy } from "../../apps/web/proxy";
@@ -81,7 +81,7 @@ describe("no proxy, no forwarding", () => {
     for (const file of serverFiles) {
       const source = readFileSync(file, "utf8");
       expect(source, path.relative(root, file)).not.toMatch(
-        /@specra\/playground\/client/,
+        /@specistry\/playground\/client/,
       );
       expect(source, path.relative(root, file)).not.toMatch(
         /createCredentialVault|executeRequest\(/,
@@ -92,7 +92,7 @@ describe("no proxy, no forwarding", () => {
   it("only the Try it island imports the client entry, and it never touches storage or cookies with a credential", () => {
     const components = walk(path.join(root, "apps/web/components"));
     const importing = components.filter((file) =>
-      /@specra\/playground\/client/.test(readFileSync(file, "utf8")),
+      /@specistry\/playground\/client/.test(readFileSync(file, "utf8")),
     );
     expect(importing.map((file) => path.relative(root, file)).sort()).toEqual([
       "apps/web/components/reader/playground/try-it.tsx",
@@ -270,7 +270,7 @@ describe("policy artifact tampering", () => {
   const text = readFileSync(
     path.join(
       root,
-      "tests/fixtures/reader/testinbox/.specra/artifacts/playground.json",
+      "tests/fixtures/reader/testinbox/.specistry/artifacts/playground.json",
     ),
     "utf8",
   );

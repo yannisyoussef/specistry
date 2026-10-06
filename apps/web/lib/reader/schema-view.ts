@@ -5,7 +5,7 @@ import type {
   ObjectConstraints,
   SchemaId,
   SchemaNode,
-} from "@specra/model";
+} from "@specistry/model";
 
 /**
  * Schema view projection (SPEC-005). Turns a canonical `SchemaNode` into a

@@ -1,4 +1,4 @@
-import type { PublishedChangelog } from "@specra/release";
+import type { PublishedChangelog } from "@specistry/release";
 
 import {
   scopeHref,

@@ -4,11 +4,14 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseContentArtifact, parseNavigationArtifact } from "@specra/content";
+import {
+  parseContentArtifact,
+  parseNavigationArtifact,
+} from "@specistry/content";
 import {
   parseArtifactManifest,
   parseDocumentationArtifact,
-} from "@specra/model";
+} from "@specistry/model";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
@@ -52,7 +55,7 @@ const PAGES = 1_000;
 const SECTIONS = 20;
 
 async function createSite(): Promise<string> {
-  const root = await mkdtemp(path.join(tmpdir(), "specra-content-scale-"));
+  const root = await mkdtemp(path.join(tmpdir(), "specistry-content-scale-"));
   temporary.push(root);
   const bytes = await writeSyntheticSite(root, {
     pages: PAGES,
@@ -88,7 +91,7 @@ describe("authored content at scale", () => {
     };
     expect(summary.ok).toBe(true);
     expect(summary.diagnostics).toBe(0);
-    const artifacts = path.join(root, ".specra", "artifacts");
+    const artifacts = path.join(root, ".specistry", "artifacts");
     const manifest = parseArtifactManifest(
       await readFile(path.join(artifacts, "manifest.json"), "utf8"),
     );

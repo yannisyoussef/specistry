@@ -13,7 +13,7 @@ import {
   parseNavigationArtifact,
   type ContentArtifact,
   type NavigationArtifact,
-} from "@specra/content";
+} from "@specistry/content";
 import {
   parseDocumentationArtifact,
   serializeDocumentationArtifact,
@@ -22,19 +22,19 @@ import {
   type Operation,
   type SchemaNode,
   type SecurityScheme,
-} from "@specra/model";
-import { diffArtifacts } from "@specra/release";
+} from "@specistry/model";
+import { diffArtifacts } from "@specistry/release";
 import {
   parseSnippetsArtifact,
   type SdkDeclaration,
   type SdkExample,
   type SnippetsArtifact,
-} from "@specra/snippets";
+} from "@specistry/snippets";
 
 import { collectFacts, type QualityFacts } from "./facts.js";
 
 const artifactRoot =
-  "../../../tests/fixtures/reader/testinbox/.specra/artifacts";
+  "../../../tests/fixtures/reader/testinbox/.specistry/artifacts";
 
 function load(name: string): string {
   return readFileSync(

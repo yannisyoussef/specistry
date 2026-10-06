@@ -1,13 +1,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { parseDocumentationArtifact } from "@specra/model";
+import { parseDocumentationArtifact } from "@specistry/model";
 import {
   generateAll,
   projectArtifact,
   PROTOCOL_LANGUAGES,
   type EnvironmentProjection,
-} from "@specra/snippets";
+} from "@specistry/snippets";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -42,7 +42,7 @@ describe("cross-language request equivalence", () => {
       readFileSync(
         path.join(
           process.cwd(),
-          "tests/fixtures/reader/testinbox/.specra/artifacts/documentation.json",
+          "tests/fixtures/reader/testinbox/.specistry/artifacts/documentation.json",
         ),
         "utf8",
       ),

@@ -1,0 +1,72 @@
+{
+  "assets": [],
+  "components": {
+    "changelog": {
+      "bytes": 1803,
+      "file": "changelog.json",
+      "format": 1,
+      "sha256": "3b4bf91010a0e5bcd6df94a7fab5a2bbc49afb4e6076095d78cfef52cdcbd1bb"
+    },
+    "content": {
+      "bytes": 6546,
+      "file": "content.json",
+      "format": 1,
+      "sha256": "4c68d4222fd0f27abeaa77dafab15a3423560e3a9b16733b45adcf39cddf42a6"
+    },
+    "documentation": {
+      "bytes": 4224,
+      "file": "documentation.json",
+      "format": 1,
+      "sha256": "5f27528251eec85461a6702719dd4dfc62b0314d31715825590cf0a8ff83dc40"
+    },
+    "manifest": {
+      "bytes": 1713,
+      "file": "manifest.json",
+      "format": 1,
+      "sha256": "ec384134069f77ef0ffb9ec9bdfd9d36b395d7325f3a6f5dd89afb9ff06dfc6b"
+    },
+    "navigation": {
+      "bytes": 441,
+      "file": "navigation.json",
+      "format": 1,
+      "sha256": "97e49a069855ff5c2d3e86687f0b19d1a9fb7c248f8bdc78f0004ca61127708a"
+    },
+    "playground": {
+      "bytes": 2232,
+      "file": "playground.json",
+      "format": 1,
+      "sha256": "a157d3897151f2e5e0e0046a4d5ae0e9d07a7721617f920f4868b468ec4d6d6d"
+    },
+    "redirects": {
+      "bytes": 125,
+      "file": "redirects.json",
+      "format": 1,
+      "sha256": "95367384ce4d61f142b61b9727da3e5696e0b6eaec786d8ea25dc47f868c029f"
+    },
+    "routes": {
+      "bytes": 937,
+      "file": "routes.json",
+      "format": 1,
+      "sha256": "4e3aeb25cbdc2da62b52924d6c85cc2f54c7227c48401ebd501dbec71cbd4186"
+    },
+    "search": {
+      "bytes": 5328,
+      "file": "search.json",
+      "format": 1,
+      "sha256": "46567c439b566c2d991bc5e7310c7834412944bc17b4a854c5633d7240542755"
+    },
+    "snippets": {
+      "bytes": 2886,
+      "file": "snippets.json",
+      "format": 1,
+      "sha256": "4fbc334be94d9d40ebdc7e214fde024d1c95ef83b7baf1e1d73e3eb92559e536"
+    }
+  },
+  "digest": "2c73740c8c40f3127d39fc593ad673f8f316ac402cc1f31e7464c8ff0c30b1b0",
+  "project": {
+    "id": "Versioned",
+    "name": "Versioned"
+  },
+  "releaseFormat": 1,
+  "version": "v2"
+}

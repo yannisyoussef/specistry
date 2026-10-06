@@ -1,7 +1,7 @@
 # Reader design contract v1
 
 This document records the durable engineering decisions derived from the approved
-Claude Design proposal for the Specra reader (direction "Reader with a contextual rail",
+Claude Design proposal for the Specistry reader (direction "Reader with a contextual rail",
 skinned **Glass**). The raw design package stays outside the repository; everything an
 implementer needs to keep the reader faithful is here. Where a decision deviates from
 the proposal, the deviation and its reason are listed at the end.

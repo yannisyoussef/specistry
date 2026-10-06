@@ -179,7 +179,7 @@ export function generateJava(request: ResolvedRequest): Snippet {
   return writer.finish("java");
 }
 
-const BOUNDARY = "----SpecraFormBoundary";
+const BOUNDARY = "----SpecistryFormBoundary";
 
 function publisher(writer: Writer, request: ResolvedRequest): void {
   const body = request.body;

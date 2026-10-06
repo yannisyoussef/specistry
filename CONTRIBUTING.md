@@ -1,4 +1,4 @@
-# Contributing to Specra
+# Contributing to Specistry
 
 ## Before changing code
 
@@ -53,7 +53,7 @@ A pull request should state the work-item identifier, scope, non-goals, risks, v
 
 ## Contributions and licensing
 
-By intentionally submitting a contribution for inclusion in Specra, you agree
+By intentionally submitting a contribution for inclusion in Specistry, you agree
 that it may be distributed under the repository's current Business Source
 License 1.1 terms, including the recorded Additional Use Grant and the future
 Apache-2.0 Change License. Contributions offered under different or additional
@@ -69,7 +69,7 @@ external contribution containing copyrightable changes for which commercial
 relicensing is intended; this document does not silently grant those rights.
 
 The confirmed copyright owner and Licensor is INFINITY VENTURES (legal form:
-SASU), and its authority to license Specra is confirmed. This does not resolve
+SASU), and its authority to license Specistry is confirmed. This does not resolve
 the separate question of commercial relicensing rights for third-party
 contributions; the caution above remains in force. See
 [the license decision](docs/license-decision.md).

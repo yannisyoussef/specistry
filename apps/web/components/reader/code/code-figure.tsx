@@ -1,4 +1,4 @@
-import type { SnippetToken } from "@specra/snippets";
+import type { SnippetToken } from "@specistry/snippets";
 
 import { CopyButton } from "../copy-button";
 

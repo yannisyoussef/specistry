@@ -5,7 +5,7 @@ import path from "node:path";
 import {
   parseDocumentationArtifact,
   type DocumentationArtifact,
-} from "@specra/model";
+} from "@specistry/model";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -35,7 +35,7 @@ function loadArtifact(name: string): DocumentationArtifact {
       path.join(
         fixtureRoot,
         name,
-        ".specra",
+        ".specistry",
         "artifacts",
         "documentation.json",
       ),

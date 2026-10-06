@@ -22,11 +22,11 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "pnpm --filter @specra/web start",
+    command: "pnpm --filter @specistry/web start",
     env: {
       PORT: "3110",
-      SPECRA_PROJECT_ROOT: fixture,
-      SPECRA_SITE_URL: "https://docs.example.test",
+      SPECISTRY_PROJECT_ROOT: fixture,
+      SPECISTRY_SITE_URL: "https://docs.example.test",
     },
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

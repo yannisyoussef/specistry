@@ -1,6 +1,6 @@
 # Documentation quality gates
 
-`specra check` evaluates documentation the same way every time and tells CI
+`specistry check` evaluates documentation the same way every time and tells CI
 whether to fail. It is built from three separate layers, and keeping them
 separate is the point:
 
@@ -24,7 +24,7 @@ See [ADR-017](adr/017-documentation-quality-facts-rules-policy.md).
 
 ## There is no score
 
-Specra reports counts by severity, not a percentage. A single number hides
+Specistry reports counts by severity, not a percentage. A single number hides
 which findings matter, moves when an API grows rather than when its
 documentation changes, and invites gaming. `0 errors · 4 warnings · 7 info`
 tells an author what to do next; `87/100` does not. The roadmap explicitly
@@ -34,13 +34,13 @@ arriving later.
 ## Running it
 
 ```bash
-specra build
-specra check
+specistry build
+specistry check
 ```
 
 Check reads the artifacts a build already produced. It never writes, never
 rebuilds, never applies a fix, never edits a suppression, and never touches
-the release catalog. Run `specra build` first, or the check reports
+the release catalog. Run `specistry build` first, or the check reports
 `CANDIDATE_MISSING` rather than judging stale output.
 
 | Option                            | Meaning                                                          |
@@ -94,7 +94,7 @@ example ever reaches a report, a log, or the JSON output.
 
 ### Authentication
 
-Specra documents contracts. No rule here judges whether authentication is
+Specistry documents contracts. No rule here judges whether authentication is
 strong, and none claims a vulnerability.
 
 | Rule                         | Default | What it detects                                                                                       | Boundary                                                                        |
@@ -104,7 +104,7 @@ strong, and none claims a vulnerability.
 
 ### SDK mappings
 
-Specra knows only the mappings a project declared (SPEC-008). No rule claims
+Specistry knows only the mappings a project declared (SPEC-008). No rule claims
 anything about the real package.
 
 | Rule                     | Default | What it detects                                                         | Boundary                                                                                            |
@@ -132,7 +132,7 @@ aspect. Uncertain changes stay uncertain on purpose.
 | `api-parameter-removed`        | warning | A documented parameter disappeared                                                                            |
 | `api-response-removed`         | warning | A documented response status disappeared                                                                      |
 | `api-security-restricted`      | error   | Set semantics over OR-of-AND alternatives: some credential set the base accepted satisfies no alternative now |
-| `api-schema-changed`           | info    | A request, response, or reusable schema changed. Specra does **not** classify it; a human decides             |
+| `api-schema-changed`           | info    | A request, response, or reusable schema changed. Specistry does **not** classify it; a human decides          |
 
 Deliberately **not** classified: an added operation, an added response, a
 deprecation, a widened enumeration, a nullability change, an
@@ -225,7 +225,7 @@ unrelated build.
 Human output lists errors and warnings in full, summarizes info findings by
 rule (unless the policy can fail on info), and ends with counts and the gate
 result. Untrusted text — an operation title, a schema name, an SDK label —
-passes through the same terminal sanitizer as every other Specra command, so
+passes through the same terminal sanitizer as every other Specistry command, so
 a hostile contract cannot rewrite a terminal.
 
 `--json` writes exactly one envelope to stdout and nothing to stderr:
@@ -283,9 +283,9 @@ evaluation is never allowed to report a pass it cannot prove.
 ## Diffing releases
 
 ```bash
-specra diff --from v1 --to v2
-specra diff --from current          # against the candidate build
-specra diff --from v1 --json
+specistry diff --from v1 --to v2
+specistry diff --from current          # against the candidate build
+specistry diff --from v1 --json
 ```
 
 `--from` is required; `--to` defaults to `candidate`. Each source is
@@ -293,14 +293,14 @@ specra diff --from v1 --json
 version id. Nothing is inferred from version ordering.
 
 Diff is informational: it exits 0 whether or not anything changed, and
-compatibility policy lives in `specra check --from`. It reuses the SPEC-010
+compatibility policy lives in `specistry check --from`. It reuses the SPEC-010
 structured diff verbatim, including its `diffFormat: 1` envelope, so the
-machine output of `specra diff --json` is the same record the release
-workflow reviews. It never writes to `.specra/candidates`, never dispositions
+machine output of `specistry diff --json` is the same record the release
+workflow reviews. It never writes to `.specistry/candidates`, never dispositions
 a candidate, and never generates changelog prose.
 
 ```text
-Specra diff v1 → v2
+Specistry diff v1 → v2
 
 Operations:
   - GET /inboxes/{id}/raw
@@ -318,27 +318,27 @@ Schemas:
 ## In CI
 
 ```bash
-specra validate
-specra build
-specra check
+specistry validate
+specistry build
+specistry check
 ```
 
 Any runner works; nothing here is specific to one CI product. To keep the
 report as an artifact, redirect it:
 
 ```bash
-specra check --json > specra-quality.json
+specistry check --json > specistry-quality.json
 ```
 
 To gate a release on quality, order the commands explicitly rather than
 coupling them:
 
 ```bash
-specra check --from current
-specra release v2 --current
+specistry check --from current
+specistry release v2 --current
 ```
 
-`specra release` does not run `specra check` for you. Hidden coupling between
+`specistry release` does not run `specistry check` for you. Hidden coupling between
 a gate and a publish step is how gates get disabled.
 
 ## Rule migration policy
@@ -354,7 +354,7 @@ Rule ids and default severities are public policy, and CI depends on them.
   in configuration for at least one documented release window.
 - Message text may change at any time; it is not an interface. Key automation
   on `rule`, `id`, and `severity`.
-- `RULE_REGISTRY_VERSION` in `@specra/quality` is bumped whenever the
+- `RULE_REGISTRY_VERSION` in `@specistry/quality` is bumped whenever the
   catalogue or a default changes.
 
 ## What quality checking is not

@@ -49,7 +49,7 @@ describe("CLI presentation", () => {
       diagnostics: [
         {
           code: "CONFIG_NOT_FOUND",
-          message: "No specra.config.ts file was found at the project root.",
+          message: "No specistry.config.ts file was found at the project root.",
           path: "config",
           severity: "error",
         },
@@ -61,7 +61,7 @@ describe("CLI presentation", () => {
       diagnostics: [
         {
           code: "CONFIG_NOT_FOUND",
-          message: "No specra.config.ts file was found at the project root.",
+          message: "No specistry.config.ts file was found at the project root.",
           path: "config",
           severity: "error",
         },
@@ -81,7 +81,7 @@ describe("CLI presentation", () => {
       components: ["documentation.json", "routes.json"],
       current: "v2",
       digest: "ab".repeat(32),
-      directory: ".specra/releases/v2",
+      directory: ".specistry/releases/v2",
       from: "v1",
       unchanged: false,
       version: "v2",
@@ -93,10 +93,10 @@ describe("CLI presentation", () => {
       release,
     } as unknown as ReleaseResult;
     const human = formatHumanResult(promoted, "release");
-    expect(human).toContain("Specra release v2 promoted.");
+    expect(human).toContain("Specistry release v2 promoted.");
     expect(human).toContain("Versioned\\u001b[31m");
     expect(human).toContain(
-      "Release: .specra/releases/v2 (documentation.json, routes.json; 1234 bytes)",
+      "Release: .specistry/releases/v2 (documentation.json, routes.json; 1234 bytes)",
     );
     expect(human).toContain("Diff candidates: 3 compared with v1");
     expect(human).toContain("Changelog: published");
@@ -152,10 +152,10 @@ describe("CLI presentation", () => {
       catalog,
     } as unknown as CatalogResult;
     expect(formatHumanResult(selected, "current")).toContain(
-      "Specra current release selected.\nCurrent: v2\n  v1 · deprecated\n  v2 (current) · supported · changelog",
+      "Specistry current release selected.\nCurrent: v2\n  v1 · deprecated\n  v2 (current) · supported · changelog",
     );
     expect(formatHumanResult(selected, "deprecate")).toContain(
-      "Specra release deprecated.",
+      "Specistry release deprecated.",
     );
     expect(JSON.parse(formatJsonResult(selected))).toEqual({
       catalog,
@@ -166,7 +166,7 @@ describe("CLI presentation", () => {
     const built = {
       artifacts: {
         bytes: 10,
-        directory: ".specra/artifacts",
+        directory: ".specistry/artifacts",
         files: ["documentation.json"],
       },
       candidates: { count: 2, from: "v1", truncated: true },
@@ -180,7 +180,7 @@ describe("CLI presentation", () => {
       snippets: { operations: 1, sdkExamples: 0 },
     } as unknown as BuildResult;
     expect(formatHumanResult(built, "build")).toContain(
-      "Diff candidates: 2 compared with v1 (truncated) in .specra/candidates/diff.json",
+      "Diff candidates: 2 compared with v1 (truncated) in .specistry/candidates/diff.json",
     );
   });
 
@@ -248,7 +248,7 @@ describe("CLI presentation", () => {
       outcome: "success",
     } as unknown as DiffCommandResult;
     const output = formatHumanResult(result, "diff");
-    expect(output).toContain("Specra diff v1 → v2");
+    expect(output).toContain("Specistry diff v1 → v2");
     expect(output).toContain("Services:");
     expect(output).toContain("+ Second service");
     expect(output).toContain("Groups:");

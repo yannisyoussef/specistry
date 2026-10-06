@@ -1,10 +1,10 @@
 # Support policy
 
-Specra is pre-release. Only the current release candidate is supported during
+Specistry is pre-release. Only the current release candidate is supported during
 evaluation; there is no long-term-support line or service-level agreement.
 
 - Use GitHub issues for reproducible, non-sensitive defects and documentation
-  gaps. Include the Specra version, Node version, platform, command, stable
+  gaps. Include the Specistry version, Node version, platform, command, stable
   diagnostic codes, and a minimized source with secrets removed.
 - Use GitHub discussions for adoption and design questions when enabled.
 - Use the repository's **Security → Report a vulnerability** flow for suspected

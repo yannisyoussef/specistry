@@ -9,7 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { DEFAULT_INGESTION_LIMITS } from "@specra/openapi";
+import { DEFAULT_INGESTION_LIMITS } from "@specistry/openapi";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -33,9 +33,9 @@ afterEach(async () => {
 describe("project acquisition policy", () => {
   it("reads confined files and fails closed on every escape", async () => {
     const project = await realpath(
-      await makeTemporaryDirectory("specra-acquisition-"),
+      await makeTemporaryDirectory("specistry-acquisition-"),
     );
-    const outside = await makeTemporaryDirectory("specra-outside-");
+    const outside = await makeTemporaryDirectory("specistry-outside-");
     await mkdir(path.join(project, "schemas"));
     await writeFile(path.join(project, "openapi.yaml"), "openapi: 3.1.0\n");
     await writeFile(path.join(outside, "secret.yaml"), "leak: true\n");

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "currentLicense": "BUSL-1.1",
-  "licensedWork": "Specra",
+  "licensedWork": "Specistry",
   "licensor": {
     "proposedName": "INFINITY VENTURES",
     "legalName": "INFINITY VENTURES",
@@ -20,5 +20,5 @@
     "appliesPerVersion": true
   },
   "changeLicense": "Apache-2.0",
-  "trademarkNotice": "The Specra name, Specra logo, and associated branding are trademarks or brand assets of their respective owner. The software license does not grant trademark rights except as expressly required by the license."
+  "trademarkNotice": "The Specistry name, Specistry logo, and associated branding are trademarks or brand assets of their respective owner. The software license does not grant trademark rights except as expressly required by the license."
 }

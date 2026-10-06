@@ -1,4 +1,4 @@
-import type { SchemaId, SchemaNode } from "@specra/model";
+import type { SchemaId, SchemaNode } from "@specistry/model";
 import { describe, expect, it } from "vitest";
 
 import {

@@ -1,7 +1,7 @@
 import { open, stat } from "node:fs/promises";
 import path from "node:path";
 
-import type { SourceAcquisition } from "@specra/openapi";
+import type { SourceAcquisition } from "@specistry/openapi";
 
 import { resolveExistingProjectPath } from "./path-policy.js";
 

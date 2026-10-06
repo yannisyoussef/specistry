@@ -14,19 +14,19 @@ import type {
   Operation,
   SchemaNode,
   SecurityScheme,
-} from "@specra/model";
+} from "@specistry/model";
 import type {
   ContentArtifact,
   ContentPage,
   NavigationArtifact,
-} from "@specra/content";
-import { flattenNavigation, selectVersion } from "@specra/content";
+} from "@specistry/content";
+import { flattenNavigation, selectVersion } from "@specistry/content";
 import type {
   ChangeAspect,
   ContractDiff,
   DiffCandidate,
-} from "@specra/release";
-import type { SdkDeclaration, SnippetsArtifact } from "@specra/snippets";
+} from "@specistry/release";
+import type { SdkDeclaration, SnippetsArtifact } from "@specistry/snippets";
 
 import type { FactTarget } from "./contracts.js";
 

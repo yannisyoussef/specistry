@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isInternalRedirectPath, validateVersionId } from "@specra/release";
+import { isInternalRedirectPath, validateVersionId } from "@specistry/release";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { contentSecurityPolicy } from "../../apps/web/proxy";
@@ -139,11 +139,11 @@ describe("candidate isolation", () => {
 
   it("keeps the fixture's candidates out of every served artifact", () => {
     const candidates = readFileSync(
-      path.join(fixture, ".specra", "candidates", "diff.json"),
+      path.join(fixture, ".specistry", "candidates", "diff.json"),
       "utf8",
     );
     expect(candidates).toContain("v1..candidate:");
-    const store = path.join(fixture, ".specra", "releases");
+    const store = path.join(fixture, ".specistry", "releases");
     for (const version of ["v1", "v2"]) {
       for (const file of readdirSync(path.join(store, version))) {
         if (!file.endsWith(".json")) continue;

@@ -18,7 +18,7 @@ import {
   parseReleaseCatalog,
   parseReleaseManifest,
   parseRouteTable,
-} from "@specra/release";
+} from "@specistry/release";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -117,7 +117,7 @@ async function project(
   openapi = OPENAPI_V1,
   extraConfig = "",
 ): Promise<string> {
-  const root = await mkdtemp(path.join(tmpdir(), "specra-release-"));
+  const root = await mkdtemp(path.join(tmpdir(), "specistry-release-"));
   temporary.push(root);
   await mkdir(path.join(root, "docs"));
   await writeFile(
@@ -130,7 +130,7 @@ async function project(
   );
   await writeFile(path.join(root, "openapi.yaml"), openapi);
   await writeFile(
-    path.join(root, "specra.config.ts"),
+    path.join(root, "specistry.config.ts"),
     `export default { schemaVersion: 1, name: "Versioned", openapi: "./openapi.yaml", navigation: ["guide", { api: true }], environments: { production: { baseUrl: "https://api.example.com" } }${extraConfig} };`,
   );
   return root;
@@ -170,12 +170,12 @@ describe("release workflow", () => {
         "snippets",
       ],
       current: "v1",
-      directory: ".specra/releases/v1",
+      directory: ".specistry/releases/v1",
       unchanged: false,
       version: "v1",
     });
     expect(released.release.from).toBeUndefined();
-    const store = path.join(root, ".specra", "releases");
+    const store = path.join(root, ".specistry", "releases");
     expect(await fileNames(store)).toEqual(["catalog.json", "v1"]);
     expect(await fileNames(path.join(store, "v1"))).toEqual([
       "content.json",
@@ -199,7 +199,10 @@ describe("release workflow", () => {
       "manifest.json",
     ]) {
       expect(await readFile(path.join(store, "v1", name), "utf8")).toBe(
-        await readFile(path.join(root, ".specra", "artifacts", name), "utf8"),
+        await readFile(
+          path.join(root, ".specistry", "artifacts", name),
+          "utf8",
+        ),
       );
     }
     const manifest = parseReleaseManifest(
@@ -268,14 +271,14 @@ describe("release workflow", () => {
     expect(
       sha256(
         await readFile(
-          path.join(root, ".specra", "releases", "v1", "content.json"),
+          path.join(root, ".specistry", "releases", "v1", "content.json"),
           "utf8",
         ),
       ),
     ).not.toBe(
       sha256(
         await readFile(
-          path.join(root, ".specra", "artifacts", "content.json"),
+          path.join(root, ".specistry", "artifacts", "content.json"),
           "utf8",
         ),
       ),
@@ -301,7 +304,7 @@ describe("release workflow", () => {
     });
     const candidates = JSON.parse(
       await readFile(
-        path.join(root, ".specra", "candidates", "diff.json"),
+        path.join(root, ".specistry", "candidates", "diff.json"),
         "utf8",
       ),
     ) as { candidates: { id: string }[] };
@@ -320,7 +323,7 @@ describe("release workflow", () => {
         ),
       ).toEqual(["CHANGELOG_CANDIDATE_UNREVIEWED@source/changelog/v2.json"]);
     }
-    expect(await fileNames(path.join(root, ".specra", "releases"))).toEqual([
+    expect(await fileNames(path.join(root, ".specistry", "releases"))).toEqual([
       "catalog.json",
       "v1",
     ]);
@@ -373,7 +376,7 @@ describe("release workflow", () => {
       current: "v2",
       from: "v1",
     });
-    const store = path.join(root, ".specra", "releases");
+    const store = path.join(root, ".specistry", "releases");
     const changelog = JSON.parse(
       await readFile(path.join(store, "v2", "changelog.json"), "utf8"),
     ) as { entries: unknown[]; reviewed: unknown };
@@ -425,7 +428,7 @@ describe("release workflow", () => {
     );
     await buildProject({ cwd: root });
     await releaseProject({ cwd: root, current: true, version: "v2" });
-    const store = path.join(root, ".specra", "releases");
+    const store = path.join(root, ".specistry", "releases");
     const before = {
       v1: await readFile(path.join(store, "v1", "release.json"), "utf8"),
       v2: await readFile(path.join(store, "v2", "release.json"), "utf8"),
@@ -484,7 +487,12 @@ describe("release workflow", () => {
     if (!noCandidate.ok)
       expect(noCandidate.diagnostics[0]?.code).toBe("CANDIDATE_MISSING");
     await buildProject({ cwd: root });
-    const searchFile = path.join(root, ".specra", "artifacts", "search.json");
+    const searchFile = path.join(
+      root,
+      ".specistry",
+      "artifacts",
+      "search.json",
+    );
     const original = await readFile(searchFile, "utf8");
     await writeFile(searchFile, `${original} `);
     const tampered = await releaseProject({ cwd: root, version: "v1" });
@@ -516,7 +524,7 @@ describe("release workflow", () => {
     expect(released.ok, JSON.stringify(released)).toBe(true);
     const redirects = JSON.parse(
       await readFile(
-        path.join(good, ".specra", "releases", "v1", "redirects.json"),
+        path.join(good, ".specistry", "releases", "v1", "redirects.json"),
         "utf8",
       ),
     ) as { entries: unknown[] };
@@ -542,7 +550,7 @@ describe("release workflow", () => {
         "REDIRECT_SOURCE_SHADOWS_ROUTE@config#/redirects/2",
       ]);
     }
-    expect(await fileNames(path.join(bad, ".specra"))).not.toContain(
+    expect(await fileNames(path.join(bad, ".specistry"))).not.toContain(
       "releases",
     );
     const external = await project(
@@ -567,7 +575,7 @@ describe("release workflow", () => {
       results.map((result) => (result.ok ? result.release.digest : "")),
     );
     expect(digests.size).toBe(1);
-    const store = path.join(root, ".specra", "releases");
+    const store = path.join(root, ".specistry", "releases");
     expect(await fileNames(store)).toEqual(["catalog.json", "v1"]);
     const catalog = parseReleaseCatalog(
       await readFile(path.join(store, "catalog.json"), "utf8"),
@@ -581,7 +589,7 @@ describe("release workflow", () => {
       "---\ntitle: Guide\n---\n\nOther.\n",
     );
     await buildProject({ cwd: other });
-    await rm(path.join(other, ".specra", "releases"), {
+    await rm(path.join(other, ".specistry", "releases"), {
       force: true,
       recursive: true,
     });
@@ -592,7 +600,7 @@ describe("release workflow", () => {
     await buildProject({ cwd: root });
     // Point the second project's store at the first one's through a copy of
     // the candidate: simulate by releasing the other candidate into root.
-    await rm(path.join(root, ".specra", "artifacts"), {
+    await rm(path.join(root, ".specistry", "artifacts"), {
       force: true,
       recursive: true,
     });
@@ -604,16 +612,15 @@ describe("release workflow", () => {
       })(),
     ]);
     expect(raced.every((result) => result.ok)).toBe(true);
-    expect(await fileNames(path.join(other, ".specra", "releases"))).toEqual([
-      "catalog.json",
-      "v2",
-    ]);
+    expect(await fileNames(path.join(other, ".specistry", "releases"))).toEqual(
+      ["catalog.json", "v2"],
+    );
   });
 
   it("never exposes a half-written release: staging leftovers are ignored and symlinked stores refused", async () => {
     const root = await project();
     await buildProject({ cwd: root });
-    const store = path.join(root, ".specra", "releases");
+    const store = path.join(root, ".specistry", "releases");
     await mkdir(path.join(store, ".staging-v1-deadbeef"), { recursive: true });
     await writeFile(
       path.join(store, ".staging-v1-deadbeef", "release.json"),
@@ -646,12 +653,12 @@ describe("release workflow", () => {
     if (!corrupt.ok)
       expect(corrupt.diagnostics[0]?.code).toBe("CATALOG_INVALID");
     // A store that escapes the project through a symlink is refused.
-    const outside = await mkdtemp(path.join(tmpdir(), "specra-outside-"));
+    const outside = await mkdtemp(path.join(tmpdir(), "specistry-outside-"));
     temporary.push(outside);
     const escaped = await project();
     await buildProject({ cwd: escaped });
-    await mkdir(path.join(escaped, ".specra"), { recursive: true });
-    await symlink(outside, path.join(escaped, ".specra", "releases"));
+    await mkdir(path.join(escaped, ".specistry"), { recursive: true });
+    await symlink(outside, path.join(escaped, ".specistry", "releases"));
     const escapedRelease = await releaseProject({
       cwd: escaped,
       version: "v1",
@@ -685,7 +692,7 @@ describe("release workflow", () => {
     if (!aborted.ok) expect(aborted.diagnostics[0]?.code).toBe("CANCELLED");
     const released = await releaseProject({ cwd: root, version: "v1" });
     expect(released.ok, JSON.stringify(released)).toBe(true);
-    const store = path.join(root, ".specra", "releases");
+    const store = path.join(root, ".specistry", "releases");
     const manifest = parseReleaseManifest(
       await readFile(path.join(store, "v1", "release.json"), "utf8"),
     );
@@ -749,7 +756,7 @@ describe("release workflow", () => {
     const root = await project();
     await buildProject({ cwd: root });
     expect((await releaseProject({ cwd: root, version: "v1" })).ok).toBe(true);
-    const lock = path.join(root, ".specra", "releases", ".lock");
+    const lock = path.join(root, ".specistry", "releases", ".lock");
     await writeFile(lock, "");
     const stale = (Date.now() - 120_000) / 1000;
     await utimes(lock, stale, stale);

@@ -1,6 +1,6 @@
 {
-  "name": "@specra/search",
-  "version": "0.1.0-rc.2",
+  "name": "@specistry/search",
+  "version": "0.1.0-rc.3",
   "private": true,
   "license": "BUSL-1.1",
   "type": "module",
@@ -23,8 +23,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@specra/content": "workspace:*",
-    "@specra/model": "workspace:*",
+    "@specistry/content": "workspace:*",
+    "@specistry/model": "workspace:*",
     "minisearch": "7.2.0"
   },
   "devDependencies": {

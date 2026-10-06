@@ -5,15 +5,18 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
-import { parseContentArtifact, parseNavigationArtifact } from "@specra/content";
-import { parseDocumentationArtifact } from "@specra/model";
-import { parseSnippetsArtifact } from "@specra/snippets";
+import {
+  parseContentArtifact,
+  parseNavigationArtifact,
+} from "@specistry/content";
+import { parseDocumentationArtifact } from "@specistry/model";
+import { parseSnippetsArtifact } from "@specistry/snippets";
 import {
   buildSearch,
   parseSearchArtifact,
   projectSearchDocuments,
-} from "@specra/search";
-import { createSearchClient } from "@specra/search/client";
+} from "@specistry/search";
+import { createSearchClient } from "@specistry/search/client";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { writeSyntheticSite } from "./content-generator.mjs";
@@ -215,7 +218,7 @@ function buildInFreshProcess(root: string): {
 async function site(
   options: Parameters<typeof writeSyntheticSite>[1],
 ): Promise<string> {
-  const root = await mkdtemp(path.join(tmpdir(), "specra-search-scale-"));
+  const root = await mkdtemp(path.join(tmpdir(), "specistry-search-scale-"));
   temporary.push(root);
   await writeSyntheticSite(root, options);
   return root;
@@ -225,7 +228,7 @@ describe("search at scale", () => {
   it("indexes the TestInbox fixture in milliseconds with a small artifact", async () => {
     const measurement = await measureArtifacts(
       "testinbox",
-      path.join(fixtureRoot, ".specra", "artifacts"),
+      path.join(fixtureRoot, ".specistry", "artifacts"),
     );
     expect(measurement.gzipBytes).toBeLessThan(64 * 1_024);
     expect(measurement.queryMaxMs).toBeLessThan(50);
@@ -236,7 +239,7 @@ describe("search at scale", () => {
     const built = buildInFreshProcess(root);
     const measurement = await measureArtifacts(
       "pages-1000",
-      path.join(root, ".specra", "artifacts"),
+      path.join(root, ".specistry", "artifacts"),
       built,
     );
     expect(measurement.documents).toBeGreaterThan(6_000);
@@ -255,7 +258,7 @@ describe("search at scale", () => {
     const built = buildInFreshProcess(root);
     const measurement = await measureArtifacts(
       "operations-10000",
-      path.join(root, ".specra", "artifacts"),
+      path.join(root, ".specistry", "artifacts"),
       built,
     );
     expect(measurement.operations).toBe(10_000);
@@ -274,7 +277,7 @@ describe("search at scale", () => {
     const built = buildInFreshProcess(root);
     const measurement = await measureArtifacts(
       "combined",
-      path.join(root, ".specra", "artifacts"),
+      path.join(root, ".specistry", "artifacts"),
       built,
     );
     expect(measurement.gzipBytes).toBeLessThan(8 * 1_024 * 1_024);

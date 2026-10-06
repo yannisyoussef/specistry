@@ -1,8 +1,11 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { parseContentArtifact, parseNavigationArtifact } from "@specra/content";
-import { parseDocumentationArtifact } from "@specra/model";
+import {
+  parseContentArtifact,
+  parseNavigationArtifact,
+} from "@specistry/content";
+import { parseDocumentationArtifact } from "@specistry/model";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -32,7 +35,7 @@ import {
 
 const fixture = fileURLToPath(
   new URL(
-    "../../../tests/fixtures/reader/testinbox/.specra/artifacts/",
+    "../../../tests/fixtures/reader/testinbox/.specistry/artifacts/",
     import.meta.url,
   ),
 );

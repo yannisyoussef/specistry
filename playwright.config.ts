@@ -6,7 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
  * Browser suites run against the production reader (`next start`) serving
  * the committed TestInbox fixture on port 3100; a second instance of the same
  * build serves the adversarial edge fixture on port 3101 for XSS and
- * long-content checks. `SPECRA_SITE_URL` is set on the first so canonical and
+ * long-content checks. `SPECISTRY_SITE_URL` is set on the first so canonical and
  * sitemap URLs are absolute and testable. Desktop and mobile reader suites are
  * separate files so each runs under one device profile. The `visual` project keeps its
  * Linux-only baselines under `tests/visual/__screenshots__`; see
@@ -68,29 +68,29 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "pnpm --filter @specra/web start",
+      command: "pnpm --filter @specistry/web start",
       env: {
         PORT: "3100",
-        SPECRA_PROJECT_ROOT: fixtureProject,
-        SPECRA_SITE_URL: "https://docs.example.test",
+        SPECISTRY_PROJECT_ROOT: fixtureProject,
+        SPECISTRY_SITE_URL: "https://docs.example.test",
       },
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
       url: "http://127.0.0.1:3100",
     },
     {
-      command: "pnpm --filter @specra/web start",
-      env: { PORT: "3101", SPECRA_PROJECT_ROOT: edgeProject },
+      command: "pnpm --filter @specistry/web start",
+      env: { PORT: "3101", SPECISTRY_PROJECT_ROOT: edgeProject },
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
       url: EDGE_URL,
     },
     {
-      command: "pnpm --filter @specra/web start",
+      command: "pnpm --filter @specistry/web start",
       env: {
         PORT: "3102",
-        SPECRA_PROJECT_ROOT: versionedProject,
-        SPECRA_SITE_URL: "https://versioned.example.test",
+        SPECISTRY_PROJECT_ROOT: versionedProject,
+        SPECISTRY_SITE_URL: "https://versioned.example.test",
       },
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,

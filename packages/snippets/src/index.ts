@@ -1,4 +1,4 @@
-import type { DocumentationArtifact } from "@specra/model";
+import type { DocumentationArtifact } from "@specistry/model";
 
 import {
   parseSnippetsArtifact,
@@ -69,7 +69,7 @@ import {
 import { validateBaseUrl } from "./url.js";
 
 /**
- * `@specra/snippets`: pure protocol request projection and generation
+ * `@specistry/snippets`: pure protocol request projection and generation
  * (cURL, HTTP, JavaScript, TypeScript, Java, Python) from the canonical
  * model, plus the artifact contract that carries projections and authored
  * SDK examples to the reader. This package never infers SDK APIs, never

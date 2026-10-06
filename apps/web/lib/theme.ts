@@ -4,7 +4,7 @@
  * redirected back to the page it came from.
  */
 
-export const THEME_COOKIE = "specra-mode";
+export const THEME_COOKIE = "specistry-mode";
 export const THEME_MODES = ["light", "dark", "system"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 

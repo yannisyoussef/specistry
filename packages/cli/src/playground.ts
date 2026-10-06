@@ -1,9 +1,9 @@
-import { parseDocumentationArtifact } from "@specra/model";
+import { parseDocumentationArtifact } from "@specistry/model";
 import {
   projectPlayground,
   serializePlaygroundArtifact,
-} from "@specra/playground";
-import { parseSnippetsArtifact } from "@specra/snippets";
+} from "@specistry/playground";
+import { parseSnippetsArtifact } from "@specistry/snippets";
 
 import type { BuildContext, Diagnostic } from "./contracts.js";
 import { artifactPath, configPath, createDiagnostic } from "./diagnostics.js";

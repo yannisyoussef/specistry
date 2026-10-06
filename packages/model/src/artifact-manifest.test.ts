@@ -10,7 +10,7 @@ const manifest: ArtifactManifest = {
   artifactFormat: 1,
   diagnostics: { errors: 0, warnings: 2 },
   files: { documentation: "documentation.json" },
-  generator: "specra",
+  generator: "specistry",
   modelVersion: 1,
   project: { id: "example", name: "Example" },
   sources: [

@@ -7,7 +7,7 @@ import {
   validateDocumentationArtifact,
   type ApiService,
   type SchemaNode,
-} from "@specra/model";
+} from "@specistry/model";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -24,7 +24,7 @@ import {
   type SourceAcquisition,
 } from "./index.js";
 
-const project = { name: "Specra tests" };
+const project = { name: "Specistry tests" };
 
 async function ingest(
   source: SourceAcquisition,
@@ -1040,7 +1040,7 @@ components:
     expect(
       two.artifact?.model.versions[0]?.services.map((entry) => entry.id),
     ).toEqual(["b.yaml", "a.yaml"]);
-    expect(two.artifact?.model.project.name).toBe("Specra tests");
+    expect(two.artifact?.model.project.name).toBe("Specistry tests");
 
     const clash = await ingestOpenApi({
       project,

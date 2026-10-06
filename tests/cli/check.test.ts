@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { RULE_IDS } from "@specra/quality";
+import { RULE_IDS } from "@specistry/quality";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -22,7 +22,7 @@ import {
 } from "../../packages/cli/src/index";
 
 /**
- * SPEC-011 §12–§17, §54–§56, §79–§82, §180: `specra check` and `specra diff`
+ * SPEC-011 §12–§17, §54–§56, §79–§82, §180: `specistry check` and `specistry diff`
  * as a CI would use them. Every gate case is a mutation that must actually
  * be caught: a suite that only runs the command against clean fixtures
  * proves nothing.
@@ -97,7 +97,7 @@ paths:
 `;
 
 async function project(quality = ""): Promise<string> {
-  const root = await mkdtemp(path.join(tmpdir(), "specra-check-"));
+  const root = await mkdtemp(path.join(tmpdir(), "specistry-check-"));
   temporary.push(root);
   await mkdir(path.join(root, "docs"));
   await writeFile(
@@ -106,7 +106,7 @@ async function project(quality = ""): Promise<string> {
   );
   await writeFile(path.join(root, "openapi.yaml"), OPENAPI);
   await writeFile(
-    path.join(root, "specra.config.ts"),
+    path.join(root, "specistry.config.ts"),
     `export default { schemaVersion: 1, name: "Quality", openapi: "./openapi.yaml", navigation: [{ api: true }]${quality} };`,
   );
   return root;
@@ -129,11 +129,11 @@ function run(
   };
 }
 
-describe("specra check", () => {
+describe("specistry check", () => {
   it("reports the candidate, passes by default, and is read-only", async () => {
     const root = await project();
     expect((await buildProject({ cwd: root })).ok).toBe(true);
-    const before = await readdir(path.join(root, ".specra"));
+    const before = await readdir(path.join(root, ".specistry"));
 
     const result = await checkProject({ cwd: root });
     expect(result.ok, JSON.stringify(result)).toBe(true);
@@ -145,8 +145,8 @@ describe("specra check", () => {
     expect(result.quality.findings.map((finding) => finding.rule)).toContain(
       "operation-description",
     );
-    expect(await readdir(path.join(root, ".specra"))).toEqual(before);
-    expect(await readdir(root)).not.toContain("specra-quality.json");
+    expect(await readdir(path.join(root, ".specistry"))).toEqual(before);
+    expect(await readdir(root)).not.toContain("specistry-quality.json");
   });
 
   it("fails the gate only when the policy says so", async () => {
@@ -284,7 +284,7 @@ describe("specra check", () => {
     expect((await releaseProject({ cwd: root, version: "v1" })).ok).toBe(true);
     const component = path.join(
       root,
-      ".specra",
+      ".specistry",
       "releases",
       "v1",
       "documentation.json",
@@ -310,7 +310,7 @@ describe("specra check", () => {
   });
 });
 
-describe("specra diff", () => {
+describe("specistry diff", () => {
   it("compares a release with the candidate and never writes", async () => {
     const root = await project();
     expect((await buildProject({ cwd: root })).ok).toBe(true);
@@ -321,7 +321,7 @@ describe("specra diff", () => {
     );
     expect((await buildProject({ cwd: root })).ok).toBe(true);
     const candidates = await readFile(
-      path.join(root, ".specra", "candidates", "diff.json"),
+      path.join(root, ".specistry", "candidates", "diff.json"),
       "utf8",
     );
 
@@ -336,7 +336,7 @@ describe("specra diff", () => {
     // Read-only: the private review file is untouched and no changelog appears.
     expect(
       await readFile(
-        path.join(root, ".specra", "candidates", "diff.json"),
+        path.join(root, ".specistry", "candidates", "diff.json"),
         "utf8",
       ),
     ).toBe(candidates);
@@ -425,7 +425,7 @@ describe("packaged binary", () => {
     expect((await buildProject({ cwd: root })).ok).toBe(true);
     const result = run(root, ["diff", "--from", "v1"]);
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain("Specra diff v1 → candidate");
+    expect(result.stdout).toContain("Specistry diff v1 → candidate");
     expect(result.stdout).toContain("Operations:");
     expect(result.stdout).toContain("- DELETE /inboxes/{id}");
     expect(result.stdout).toContain("1 change(s)");

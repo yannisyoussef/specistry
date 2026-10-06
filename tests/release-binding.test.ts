@@ -16,8 +16,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const sourceCommit = "a".repeat(40);
-const sourceTag = "v0.1.0-rc.2";
-const repository = "yannisyoussef/specra";
+const sourceTag = "v0.1.0-rc.3";
+const repository = "yannisyoussef/specistry";
 const temporary: string[] = [];
 const moduleUrl = pathToFileURL(
   path.join(root, "scripts/lib/release-binding.mjs"),
@@ -55,11 +55,11 @@ function binding() {
       status: "completed",
       conclusion: "success",
     },
-    jobs: [{ name: "Private candidate preparation", conclusion: "success" }],
+    jobs: [{ name: "Reviewed candidate preparation", conclusion: "success" }],
     artifacts: [
       {
         id: 123,
-        name: "prepared-specra-0.1.0-rc.2",
+        name: "prepared-specistry-0.1.0-rc.3",
         expired: false,
         digest: `sha256:${"b".repeat(64)}`,
       },
@@ -70,30 +70,32 @@ function binding() {
 }
 
 async function fixture() {
-  const repositoryRoot = await mkdtemp(path.join(tmpdir(), "specra-binding-"));
+  const repositoryRoot = await mkdtemp(
+    path.join(tmpdir(), "specistry-binding-"),
+  );
   temporary.push(repositoryRoot);
   for (const file of ["package.json", "license-policy.json"])
     await cp(path.join(root, file), path.join(repositoryRoot, file));
   const candidateDirectory = await mkdtemp(
-    path.join(tmpdir(), "specra-prepared-"),
+    path.join(tmpdir(), "specistry-prepared-"),
   );
   temporary.push(candidateDirectory);
   const policy = JSON.parse(
     await readFile(path.join(root, "license-policy.json"), "utf8"),
   );
   const files = new Map([
-    ["specra-cli-0.1.0-rc.2.tgz", "prepared tarball"],
-    ["specra-cli.cdx.json", '{"bomFormat":"CycloneDX"}'],
+    ["specistry-cli-0.1.0-rc.3.tgz", "prepared tarball"],
+    ["specistry-cli.cdx.json", '{"bomFormat":"CycloneDX"}'],
     [
       "license-metadata.json",
-      JSON.stringify(licenseMetadata(policy, "0.1.0-rc.2")),
+      JSON.stringify(licenseMetadata(policy, "0.1.0-rc.3")),
     ],
     [
       "release-audit.json",
       JSON.stringify({
-        artifact: "specra-cli-0.1.0-rc.2.tgz",
+        artifact: "specistry-cli-0.1.0-rc.3.tgz",
         sourceCommit,
-        version: "0.1.0-rc.2",
+        version: "0.1.0-rc.3",
         license: "BUSL-1.1",
       }),
     ],
@@ -111,7 +113,7 @@ async function fixture() {
   // The supported recorder provides the reference bytes. Finalization must
   // reproduce them from an untouched copy of the private preparation artifact.
   const recordedCandidate = await mkdtemp(
-    path.join(tmpdir(), "specra-recorded-"),
+    path.join(tmpdir(), "specistry-recorded-"),
   );
   temporary.push(recordedCandidate);
   await cp(candidateDirectory, recordedCandidate, { recursive: true });
@@ -151,7 +153,7 @@ describe("public-first release binding", () => {
     const ci = parse(
       await readFile(path.join(root, ".github/workflows/ci.yml"), "utf8"),
     );
-    for (const key of ["SPECRA_PROJECT_ROOT", "SPECRA_SITE_URL"]) {
+    for (const key of ["SPECISTRY_PROJECT_ROOT", "SPECISTRY_SITE_URL"]) {
       expect(ci.env?.[key]).toBeTruthy();
       expect(candidate.jobs.prepare.env?.[key]).toBe(ci.env?.[key]);
     }
@@ -166,7 +168,7 @@ describe("public-first release binding", () => {
       { event: "pull_request" },
       { conclusion: "failure" },
       { path: ".github/workflows/ci.yml" },
-      { head_repository: { full_name: "attacker/specra" } },
+      { head_repository: { full_name: "attacker/specistry" } },
     ]) {
       const value = binding();
       Object.assign(value.run, patch);
@@ -189,7 +191,7 @@ describe("public-first release binding", () => {
     for (const patch of [
       { expired: true },
       { digest: "" },
-      { name: "specra-0.1.0-rc.1" },
+      { name: "specistry-0.1.0-rc.1" },
     ]) {
       const value = binding();
       Object.assign(value.artifacts[0], patch);
@@ -203,16 +205,16 @@ describe("public-first release binding", () => {
   it("matches the supported recorder exactly without rebuilding or mutating prepared subjects", async () => {
     const value = await fixture();
     const before = await readFile(
-      path.join(value.candidateDirectory, "specra-cli-0.1.0-rc.2.tgz"),
+      path.join(value.candidateDirectory, "specistry-cli-0.1.0-rc.3.tgz"),
     );
     await finalizePreparedCandidate(value);
-    for (const name of ["SHA256SUMS", "public-distribution-0.1.0-rc.2.json"])
+    for (const name of ["SHA256SUMS", "public-distribution-0.1.0-rc.3.json"])
       expect(await readFile(path.join(value.candidateDirectory, name))).toEqual(
         await readFile(path.join(value.recordedCandidate, name)),
       );
     expect(
       await readFile(
-        path.join(value.candidateDirectory, "specra-cli-0.1.0-rc.2.tgz"),
+        path.join(value.candidateDirectory, "specistry-cli-0.1.0-rc.3.tgz"),
       ),
     ).toEqual(before);
     await expect(finalizePreparedCandidate(value)).rejects.toThrow(
@@ -228,7 +230,7 @@ describe("public-first release binding", () => {
     await expect(
       finalizePreparedCandidate({ ...value, sourceCommit: "c".repeat(40) }),
     ).rejects.toThrow("audit source");
-    const ledgerPath = path.join(value.ledgerDirectory, "0.1.0-rc.2.json");
+    const ledgerPath = path.join(value.ledgerDirectory, "0.1.0-rc.3.json");
     const ledger = JSON.parse(await readFile(ledgerPath, "utf8"));
     for (const patch of [
       { artifactSha256: "d".repeat(64) },
@@ -252,14 +254,14 @@ describe("public-first release binding", () => {
     await expect(finalizePreparedCandidate(value)).rejects.toThrow("duplicate");
     await writeFile(
       checksumPath,
-      checksums.replace("specra-cli.cdx.json", "../escaped.json"),
+      checksums.replace("specistry-cli.cdx.json", "../escaped.json"),
     );
     await expect(finalizePreparedCandidate(value)).rejects.toThrow(
       "invalid subject",
     );
     await writeFile(checksumPath, checksums);
     await writeFile(
-      path.join(value.candidateDirectory, "specra-cli.cdx.json"),
+      path.join(value.candidateDirectory, "specistry-cli.cdx.json"),
       "tampered",
     );
     await expect(finalizePreparedCandidate(value)).rejects.toThrow(
@@ -270,10 +272,10 @@ describe("public-first release binding", () => {
       "exactly the five",
     );
     await rm(path.join(value.candidateDirectory, "extra"));
-    await rm(path.join(value.candidateDirectory, "specra-cli.cdx.json"));
+    await rm(path.join(value.candidateDirectory, "specistry-cli.cdx.json"));
     await symlink(
       checksumPath,
-      path.join(value.candidateDirectory, "specra-cli.cdx.json"),
+      path.join(value.candidateDirectory, "specistry-cli.cdx.json"),
     );
     await expect(finalizePreparedCandidate(value)).rejects.toThrow(
       "regular files",

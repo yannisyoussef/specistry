@@ -119,7 +119,7 @@ export async function writeSyntheticSite(
     );
   }
   await writeFile(
-    path.join(root, "specra.config.ts"),
+    path.join(root, "specistry.config.ts"),
     `export default { schemaVersion: 1, name: "Scale", openapi: "./${contract}", navigation: [${navigation.join(", ")}, { api: true }] };`,
   );
   return bytes;

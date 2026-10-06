@@ -2,7 +2,7 @@
 
 The playground lets a reader send one request at a time from their own
 browser to an API environment the project explicitly approved, with the
-credential they typed, and shows the bounded response. Specra never sees,
+credential they typed, and shows the bounded response. Specistry never sees,
 stores, forwards, or logs the request: there is no proxy, no relay route,
 and no server-side execution. This page is the consumer-facing reference;
 [ADR-015](adr/015-browser-direct-playground.md) records the decision and the
@@ -38,7 +38,7 @@ export default defineConfig({
 | `playground.responseLimitBytes` | 1 MiB      | 1 byte to 4 MiB; the body read stops here and the page says the response is partial                                                                                                                                     |
 | `playground.timeoutMs`          | 30 000     | 1 ms to 120 000 ms; the request is aborted at the limit                                                                                                                                                                 |
 
-`specra validate` and `specra build` reject an unknown environment id
+`specistry validate` and `specistry build` reject an unknown environment id
 (`PLAYGROUND_ENVIRONMENT_NOT_FOUND`), a base URL that is not an exact
 allowed origin (`PLAYGROUND_ENVIRONMENT_ORIGIN_INVALID`), and environments
 without `mode: "browser"` (`CONFIG_INVALID`). Operations the browser cannot
@@ -47,7 +47,7 @@ still render, with an explanation instead of a form.
 
 ## What the build produces
 
-`specra build` writes `playground.json`, a policy derived only from the
+`specistry build` writes `playground.json`, a policy derived only from the
 canonical artifact and the code-sample projection:
 
 - the approved environments as exact origins (`scheme://host[:port]`) with
@@ -113,7 +113,7 @@ appear.
 Credentials live in the page's memory, keyed by environment and scheme,
 for as long as the operation page is open. They are never written to the
 URL, `localStorage`, `sessionStorage`, cookies, IndexedDB, the server, an
-artifact, the console, or analytics (Specra has none). Switching
+artifact, the console, or analytics (Specistry has none). Switching
 environments switches to that environment's credentials, so a sandbox
 token is never sent to production; `Clear credentials` empties the vault;
 a reload discards it. Credential headers are masked in the preview and in

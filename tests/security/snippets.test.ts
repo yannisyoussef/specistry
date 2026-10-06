@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import type { ApiService, Operation, SchemaNode } from "@specra/model";
+import type { ApiService, Operation, SchemaNode } from "@specistry/model";
 import {
   generateAll,
   parseSnippetsArtifact,
@@ -12,7 +12,7 @@ import {
   resolveRequest,
   serializeSnippetsArtifact,
   SnippetsArtifactError,
-} from "@specra/snippets";
+} from "@specistry/snippets";
 import { afterAll, describe, expect, it } from "vitest";
 
 /**
@@ -41,7 +41,9 @@ const HOSTILE = [
   "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.abc",
 ] as const;
 
-const scratch = mkdtempSync(path.join(tmpdir(), "specra-snippets-security-"));
+const scratch = mkdtempSync(
+  path.join(tmpdir(), "specistry-snippets-security-"),
+);
 afterAll(() => rmSync(scratch, { force: true, recursive: true }));
 
 const brand = <T>(value: string): T => value as unknown as T;

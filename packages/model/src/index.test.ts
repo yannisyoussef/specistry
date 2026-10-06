@@ -56,7 +56,7 @@ function artifactFixture(): DocumentationArtifact {
       project: {
         canonicalUrl: "https://docs.example.test",
         description: "Canonical fixture",
-        id: asId<ProjectId>("specra-fixture"),
+        id: asId<ProjectId>("specistry-fixture"),
         name: "Fixture",
       },
       versions: [

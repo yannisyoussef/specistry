@@ -101,7 +101,7 @@ describe("software license policy", () => {
         await readFile(path.join(repositoryRoot, manifestPath), "utf8"),
       ) as { license?: string; version?: string };
       expect(manifest.license, manifestPath).toBe("BUSL-1.1");
-      expect(manifest.version, manifestPath).toBe("0.1.0-rc.2");
+      expect(manifest.version, manifestPath).toBe("0.1.0-rc.3");
     }
 
     const checked = command(process.execPath, [
@@ -113,9 +113,9 @@ describe("software license policy", () => {
       path.join(repositoryRoot, "README.md"),
       "utf8",
     );
-    expect(readme).toContain("Specra is source-available");
-    expect(readme).toContain("Specra is not open source before");
-    expect(readme).not.toMatch(/Specra is (?:an )?open[- ]source/i);
+    expect(readme).toContain("Specistry is source-available");
+    expect(readme).toContain("Specistry is not open source before");
+    expect(readme).not.toMatch(/Specistry is (?:an )?open[- ]source/i);
     const currentSurfaces = [
       readme,
       await readFile(
@@ -131,7 +131,13 @@ describe("software license policy", () => {
         "utf8",
       ),
       await readFile(
-        path.join(repositoryRoot, "dogfood", "specra-docs", "docs", "index.md"),
+        path.join(
+          repositoryRoot,
+          "dogfood",
+          "specistry-docs",
+          "docs",
+          "index.md",
+        ),
         "utf8",
       ),
     ];
@@ -147,7 +153,9 @@ describe("software license policy", () => {
   });
 
   it("fails closed when one manifest or the approved grant drifts", async () => {
-    const fixture = await mkdtemp(path.join(tmpdir(), "specra-license-gate-"));
+    const fixture = await mkdtemp(
+      path.join(tmpdir(), "specistry-license-gate-"),
+    );
     temporary.push(fixture);
     await mkdir(path.join(fixture, "apps", "web"), { recursive: true });
     await mkdir(path.join(fixture, "packages", "cli"), { recursive: true });
@@ -262,7 +270,7 @@ describe("software license policy", () => {
 
   it("packs the confirmed license surfaces and emits undated candidate metadata and SBOM license data", async () => {
     const temporaryRoot = await mkdtemp(
-      path.join(tmpdir(), "specra-license-candidate-"),
+      path.join(tmpdir(), "specistry-license-candidate-"),
     );
     const output = path.join(temporaryRoot, "candidate");
     temporary.push(temporaryRoot);
@@ -272,7 +280,7 @@ describe("software license policy", () => {
     ]);
     expect(built.status, built.stderr).toBe(0);
 
-    const tarball = path.join(output, "specra-cli-0.1.0-rc.2.tgz");
+    const tarball = path.join(output, "specistry-cli-0.1.0-rc.3.tgz");
     const consumer = path.join(temporaryRoot, "consumer");
     await mkdir(consumer);
     const installed = command("npm", [
@@ -287,7 +295,12 @@ describe("software license policy", () => {
       path.join(temporaryRoot, "npm-cache"),
     ]);
     expect(installed.status, installed.stderr).toBe(0);
-    const installedCli = path.join(consumer, "node_modules", "@specra", "cli");
+    const installedCli = path.join(
+      consumer,
+      "node_modules",
+      "@specistry",
+      "cli",
+    );
     for (const file of ["LICENSE", "NOTICE", "package.json"])
       await expect(
         readFile(path.join(installedCli, file), "utf8"),
@@ -308,7 +321,7 @@ describe("software license policy", () => {
       legalForm: "SASU",
       licensor: "INFINITY VENTURES",
       licensorConfirmed: true,
-      version: "0.1.0-rc.2",
+      version: "0.1.0-rc.3",
     });
     const audit = JSON.parse(
       await readFile(path.join(output, "release-audit.json"), "utf8"),
@@ -317,13 +330,13 @@ describe("software license policy", () => {
       license: "BUSL-1.1",
       licenseMetadata: "license-metadata.json",
       publicDistribution: "eligible-after-protected-review",
-      version: "0.1.0-rc.2",
+      version: "0.1.0-rc.3",
     });
     expect(audit.bundledDependencies).toContain("zod");
     expect(audit.bundledDependencies).toContain("parse-entities");
     expect(audit.bundledDependencies.length).toBeGreaterThan(10);
     const sbom = JSON.parse(
-      await readFile(path.join(output, "specra-cli.cdx.json"), "utf8"),
+      await readFile(path.join(output, "specistry-cli.cdx.json"), "utf8"),
     );
     expect(JSON.stringify(sbom)).toContain('"id":"BUSL-1.1"');
     const unistVersions = sbom.components
@@ -340,7 +353,7 @@ describe("software license policy", () => {
     const packed = (await readdir(output)).find((name) =>
       name.endsWith(".tgz"),
     );
-    expect(packed).toBe("specra-cli-0.1.0-rc.2.tgz");
+    expect(packed).toBe("specistry-cli-0.1.0-rc.3.tgz");
 
     const confirmedRepository = path.join(temporaryRoot, "confirmed-repo");
     await mkdir(confirmedRepository);
@@ -384,7 +397,7 @@ describe("software license policy", () => {
     );
     await expect(
       readFile(path.join(output, "SHA256SUMS"), "utf8"),
-    ).resolves.toContain("public-distribution-0.1.0-rc.2.json");
+    ).resolves.toContain("public-distribution-0.1.0-rc.3.json");
     await expect(
       recordPublicDistribution({
         repositoryRoot: confirmedRepository,
@@ -404,7 +417,9 @@ describe("software license policy", () => {
       "Public release license gate passed for INFINITY VENTURES",
     );
 
-    const fixture = await mkdtemp(path.join(tmpdir(), "specra-release-gate-"));
+    const fixture = await mkdtemp(
+      path.join(tmpdir(), "specistry-release-gate-"),
+    );
     temporary.push(fixture);
     for (const file of ["LICENSE", "NOTICE", "license-policy.json"])
       await cp(path.join(repositoryRoot, file), path.join(fixture, file));
@@ -450,7 +465,7 @@ describe("software license policy", () => {
       "--eval",
       `import { licenseMetadata } from ${JSON.stringify(moduleUrl)};
        const policy = { currentLicense: "BUSL-1.1", changeLicense: "Apache-2.0", finalParametersOwnerApproved: true, changeDatePolicy: { yearsAfterFirstPublicDistribution: 3, appliesPerVersion: true }, licensor: { proposedName: "INFINITY VENTURES", legalName: "INFINITY VENTURES", legalForm: "SASU", legalNameConfirmed: true, licensingAuthorityConfirmed: true } };
-       console.log(JSON.stringify({ dryRun: licenseMetadata(policy, "0.1.0-rc.2"), published: licenseMetadata(policy, "0.1.0-rc.2", "2028-02-29") }));`,
+       console.log(JSON.stringify({ dryRun: licenseMetadata(policy, "0.1.0-rc.3"), published: licenseMetadata(policy, "0.1.0-rc.3", "2028-02-29") }));`,
     ]);
     expect(evaluated.status, evaluated.stderr).toBe(0);
     expect(JSON.parse(evaluated.stdout)).toMatchObject({

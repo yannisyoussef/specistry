@@ -25,11 +25,11 @@ Parsing and reference traversal use byte, depth, node, string, and example budge
 
 ## Accessibility target
 
-Specra targets WCAG 2.2 AA where applicable. Every slice must cover semantic landmarks and headings, keyboard operation, visible focus, focus restoration, screen-reader names and state, contrast, reduced motion, zoom/reflow, touch targets, form errors, and non-color cues.
+Specistry targets WCAG 2.2 AA where applicable. Every slice must cover semantic landmarks and headings, keyboard operation, visible focus, focus restoration, screen-reader names and state, contrast, reduced motion, zoom/reflow, touch targets, form errors, and non-color cues.
 
 Automated gates use axe for stable representative states and browser tests as interactive components arrive. Automation cannot verify reading order quality, useful alternative text, announcements, keyboard efficiency, zoom behavior, or comprehension. Release testing therefore includes manual keyboard-only, VoiceOver and NVDA spot checks, 200%/400% zoom, high contrast, reduced motion, mobile screen-reader, and touch-target review.
 
-For `0.1.0-rc.2` and other pre-1.0 RCs, the owner accepts missing manual
+For `0.1.0-rc.3` and other pre-1.0 RCs, the owner accepts missing manual
 VoiceOver/NVDA qualification as P2 [A11Y-R01](../reviews/spec-012-manual-at.md).
 All automated gates remain required. The manual expectations below remain
 qualification obligations before stable `1.0.0`; pre-1.0 RCs make no

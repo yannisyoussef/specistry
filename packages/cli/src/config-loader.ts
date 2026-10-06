@@ -1,8 +1,8 @@
 import {
   isRedactedIssuePath,
   parseConfig,
-  type SpecraConfig,
-} from "@specra/config";
+  type SpecistryConfig,
+} from "@specistry/config";
 
 import { hostModuleUrl, runBoundedHost } from "./bounded-host.js";
 import type { DiagnosticCode } from "./contracts.js";
@@ -22,7 +22,7 @@ interface ConfigLoadOptions {
 }
 
 export type ConfigLoadResult =
-  | { readonly config: SpecraConfig; readonly ok: true }
+  | { readonly config: SpecistryConfig; readonly ok: true }
   | {
       readonly code: DiagnosticCode;
       readonly issuePaths?: readonly string[];
@@ -47,7 +47,7 @@ export async function loadConfigIsolated(
   options: ConfigLoadOptions,
 ): Promise<ConfigLoadResult> {
   const outcome = await runBoundedHost({
-    args: [import.meta.resolve("@specra/config"), options.configUrl.href],
+    args: [import.meta.resolve("@specistry/config"), options.configUrl.href],
     hostModule: hostModuleUrl("config-worker.js", import.meta.url),
     maxFrameBytes: MAX_PROTOCOL_BYTES,
     maxOutputBytes: MAX_PROCESS_OUTPUT_BYTES,

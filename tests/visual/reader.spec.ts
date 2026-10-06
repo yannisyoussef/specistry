@@ -23,7 +23,7 @@ async function settle(
 ): Promise<void> {
   await page
     .context()
-    .addCookies([{ name: "specra-mode", url: origin, value: mode }]);
+    .addCookies([{ name: "specistry-mode", url: origin, value: mode }]);
   await page.goto(`${origin}${path}`, { waitUntil: "networkidle" });
   await page.evaluate(() => document.fonts.ready);
 }
