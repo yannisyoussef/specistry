@@ -248,5 +248,27 @@ describe("BRAND-001 release identity", () => {
     );
     expect(candidate.jobs.prepare.if).not.toContain("repository.private");
     expect(candidateText).not.toContain("0.1.0-rc.2");
+    const steps = candidate.jobs.prepare.steps as Array<{
+      run?: string;
+      with?: { repository?: string };
+    }>;
+    const consumerIndex = steps.findIndex(
+      (step) => step.with?.repository === "yannisyoussef/odexa",
+    );
+    expect(consumerIndex).toBeGreaterThan(-1);
+    for (const command of [
+      "pnpm check",
+      "pnpm build",
+      "pnpm audit --audit-level high",
+      "pnpm check:release-license",
+      "pnpm release:candidate",
+    ]) {
+      const gateIndex = steps.findIndex((step) => step.run === command);
+      expect(gateIndex).toBeGreaterThan(-1);
+      expect(consumerIndex).toBeGreaterThan(gateIndex);
+    }
+    expect(steps[consumerIndex + 1].run).toBe(
+      "node scripts/qualify-cli-candidate.mjs .release/candidate .specistry-tooling/odexa",
+    );
   });
 });
