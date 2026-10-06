@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "version": "0.1.0-rc.3",
+  "currentLicense": "BUSL-1.1",
+  "licensor": "INFINITY VENTURES",
+  "legalForm": "SASU",
+  "licensorConfirmed": true,
+  "finalParametersOwnerApproved": true,
+  "firstPublicDistribution": "2026-10-06",
+  "changeDate": "2029-10-06",
+  "changeDatePolicy": {
+    "yearsAfterFirstPublicDistribution": 3,
+    "appliesPerVersion": true
+  },
+  "changeLicense": "Apache-2.0",
+  "sourceCommit": "f9fd0f595e0b3b075ea4ceeb30390447e1616309",
+  "artifact": "specistry-cli-0.1.0-rc.3.tgz",
+  "artifactSha256": "62a62d8b15292fb9255df659c604d899dd59045916bea81b2c4092c8a7bc761f"
+}
