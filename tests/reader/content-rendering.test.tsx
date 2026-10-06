@@ -6,11 +6,11 @@ import {
   parseContentArtifact,
   parseNavigationArtifact,
   type ContentPage,
-} from "@specra/content";
+} from "@specistry/content";
 import {
   parseArtifactManifest,
   parseDocumentationArtifact,
-} from "@specra/model";
+} from "@specistry/model";
 import {
   cleanup,
   fireEvent,
@@ -52,7 +52,7 @@ const fixture = path.join(
   "fixtures",
   "reader",
   "testinbox",
-  ".specra",
+  ".specistry",
   "artifacts",
 );
 const read = (name: string) => readFileSync(path.join(fixture, name), "utf8");

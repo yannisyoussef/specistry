@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
  * The reader fixtures commit their canonical artifacts so tests and browser
  * runs never depend on the ingestion pipeline. This guard rebuilds each fixture
  * through the packaged CLI and fails when the committed bytes drift from what
- * `specra build` produces, so a fixture can never describe a stale contract.
+ * `specistry build` produces, so a fixture can never describe a stale contract.
  */
 
 const fixtureRoot = fileURLToPath(
@@ -31,13 +31,13 @@ afterEach(async () => {
 
 describe("reader fixtures", () => {
   it.each(["testinbox", "edge", "multi"])(
-    "keeps the committed %s artifact identical to a fresh specra build",
+    "keeps the committed %s artifact identical to a fresh specistry build",
     async (fixture) => {
       const source = path.join(fixtureRoot, fixture);
-      const project = await mkdtemp(path.join(tmpdir(), "specra-fixture-"));
+      const project = await mkdtemp(path.join(tmpdir(), "specistry-fixture-"));
       temporaryDirectories.push(project);
       await cp(source, project, {
-        filter: (entry) => !entry.includes(`${path.sep}.specra`),
+        filter: (entry) => !entry.includes(`${path.sep}.specistry`),
         recursive: true,
       });
       const built = spawnSync(process.execPath, [cliPath, "build", "--json"], {
@@ -53,16 +53,16 @@ describe("reader fixtures", () => {
         "playground.json",
       ]) {
         const fresh = await readFile(
-          path.join(project, ".specra", "artifacts", file),
+          path.join(project, ".specistry", "artifacts", file),
           "utf8",
         );
         const committed = await readFile(
-          path.join(source, ".specra", "artifacts", file),
+          path.join(source, ".specistry", "artifacts", file),
           "utf8",
         );
         expect(
           fresh,
-          `${fixture}/${file} drifted; rebuild it with specra build`,
+          `${fixture}/${file} drifted; rebuild it with specistry build`,
         ).toBe(committed);
       }
     },

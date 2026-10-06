@@ -13,7 +13,7 @@ import { validateVersionId } from "./version.js";
  * a summary, dated entries with categorized items, and an explicit
  * disposition of every structured diff candidate (`included` through an
  * item's `candidates`, or `omitted`). Item text is plain text rendered as
- * text. Nothing here is generated prose: Specra validates and publishes
+ * text. Nothing here is generated prose: Specistry validates and publishes
  * exactly what the author wrote, and a candidate the author never
  * dispositioned blocks the release.
  */

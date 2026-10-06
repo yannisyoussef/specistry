@@ -1,4 +1,4 @@
-import type { ContentArtifact, ContentPage } from "@specra/content";
+import type { ContentArtifact, ContentPage } from "@specistry/content";
 import { describe, expect, it } from "vitest";
 
 import { evaluateQuality } from "./engine.js";

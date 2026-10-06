@@ -1,4 +1,4 @@
-import { composeUrl, type Pair } from "@specra/snippets/protocol";
+import { composeUrl, type Pair } from "@specistry/snippets/protocol";
 
 import type { PlaygroundEnvironment } from "../types.js";
 

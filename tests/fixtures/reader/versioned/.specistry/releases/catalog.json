@@ -1,0 +1,22 @@
+{
+  "catalogFormat": 1,
+  "current": "v2",
+  "releases": [
+    {
+      "changelog": false,
+      "date": "2026-08-01",
+      "digest": "7492291f38c94521c3226224945c6738a3f33b20f0f381a2c8f671a6d093eb8c",
+      "label": "1.0",
+      "state": "deprecated",
+      "version": "v1"
+    },
+    {
+      "changelog": true,
+      "date": "2026-09-05",
+      "digest": "2c73740c8c40f3127d39fc593ad673f8f316ac402cc1f31e7464c8ff0c30b1b0",
+      "label": "2.0",
+      "state": "supported",
+      "version": "v2"
+    }
+  ]
+}

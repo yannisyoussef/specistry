@@ -1,5 +1,5 @@
 /**
- * Specra search contract (SPEC-007, ADR-013). The build projects the canonical
+ * Specistry search contract (SPEC-007, ADR-013). The build projects the canonical
  * API model, the authored content model, and the navigation order into
  * source-independent search documents, indexes them once, and writes one
  * deterministic artifact. The browser loads that artifact lazily and queries

@@ -3,13 +3,13 @@ import {
   parseNavigationArtifact,
   type ContentPage,
   type NavigationArtifact,
-} from "@specra/content";
-import { parseDocumentationArtifact } from "@specra/model";
+} from "@specistry/content";
+import { parseDocumentationArtifact } from "@specistry/model";
 import {
   buildSearch,
   projectSearchDocuments,
   type ProjectionInput,
-} from "@specra/search";
+} from "@specistry/search";
 
 import type { ContentBuildOutput } from "./content.js";
 
@@ -17,8 +17,8 @@ import type { ContentBuildOutput } from "./content.js";
  * Search generation (SPEC-007): runs after ingestion and authored content are
  * known valid, from the same serialized artifacts the reader will consume,
  * so the index can never describe anything the build did not publish.
- * `specra validate` projects documents only (cheap, reports the count);
- * `specra build` projects and indexes.
+ * `specistry validate` projects documents only (cheap, reports the count);
+ * `specistry build` projects and indexes.
  */
 
 export interface SearchBuildOutput {

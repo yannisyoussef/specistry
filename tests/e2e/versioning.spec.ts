@@ -338,11 +338,11 @@ test.describe("versioned reader", () => {
     expect(html).not.toContain("operation-changed:openapi.yaml~createInbox");
     expect(html).not.toContain("schema-changed");
     for (const path of [
-      "/.specra/candidates/diff.json",
+      "/.specistry/candidates/diff.json",
       "/docs/v1/changelog",
       "/candidates/diff.json",
-      "/.specra/releases/catalog.json",
-      "/.specra/releases/v2/release.json",
+      "/.specistry/releases/catalog.json",
+      "/.specistry/releases/v2/release.json",
     ]) {
       expect((await request.get(`${base}${path}`)).status(), path).toBe(404);
     }

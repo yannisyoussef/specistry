@@ -2,7 +2,7 @@
 // the packaged CLI: the v1 project under history/v1 is built and released,
 // the root v2 project is built against that store (writing the private diff
 // candidates) and released as current, and v1 is deprecated. Everything the
-// reader serves comes from the resulting .specra directory, which the drift
+// reader serves comes from the resulting .specistry directory, which the drift
 // guard reproduces byte for byte. Usage:
 //   node scripts/build-versioned-fixture.mjs [<fixture dir>] [<output dir>]
 import { spawnSync } from "node:child_process";
@@ -27,14 +27,14 @@ function run(cwd, args) {
   });
   if (result.status !== 0) {
     throw new Error(
-      `specra ${args.join(" ")} failed in ${cwd}:\n${result.stdout}\n${result.stderr}`,
+      `specistry ${args.join(" ")} failed in ${cwd}:\n${result.stdout}\n${result.stderr}`,
     );
   }
   return JSON.parse(result.stdout);
 }
 
-const exclude = (entry) => !entry.includes(`${path.sep}.specra`);
-const work = mkdtempSync(path.join(tmpdir(), "specra-versioned-"));
+const exclude = (entry) => !entry.includes(`${path.sep}.specistry`);
+const work = mkdtempSync(path.join(tmpdir(), "specistry-versioned-"));
 try {
   // v1: its own project, released first.
   const v1 = path.join(work, "v1");
@@ -51,8 +51,8 @@ try {
     recursive: true,
   });
   cpSync(
-    path.join(v1, ".specra", "releases"),
-    path.join(v2, ".specra", "releases"),
+    path.join(v1, ".specistry", "releases"),
+    path.join(v2, ".specistry", "releases"),
     { recursive: true },
   );
   run(v2, ["build"]);
@@ -66,11 +66,11 @@ try {
     "2.0",
   ]);
   run(v2, ["deprecate", "v1"]);
-  rmSync(path.join(output, ".specra"), { force: true, recursive: true });
-  cpSync(path.join(v2, ".specra"), path.join(output, ".specra"), {
+  rmSync(path.join(output, ".specistry"), { force: true, recursive: true });
+  cpSync(path.join(v2, ".specistry"), path.join(output, ".specistry"), {
     recursive: true,
   });
-  process.stdout.write(`${path.join(output, ".specra")}\n`);
+  process.stdout.write(`${path.join(output, ".specistry")}\n`);
 } finally {
   rmSync(work, { force: true, recursive: true });
 }

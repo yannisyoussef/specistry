@@ -1,101 +1,115 @@
 # Release candidate and promotion
 
-SPEC-012 prepares evidence; it does not publish a package, push an image, or
-promote `develop` to `master`.
+The next candidate is **Specistry 0.1.0-rc.3**, the first planned npm release
+as `@specistry/cli@next`. It is not yet published. Source packages are private;
+only the explicitly staged, qualified CLI artifact is publishable.
 
-## Candidate contents
+## Immutable history
 
-An inspectable candidate contains:
+The [brand migration](brand-migration.md) preserves Specra 0.1.0-rc.2 under its
+original identity. Never move its tag or change its release, assets, SBOM,
+checksums, provenance or `release-ledger/0.1.0-rc.2.json`. Its first distribution
+was 2026-10-06 and its Apache-2.0 Change Date is 2029-10-06. Historical signer
+identities remain the original repository identity even after redirects.
 
-- the staged and packed `@specra/cli` tarball;
-- the production reader image or its reproducible build context;
-- SHA-256 checksums;
-- a standard CycloneDX or SPDX SBOM;
-- package-content and dependency-license audits;
-- the compatibility, support, deployment, security, and license-decision
-  records;
-- `license-metadata.json`, with the current license, future license, per-version
-  Change Date policy, and deliberately null distribution dates for an
-  unpublished candidate;
-- provenance status and the exact source commit.
+## Reviewed promotion
 
-The next software version is `0.1.0-rc.2`: the complete planned v1 slices, the
-owner-confirmed Licensor and authority, and the approved BSL 1.1 policy are
-present. The owner accepts manual VoiceOver/NVDA qualification as P2 residual
-[A11Y-R01](reviews/spec-012-manual-at.md) for pre-1.0 RCs. It remains a blocker
-for stable `1.0.0` and comprehensive accessibility claims. Verified protected
-provenance, candidate integrity, and the committed public-distribution ledger
-remain required for RC publication. GitHub repository visibility and a GitHub
-pre-release with artifacts are the initial public distribution channel; npm and
-container registry publication may follow separately.
+1. Review BRAND-001 against `develop`. All existing CI gates and specialist
+   reviews must pass; resolve every P0/P1 finding. Merge under the repository's
+   normal policy and verify exact post-merge integration CI.
+2. Promote only that green source through an explicit `develop` → `master`
+   PR, then verify exact post-merge production CI.
+3. Secure npm organization/scope `specistry` with owner publishing authority.
+   Do not use a substitute scope. Confirm release infrastructure is ready.
+4. Only then rename `yannisyoussef/specra` to `yannisyoussef/specistry` and
+   verify old GitHub URLs redirect. Active metadata names the new repository;
+   historical records retain their original names.
+5. Freeze green production source and create its annotated version tag. Add
+   that exact tag to the `release` environment deployment policy; retain
+   historical policies, never broaden to unreviewed branches or wildcard tags.
 
-## Promotion sequence
+## Build once, qualify once, publish the same bytes
 
-1. Merge the SPEC-012 feature PR into `develop` after all required checks and
-   reviews are green.
-2. Verify `develop` in integration with the packed CLI, Odexa, self-docs, and
-   the production reader.
-3. Treat the owner confirmation of the Licensor, ownership, licensing
-   authority, and final populated license parameters as complete. Commit the
-   owner-accepted manual AT deferral and preserve its stable-release obligation.
-   Qualified external legal review remains strongly recommended and unrecorded;
-   it is not an RC blocker.
-4. Freeze the exact green `develop` source, open its explicit `develop` →
-   `master` promotion PR, merge only after green checks, and verify post-merge CI.
-5. Create the annotated version tag at the exact green `master` source. While
-   private, dispatch the candidate workflow on that tag with `mode=prepare`.
-   Download and verify the five prepared files; their distribution dates remain
-   null. Preparation has read-only permissions and cannot attest or publish.
-6. Use the supported recorder to generate the ledger for the actual intended
-   visibility-change date. Commit it through a reviewed PR and merge into
-   `master`; keep the version tag on the original artifact-producing source.
-7. Audit the full history, then make the repository public on the ledger date.
-   Configure `release` with exact tag/branch deployment policies, no cosmetic
-   self-approval, timers, or secrets. Dispatch `mode=attest` on the original tag,
-   supplying its successful preparation run ID and the reviewed ledger commit.
-8. Cryptographically verify all six artifact subjects against the repository,
-   workflow, frozen source digest, and exact tag before publishing the GitHub
-   pre-release. npm and container registries remain separate, deferred channels.
+Dispatch `.github/workflows/release-candidate.yml` on the exact version tag with
+`mode=prepare`. The protected, read-only preparation job requires an annotated
+tag resolving to successful exact-source production CI and master ancestry.
+It runs all quality/build/audit/license gates, stages and packs once, and runs
+npm/pnpm self-documentation and pinned reviewed Odexa integration against that
+**same tarball**. Qualification is recorded in `release-audit.json`, bound to the
+tarball digest and Odexa source. The package remains unchanged.
 
-Ordinary PR CI keeps `contents: read`. OIDC, attestations, package publication,
-and registry write permissions belong only in a dedicated protected release
-workflow. `.github/workflows/release-candidate.yml` is manual. Its private
-preparation job validates every manifest and authoritative license surface.
-Only its public attestation job targets `release` and receives OIDC/attestation
-write permissions. It verifies the successful same-repository preparation run,
-exact source/tag, immutable archive digest, reviewed ledger ancestry on `master`,
-every prepared checksum, undated policy metadata, and the ledger's tarball
-digest. It copies the exact committed record and deterministically updates the
-checksum manifest without rebuilding any prepared subject. It uses GitHub's
-pinned build-provenance action, preserves the signed bundle, and produces no
-registry publication by itself. A prepared workflow is not
-evidence of a live attestation; report that state as
-`PROVENANCE WORKFLOW PREPARED — LIVE ATTESTATION NOT EXECUTED`.
+The prepared artifact contains five files: `specistry-cli-<version>.tgz`,
+`specistry-cli.cdx.json`, `license-metadata.json`, `release-audit.json`, and
+`SHA256SUMS`. Its metadata deliberately leaves distribution dates null:
+building or testing does not invent a distribution event.
 
-## Per-version Change Date record
-
-Building, testing, uploading a private CI artifact, or conducting a dry run is
-not recorded as public distribution. Candidate metadata therefore keeps
-`firstPublicDistribution` and `changeDate` null. The candidate workflow never
-accepts a distribution date. At the actual public distribution event, a future
-protected publication transaction must run:
+Record the actual earliest public distribution of this specific version,
+including public versioned source where applicable. Never reuse another
+version's record or date. Use the verified candidate and immutable recorder:
 
 ```bash
-pnpm release:record-public-distribution -- YYYY-MM-DD .release/specra-0.1.0-rc.2
+pnpm release:record-public-distribution -- YYYY-MM-DD .release/candidate
 ```
 
-The command derives a canonical versioned record name inside the repository's
-`release-ledger/` authority, rejects future dates and version or digest
-mismatches, refuses to overwrite a record, requires the licensor
-confirmations and final owner approval, binds the record to the source commit
-and tarball digest, writes an identical candidate copy, updates `SHA256SUMS`,
-and deterministically derives the Change Date three calendar years later.
+The recorder refuses existing records, future dates, license drift and
+source/version/digest mismatches. It derives the Apache-2.0 Change Date three
+calendar years later. Commit the record via a reviewed PR to `master`; leave
+the version tag on the artifact-producing source. A later artifact upload does
+not reset the version's earlier public-source distribution date.
 
-The public-first transaction commits the ledger while private, makes the source
-public on that date, then attests and verifies the identical checksummed copy
-before publishing the GitHub pre-release. This ordering avoids requiring
-Enterprise Cloud solely for private attestations. The original release audit
-keeps its truthful preparation-time `executed: false` status; live verification
-is recorded separately with the signed bundle and actual run/subject references.
-Publication must never reuse another version's date or create an uncommitted or
-unchecksummed side record. A green workflow alone is not provenance verification.
+Dispatch `mode=attest` on the original tag with the successful preparation run
+ID and reviewed ledger commit. This protected job downloads the immutable,
+digest-bound preparation artifact, checks every subject and ledger ancestry,
+copies the exact record and updates checksums without rebuilding. Only this
+job receives OIDC/attestation-write permissions. Cryptographically verify all
+six signed subjects against the canonical repository, exact tag, source and
+workflow digest and hosted runner before publishing the GitHub pre-release.
+Preserve the signed bundle and actual verification output as separate evidence.
+The audit's preparation-time `attestation.executed: false` stays truthful.
+
+Ordinary CI remains read-only. A prepared workflow is not live provenance;
+until execution and verification, report
+`PROVENANCE WORKFLOW PREPARED — LIVE ATTESTATION NOT EXECUTED`.
+
+## First npm publication and Trusted Publishing
+
+The owner must create/claim organization `specistry` and log in with publishing
+authority. If first publication requires login/2FA, stop for that owner action:
+do not bypass 2FA, publish a placeholder or add a persistent `NPM_TOKEN`.
+Publish the verified RC3 `.tgz` with
+`--ignore-scripts --access public --tag next --registry=https://registry.npmjs.org`.
+Never publish a directory, repack, rebuild or reuse a name/version pair.
+
+Once package settings are available, configure npm's GitHub Trusted Publisher:
+
+| Field             | Value                                                                   |
+| ----------------- | ----------------------------------------------------------------------- |
+| Organization/user | `yannisyoussef`                                                         |
+| Repository        | `specistry`                                                             |
+| Workflow filename | `npm-publish.yml`                                                       |
+| Environment       | `release`                                                               |
+| Allowed actions   | Enable **Allow npm publish** (new configurations default to stage-only) |
+
+Normal publication uses short-lived OIDC on GitHub-hosted runners, npm ≥11.5.1,
+and Node 24. The dedicated workflow compiles nothing: it resolves the reviewed
+release, verifies all signed subjects, GitHub asset digests, checksums, exact
+ledger, tarball manifest, legal files, private bundled closure and consumer
+qualification, then publishes that `.tgz`. RCs use `next`; stable releases use
+`latest`. No separate dist-tag-management permission is needed. See
+[npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/).
+
+After publication, anonymously compare npm's downloaded tarball SHA-256 and
+SHA-512 integrity with the qualified GitHub bytes; verify `next` and that RC3 is
+not `latest`. A fresh registry installation must execute `specistry --help`,
+build and check self-docs before publication is reported complete. Only then
+present registry installation commands as live in the documentation.
+
+## Accepted residuals
+
+BUSL-1.1, Licensor INFINITY VENTURES (SASU), the Additional Use Grant and future
+Apache-2.0 policy remain owner-confirmed and unchanged. External legal review
+is strongly recommended and `not-recorded`; it is not an RC blocker.
+Automated accessibility and cross-browser gates remain required. Manual
+VoiceOver/NVDA is **DEFERRED TO 1.0.0**, under existing A11Y-R01; no comprehensive
+screen-reader validation or formal WCAG conformance is claimed. Existing
+advisory decisions and review dates are not reset by the rename.

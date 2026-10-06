@@ -1,7 +1,7 @@
 /**
- * `specra check` and `specra diff` (SPEC-011 §11–§17). Both commands are
+ * `specistry check` and `specistry diff` (SPEC-011 §11–§17). Both commands are
  * read-only orchestration: they resolve the artifact sets the author named,
- * hand them to `@specra/quality` and to the SPEC-010 diff port, and turn
+ * hand them to `@specistry/quality` and to the SPEC-010 diff port, and turn
  * the result into a diagnostic list and an exit outcome. No quality
  * semantics live here — this module contains no rule, no severity
  * decision, and no compatibility judgement.
@@ -11,10 +11,13 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { ContentArtifact, NavigationArtifact } from "@specra/content";
-import { parseContentArtifact, parseNavigationArtifact } from "@specra/content";
-import type { DocumentationArtifact } from "@specra/model";
-import { parseDocumentationArtifact } from "@specra/model";
+import type { ContentArtifact, NavigationArtifact } from "@specistry/content";
+import {
+  parseContentArtifact,
+  parseNavigationArtifact,
+} from "@specistry/content";
+import type { DocumentationArtifact } from "@specistry/model";
+import { parseDocumentationArtifact } from "@specistry/model";
 import {
   collectFacts,
   evaluateQuality,
@@ -23,7 +26,7 @@ import {
   QualityContractError,
   type QualityDiagnostic,
   type QualityEvaluation,
-} from "@specra/quality";
+} from "@specistry/quality";
 import {
   diffArtifacts,
   findRelease,
@@ -31,9 +34,9 @@ import {
   RELEASE_MANIFEST_FILENAME,
   type ContractDiff,
   type ReleaseManifest,
-} from "@specra/release";
-import type { SnippetsArtifact } from "@specra/snippets";
-import { parseSnippetsArtifact } from "@specra/snippets";
+} from "@specistry/release";
+import type { SnippetsArtifact } from "@specistry/snippets";
+import { parseSnippetsArtifact } from "@specistry/snippets";
 
 import type {
   BuildContext,
@@ -239,7 +242,7 @@ function qualityDiagnostics(
 }
 
 /**
- * `specra check`: evaluates the selected documentation against the project's
+ * `specistry check`: evaluates the selected documentation against the project's
  * quality policy. Read-only — nothing is written, rebuilt, or promoted.
  */
 export async function checkProject(
@@ -326,7 +329,7 @@ export async function checkProject(
 }
 
 /**
- * `specra diff`: the public view of the SPEC-010 structured diff. It
+ * `specistry diff`: the public view of the SPEC-010 structured diff. It
  * classifies nothing, writes nothing, and never touches the private
  * candidate review file or the changelog.
  */

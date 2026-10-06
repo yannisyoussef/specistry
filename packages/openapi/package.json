@@ -1,6 +1,6 @@
 {
-  "name": "@specra/openapi",
-  "version": "0.1.0-rc.2",
+  "name": "@specistry/openapi",
+  "version": "0.1.0-rc.3",
   "private": true,
   "license": "BUSL-1.1",
   "type": "module",
@@ -19,7 +19,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@specra/model": "workspace:*",
+    "@specistry/model": "workspace:*",
     "yaml": "2.9.0"
   },
   "devDependencies": {

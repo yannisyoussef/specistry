@@ -16,40 +16,40 @@ const workspaceGroups = ["apps", "packages"];
 // exception lists. The web app is framework-driven and is constrained only by
 // its dependency edges.
 const boundaries = new Map([
-  ["@specra/model", { allowed: new Set(), constrained: true }],
+  ["@specistry/model", { allowed: new Set(), constrained: true }],
   [
-    "@specra/openapi",
-    { allowed: new Set(["@specra/model"]), constrained: true },
+    "@specistry/openapi",
+    { allowed: new Set(["@specistry/model"]), constrained: true },
   ],
-  ["@specra/config", { allowed: new Set(), constrained: true }],
+  ["@specistry/config", { allowed: new Set(), constrained: true }],
   // The content package owns Markdown parsing and highlighting; its parser
   // dependencies never appear in the CLI, config, model, or reader manifests.
   [
-    "@specra/content",
-    { allowed: new Set(["@specra/model"]), constrained: true },
+    "@specistry/content",
+    { allowed: new Set(["@specistry/model"]), constrained: true },
   ],
   // Search projects canonical, content, and navigation data (SPEC-007); it
   // never sees a parser, and its browser entry depends on the engine only.
   [
-    "@specra/search",
+    "@specistry/search",
     {
-      allowed: new Set(["@specra/content", "@specra/model"]),
+      allowed: new Set(["@specistry/content", "@specistry/model"]),
       constrained: true,
     },
   ],
   // Snippets project canonical operations into protocol examples (SPEC-008);
   // the generators see the model only, never a parser, React, or the network.
   [
-    "@specra/snippets",
-    { allowed: new Set(["@specra/model"]), constrained: true },
+    "@specistry/snippets",
+    { allowed: new Set(["@specistry/model"]), constrained: true },
   ],
   // The playground projects forms and executes requests from the browser
   // (SPEC-009); it sees the model and the protocol layer only, never a
   // parser, React, or the server.
   [
-    "@specra/playground",
+    "@specistry/playground",
     {
-      allowed: new Set(["@specra/model", "@specra/snippets"]),
+      allowed: new Set(["@specistry/model", "@specistry/snippets"]),
       constrained: true,
     },
   ],
@@ -57,9 +57,9 @@ const boundaries = new Map([
   // manifest, catalog, route table, redirect, structured-diff, and changelog
   // contracts as pure data logic; the CLI does the filesystem work.
   [
-    "@specra/release",
+    "@specistry/release",
     {
-      allowed: new Set(["@specra/content", "@specra/model"]),
+      allowed: new Set(["@specistry/content", "@specistry/model"]),
       constrained: true,
     },
   ],
@@ -68,52 +68,52 @@ const boundaries = new Map([
   // never sees a parser, the CLI, presentation, React, or the browser, and
   // it loads no rule at runtime.
   [
-    "@specra/quality",
+    "@specistry/quality",
     {
       allowed: new Set([
-        "@specra/content",
-        "@specra/model",
-        "@specra/release",
-        "@specra/snippets",
+        "@specistry/content",
+        "@specistry/model",
+        "@specistry/release",
+        "@specistry/snippets",
       ]),
       constrained: true,
     },
   ],
   [
-    "@specra/cli",
+    "@specistry/cli",
     {
       allowed: new Set([
-        "@specra/config",
-        "@specra/content",
-        "@specra/model",
-        "@specra/openapi",
-        "@specra/playground",
-        "@specra/quality",
-        "@specra/release",
-        "@specra/search",
-        "@specra/snippets",
+        "@specistry/config",
+        "@specistry/content",
+        "@specistry/model",
+        "@specistry/openapi",
+        "@specistry/playground",
+        "@specistry/quality",
+        "@specistry/release",
+        "@specistry/search",
+        "@specistry/snippets",
       ]),
       constrained: true,
     },
   ],
   [
-    "@specra/web",
+    "@specistry/web",
     {
       allowed: new Set([
-        "@specra/config",
-        "@specra/content",
-        "@specra/model",
-        "@specra/playground",
-        "@specra/release",
-        "@specra/search",
-        "@specra/snippets",
+        "@specistry/config",
+        "@specistry/content",
+        "@specistry/model",
+        "@specistry/playground",
+        "@specistry/release",
+        "@specistry/search",
+        "@specistry/snippets",
       ]),
       constrained: false,
     },
   ],
 ]);
 // Reviewed exceptions, keyed by repository-relative path. The trusted-config
-// host exists to load the consumer's `specra.config.ts` (ADR-008) and may
+// host exists to load the consumer's `specistry.config.ts` (ADR-008) and may
 // contain exactly the number of opaque loads recorded here; the bounded host
 // runner is the only production module allowed to cross a process boundary.
 const opaqueLoadExceptions = new Map([
@@ -149,7 +149,7 @@ const ioBoundaryModules = new Set(
     "tls",
   ].flatMap((name) => [name, `node:${name}`]),
 );
-const ioBoundaryPackages = new Set(["@specra/cli"]);
+const ioBoundaryPackages = new Set(["@specistry/cli"]);
 const manifestSections = [
   "dependencies",
   "devDependencies",
@@ -167,19 +167,19 @@ const productionSections = new Set([
 // Markdown parser and highlighter, and the search indexer stay on the
 // server; only the search engine's browser entry is allowed.
 const clientForbiddenPackages = new Set([
-  "@specra/config",
-  "@specra/content",
-  "@specra/openapi",
-  "@specra/playground",
-  "@specra/quality",
-  "@specra/release",
-  "@specra/search",
-  "@specra/snippets",
+  "@specistry/config",
+  "@specistry/content",
+  "@specistry/openapi",
+  "@specistry/playground",
+  "@specistry/quality",
+  "@specistry/release",
+  "@specistry/search",
+  "@specistry/snippets",
 ]);
 const clientAllowedSpecifiers = new Set([
-  "@specra/playground/client",
-  "@specra/search/client",
-  "@specra/snippets/protocol",
+  "@specistry/playground/client",
+  "@specistry/search/client",
+  "@specistry/snippets/protocol",
 ]);
 
 function isClientModule(source) {
@@ -248,7 +248,7 @@ for (const component of components) {
         );
       }
       if (
-        component.name === "@specra/model" &&
+        component.name === "@specistry/model" &&
         production &&
         !isModelImportAllowed(file, specifier)
       ) {
@@ -311,7 +311,7 @@ if (
   dependencyPackage(
     selfTestSource,
     "../../../packages/openapi/src/index.js",
-  ) !== "@specra/openapi"
+  ) !== "@specistry/openapi"
 ) {
   violations.push(
     "Architecture checker self-test failed to resolve a relative cross-boundary import.",
@@ -336,8 +336,8 @@ if (
   !ioBoundaryModules.has("dns") ||
   !ioBoundaryModules.has("node:https") ||
   ioBoundaryModules.has("node:crypto") ||
-  !ioBoundaryPackages.has("@specra/cli") ||
-  ioBoundaryPackages.has("@specra/openapi")
+  !ioBoundaryPackages.has("@specistry/cli") ||
+  ioBoundaryPackages.has("@specistry/openapi")
 ) {
   violations.push(
     "Architecture checker self-test failed for the I/O boundary module set.",
@@ -358,13 +358,13 @@ if (
   !isClientModule('"use client";\nimport x from "y";') ||
   !isClientModule("// island\n'use client';") ||
   isClientModule('import a from "b";\n"use client";') ||
-  !isClientImportForbidden("@specra/snippets") ||
-  !isClientImportForbidden("@specra/content/highlight") ||
-  !isClientImportForbidden("@specra/search") ||
-  isClientImportForbidden("@specra/search/client") ||
-  isClientImportForbidden("@specra/snippets/protocol") ||
-  isClientImportForbidden("@specra/playground/client") ||
-  !isClientImportForbidden("@specra/playground") ||
+  !isClientImportForbidden("@specistry/snippets") ||
+  !isClientImportForbidden("@specistry/content/highlight") ||
+  !isClientImportForbidden("@specistry/search") ||
+  isClientImportForbidden("@specistry/search/client") ||
+  isClientImportForbidden("@specistry/snippets/protocol") ||
+  isClientImportForbidden("@specistry/playground/client") ||
+  !isClientImportForbidden("@specistry/playground") ||
   isClientImportForbidden("react")
 ) {
   violations.push(
@@ -426,33 +426,33 @@ for (const [source, opaqueRuntimeLoads, usesBrowserGlobal] of astCases) {
   }
 }
 const cliComponent = components.find(
-  (component) => component.name === "@specra/cli",
+  (component) => component.name === "@specistry/cli",
 );
 const modelComponent = components.find(
-  (component) => component.name === "@specra/model",
+  (component) => component.name === "@specistry/model",
 );
 if (cliComponent !== undefined && modelComponent !== undefined) {
   const manifestSelfTest = [
     ...manifestViolations(
       {
-        dependencies: { "@specra/config": "workspace:*" },
-        devDependencies: { "@specra/web": "workspace:*" },
+        dependencies: { "@specistry/config": "workspace:*" },
+        devDependencies: { "@specistry/web": "workspace:*" },
       },
       cliComponent,
     ),
     ...manifestViolations(
-      { peerDependencies: { "@specra/config": "*" } },
+      { peerDependencies: { "@specistry/config": "*" } },
       modelComponent,
     ),
     ...manifestViolations(
-      { dependencies: { "@specra/cli": "workspace:*" } },
+      { dependencies: { "@specistry/cli": "workspace:*" } },
       cliComponent,
     ),
   ];
   if (
     manifestSelfTest.length !== 3 ||
     manifestViolations(
-      { dependencies: { "@specra/config": "workspace:*" } },
+      { dependencies: { "@specistry/config": "workspace:*" } },
       cliComponent,
     ).length !== 0
   ) {
@@ -479,7 +479,7 @@ if (cliComponent !== undefined && modelComponent !== undefined) {
     !isRelativeImportConfined(
       cliComponent,
       path.join(root, "packages/cli/src/index.ts"),
-      "@specra/config",
+      "@specistry/config",
     ) ||
     !isRelativeImportConfined(
       cliComponent,
@@ -508,14 +508,14 @@ if (cliComponent !== undefined && modelComponent !== undefined) {
   }
 }
 const declaredSelfTest = declaredInternalPackages({
-  dependencies: { "@specra/config": "workspace:*" },
-  devDependencies: { "@specra/model": "workspace:*" },
+  dependencies: { "@specistry/config": "workspace:*" },
+  devDependencies: { "@specistry/model": "workspace:*" },
 });
 if (
-  !isDeclaredEdge(declaredSelfTest, "@specra/config", true) ||
-  isDeclaredEdge(declaredSelfTest, "@specra/model", true) ||
-  !isDeclaredEdge(declaredSelfTest, "@specra/model", false) ||
-  isDeclaredEdge(declaredSelfTest, "@specra/openapi", false)
+  !isDeclaredEdge(declaredSelfTest, "@specistry/config", true) ||
+  isDeclaredEdge(declaredSelfTest, "@specistry/model", true) ||
+  !isDeclaredEdge(declaredSelfTest, "@specistry/model", false) ||
+  isDeclaredEdge(declaredSelfTest, "@specistry/openapi", false)
 ) {
   violations.push(
     "Architecture checker self-test failed for undeclared internal imports.",
@@ -593,7 +593,7 @@ function manifestViolations(manifest, component) {
     }
   }
   if (
-    component.name === "@specra/model" &&
+    component.name === "@specistry/model" &&
     Object.keys(manifest.dependencies ?? {}).length > 0
   ) {
     found.push(

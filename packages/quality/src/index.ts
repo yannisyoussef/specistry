@@ -1,5 +1,5 @@
 /**
- * `@specra/quality`: the documentation-quality engine of SPEC-011. Pure
+ * `@specistry/quality`: the documentation-quality engine of SPEC-011. Pure
  * data logic over the canonical, authored, snippet, and release-diff
  * contracts. It reads no file, opens no socket, renders nothing, and loads
  * no rule at runtime: the registry is a static array composed from

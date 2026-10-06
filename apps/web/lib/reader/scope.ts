@@ -1,4 +1,4 @@
-import type { ReleaseCatalog, ReleaseState } from "@specra/release";
+import type { ReleaseCatalog, ReleaseState } from "@specistry/release";
 
 /**
  * Where a reader's routes live (SPEC-010 §20–§23). Artifacts store

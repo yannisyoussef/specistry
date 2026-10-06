@@ -6,8 +6,8 @@ import {
   serializeDocumentationArtifact,
   type DocumentationArtifact,
   type Operation,
-} from "@specra/model";
-import { diffArtifacts } from "@specra/release";
+} from "@specistry/model";
+import { diffArtifacts } from "@specistry/release";
 import {
   collectFacts,
   evaluateQuality,
@@ -15,7 +15,7 @@ import {
   QUALITY_LIMITS,
   RULE_IDS,
   serializeEvaluation,
-} from "@specra/quality";
+} from "@specistry/quality";
 import { afterAll, describe, expect, it } from "vitest";
 
 /**
@@ -28,7 +28,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 const fixture = fileURLToPath(
   new URL(
-    "../fixtures/reader/testinbox/.specra/artifacts/documentation.json",
+    "../fixtures/reader/testinbox/.specistry/artifacts/documentation.json",
     import.meta.url,
   ),
 );

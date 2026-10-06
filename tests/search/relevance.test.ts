@@ -1,15 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { createSearchClient } from "@specra/search/client";
-import { parseSearchArtifact } from "@specra/search";
+import { createSearchClient } from "@specistry/search/client";
+import { parseSearchArtifact } from "@specistry/search";
 import { describe, expect, it } from "vitest";
 
 import corpus from "./relevance.json" with { type: "json" };
 
 /**
  * Relevance regression corpus (SPEC-007 §33, §123): golden queries against
- * the committed TestInbox search artifact, the exact bytes `specra build`
+ * the committed TestInbox search artifact, the exact bytes `specistry build`
  * wrote. Ranking changes must change this file deliberately.
  */
 
@@ -29,7 +29,7 @@ const artifact = parseSearchArtifact(
       "fixtures",
       "reader",
       "testinbox",
-      ".specra",
+      ".specistry",
       "artifacts",
       "search.json",
     ),

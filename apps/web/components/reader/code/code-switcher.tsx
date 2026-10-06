@@ -24,7 +24,7 @@ export interface SwitcherOption {
   readonly group: "protocol" | "sdk";
 }
 
-const STORAGE_KEY = "specra:code-language";
+const STORAGE_KEY = "specistry:code-language";
 const GROUP_LABELS = { protocol: "Protocol", sdk: "SDK" } as const;
 
 function subscribeNever(): () => void {

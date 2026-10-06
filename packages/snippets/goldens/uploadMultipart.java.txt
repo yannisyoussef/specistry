@@ -10,7 +10,7 @@ import java.util.List;
 
 // Requires an OAuth 2.0 access token with the scope team:read.
 HttpClient client = HttpClient.newHttpClient();
-String boundary = "----SpecraFormBoundary";
+String boundary = "----SpecistryFormBoundary";
 List<byte[]> parts = new ArrayList<>();
 parts.add(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"file\"\r\nContent-Type: image/png\r\n\r\n").getBytes(StandardCharsets.UTF_8));
 parts.add(Files.readAllBytes(Path.of("/path/to/file")));
@@ -20,7 +20,7 @@ parts.add(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
 HttpRequest request = HttpRequest.newBuilder()
     .uri(URI.create("https://api.example.com/v1/domains/<DOMAIN_ID>/logo"))
     .header("Authorization", "Bearer <YOUR_ACCESS_TOKEN>")
-    .header("Content-Type", "multipart/form-data; boundary=----SpecraFormBoundary")
+    .header("Content-Type", "multipart/form-data; boundary=----SpecistryFormBoundary")
     .PUT(HttpRequest.BodyPublishers.ofByteArrays(parts))
     .build();
 HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());

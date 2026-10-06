@@ -1,5 +1,5 @@
 /**
- * Authentication rules (SPEC-011 §30). Specra documents contracts: these
+ * Authentication rules (SPEC-011 §30). Specistry documents contracts: these
  * rules ask whether a reader can tell how to authenticate, never whether
  * the authentication is strong. Nothing here judges security posture.
  */

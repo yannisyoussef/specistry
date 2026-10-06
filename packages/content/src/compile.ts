@@ -56,12 +56,12 @@ import type {
  * The controlled content pipeline: source bytes → parse (Markdown, GFM,
  * frontmatter, MDX component syntax without any JavaScript parser) →
  * validate (vocabulary, props, nesting, links, budgets) → normalize into the
- * Specra content model. Nothing here evaluates author text; expressions,
+ * Specistry content model. Nothing here evaluates author text; expressions,
  * ESM, raw HTML, and unknown components are diagnostics, never code.
  */
 
 /**
- * A tag that is not a Specra component: lowercase names are HTML elements
+ * A tag that is not a Specistry component: lowercase names are HTML elements
  * (`<div>`, `<em>`), which authored content never passes through; anything
  * else is an unknown component name.
  */

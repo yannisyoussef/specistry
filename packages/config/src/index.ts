@@ -93,7 +93,7 @@ const environmentId = z
 /**
  * Explicit SDK example mappings (SPEC-008). A project declares each SDK it
  * ships and, per operation, the exact code a developer would write with it.
- * Specra renders that code as authored text; it never infers, generates, or
+ * Specistry renders that code as authored text; it never infers, generates, or
  * executes SDK calls. Everything is JSON-serializable data: no callbacks,
  * no components. `examples` is either inline or a relative path to a JSON
  * file `{ "examples": [...] }` with the same records, and each record holds
@@ -257,7 +257,7 @@ const redirectSchema = z
 
 /**
  * Documentation quality policy (SPEC-011). The configuration layer checks
- * shape only: `@specra/quality` owns the rule catalogue and reports an
+ * shape only: `@specistry/quality` owns the rule catalogue and reports an
  * unknown rule id as a diagnostic, so a typo can never quietly weaken a
  * gate. Nothing here is executable, and there is no plugin hook.
  */
@@ -294,7 +294,7 @@ const qualitySchema = z
 
 export type QualityConfig = z.output<typeof qualitySchema>;
 
-export const specraConfigSchema = z
+export const specistryConfigSchema = z
   .object({
     schemaVersion: z.literal(1),
     name: z.string().trim().min(1).max(120),
@@ -398,15 +398,17 @@ export function isExactExecutionOrigin(baseUrl: string | undefined): boolean {
   );
 }
 
-export type SpecraConfig = z.output<typeof specraConfigSchema>;
-export type SpecraConfigInput = z.input<typeof specraConfigSchema>;
+export type SpecistryConfig = z.output<typeof specistryConfigSchema>;
+export type SpecistryConfigInput = z.input<typeof specistryConfigSchema>;
 
-export function defineConfig(config: SpecraConfigInput): SpecraConfigInput {
+export function defineConfig(
+  config: SpecistryConfigInput,
+): SpecistryConfigInput {
   return config;
 }
 
-export function parseConfig(value: unknown): SpecraConfig {
-  return specraConfigSchema.parse(value);
+export function parseConfig(value: unknown): SpecistryConfig {
+  return specistryConfigSchema.parse(value);
 }
 
 const MAX_ISSUE_PATH_SEGMENTS = 32;
@@ -421,7 +423,7 @@ const MAX_ISSUE_PATH_LENGTH = 256;
 export function redactIssuePath(path: readonly PropertyKey[]): string {
   if (path.length === 0) return "config";
   const labels: string[] = [];
-  let current: z.ZodType | undefined = specraConfigSchema;
+  let current: z.ZodType | undefined = specistryConfigSchema;
   for (const segment of path) {
     const step = describeSegment(current, segment);
     labels.push(step.label);
@@ -440,7 +442,7 @@ export function isRedactedIssuePath(value: string): boolean {
   if (value.length === 0 || value.length > MAX_ISSUE_PATH_LENGTH) return false;
   const labels = value.split(".");
   if (labels.length > MAX_ISSUE_PATH_SEGMENTS) return false;
-  return matchesLabels(specraConfigSchema, labels);
+  return matchesLabels(specistryConfigSchema, labels);
 }
 
 interface SegmentStep {

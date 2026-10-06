@@ -1,5 +1,5 @@
-import type { EvaluatedFinding, QualityEvaluation } from "@specra/quality";
-import type { ContractDiff, DiffCandidate } from "@specra/release";
+import type { EvaluatedFinding, QualityEvaluation } from "@specistry/quality";
+import type { ContractDiff, DiffCandidate } from "@specistry/release";
 
 import type { CommandName } from "./arguments.js";
 import {
@@ -21,10 +21,10 @@ type CommandResult =
   | ReleaseResult
   | ValidationResult;
 
-export const ROOT_HELP = `Specra — deterministic developer documentation tooling
+export const ROOT_HELP = `Specistry — deterministic developer documentation tooling
 
 Usage:
-  specra <command> [options]
+  specistry <command> [options]
 
 Commands:
   validate   Validate configuration, project paths, and OpenAPI sources
@@ -35,7 +35,7 @@ Commands:
   current    Select the release the current aliases point to
   deprecate  Mark a retained release as deprecated
 
-Run 'specra <command> --help' for command options.
+Run 'specistry <command> --help' for command options.
 `;
 
 const COMMON_OPTIONS = `Options:
@@ -51,7 +51,7 @@ const COMMON_OPTIONS = `Options:
 export const VALIDATE_HELP = `Validate configuration, project paths, and OpenAPI sources
 
 Usage:
-  specra validate [options]
+  specistry validate [options]
 
 ${COMMON_OPTIONS}
 Validation evaluates the trusted configuration, confines every configured path,
@@ -65,7 +65,7 @@ Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelle
 export const BUILD_HELP = `Validate and write the canonical documentation artifact
 
 Usage:
-  specra build [options]
+  specistry build [options]
 
 ${COMMON_OPTIONS}
   --from <version>              Compare the candidate with this retained release
@@ -77,7 +77,7 @@ atomically to ${ARTIFACT_DIRECTORY}. A failed build removes any
 previous artifact directory so stale output never represents the current input.
 The artifact is a mutable candidate: rebuild as often as you like. When the
 project has released versions, build also writes structured diff candidates to
-.specra/candidates/diff.json for changelog review; they are never served.
+.specistry/candidates/diff.json for changelog review; they are never served.
 
 Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelled.
 `;
@@ -85,7 +85,7 @@ Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelle
 export const RELEASE_HELP = `Promote the candidate artifact into an immutable documentation release
 
 Usage:
-  specra release <version> [options]
+  specistry release <version> [options]
 
 ${COMMON_OPTIONS}
   --current                     Select the new release as current
@@ -100,7 +100,7 @@ digits, dots, underscores, and hyphens, never a reserved name. Release verifies
 the candidate in ${ARTIFACT_DIRECTORY} against its manifest, derives the route
 table and the configured redirects, validates changelog/<version>.json against
 the structured diff candidates, stages the exact bytes, and promotes them with
-one atomic rename into .specra/releases/<version>. An identical release is an
+one atomic rename into .specistry/releases/<version>. An identical release is an
 idempotent no-op; a different one fails: releases are immutable. The first
 release becomes current; later ones only with --current.
 
@@ -110,10 +110,10 @@ Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelle
 export const CURRENT_HELP = `Select the release the current aliases point to
 
 Usage:
-  specra current <version> [options]
+  specistry current <version> [options]
 
 ${COMMON_OPTIONS}
-Rewrites only the catalog pointer under .specra/releases/catalog.json; no
+Rewrites only the catalog pointer under .specistry/releases/catalog.json; no
 release content changes. /, /docs, and /api redirect non-permanently to the
 selected release, and pointing back to an older release is a documentation
 rollback.
@@ -124,7 +124,7 @@ Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelle
 export const DEPRECATE_HELP = `Mark a retained release as deprecated
 
 Usage:
-  specra deprecate <version> [options]
+  specistry deprecate <version> [options]
 
 ${COMMON_OPTIONS}
 Sets the catalog lifecycle state; the reader labels the release and shows a
@@ -137,7 +137,7 @@ Exit codes: 0 success, 2 validation failure, 64 usage, 70 internal, 130 cancelle
 export const CHECK_HELP = `Evaluate documentation quality against the project policy
 
 Usage:
-  specra check [options]
+  specistry check [options]
 
 ${COMMON_OPTIONS}
   --version <id>                Check a retained release instead of the candidate
@@ -145,8 +145,8 @@ ${COMMON_OPTIONS}
 
 Check is read-only: it evaluates the artifacts a build already produced and
 writes nothing. Rules come from a fixed catalogue (see docs/quality.md); the
-quality section of specra.config.ts sets severities, thresholds, and governed
-suppressions. Run 'specra build' first so the candidate matches your sources.
+quality section of specistry.config.ts sets severities, thresholds, and governed
+suppressions. Run 'specistry build' first so the candidate matches your sources.
 
 Exit codes: 0 gate passed, 3 gate failed, 2 project or policy error,
 64 usage, 70 internal, 130 cancelled.
@@ -155,16 +155,16 @@ Exit codes: 0 gate passed, 3 gate failed, 2 project or policy error,
 export const DIFF_HELP = `Show the structured differences between two documentation sets
 
 Usage:
-  specra diff --from <candidate|current|version> [--to <source>] [options]
+  specistry diff --from <candidate|current|version> [--to <source>] [options]
 
 ${COMMON_OPTIONS}
   --from <candidate|current|id> Comparison base (required)
   --to <candidate|current|id>   Comparison target (default: candidate)
 
 Diff is read-only and informational: it never fails because something changed,
-never writes to .specra/candidates, and never publishes a changelog. It reports
+never writes to .specistry/candidates, and never publishes a changelog. It reports
 identity-based structural facts only — a renamed entity is a removal and an
-addition, and a changed schema is a change, not a verdict. Ask 'specra check
+addition, and a changed schema is a change, not a verdict. Ask 'specistry check
 --from <base>' for the compatibility policy.
 
 Exit codes: 0 success, 2 project or version error, 64 usage, 70 internal,
@@ -182,13 +182,13 @@ export const COMMAND_HELP: Readonly<Record<CommandName, string>> = {
 };
 
 const FAILURE_TITLES: Readonly<Record<CommandName, string>> = {
-  build: "Specra build failed",
-  check: "Specra check failed",
-  diff: "Specra diff failed",
-  current: "Specra current selection failed",
-  deprecate: "Specra deprecation failed",
-  release: "Specra release failed",
-  validate: "Specra validation failed",
+  build: "Specistry build failed",
+  check: "Specistry check failed",
+  diff: "Specistry diff failed",
+  current: "Specistry current selection failed",
+  deprecate: "Specistry deprecation failed",
+  release: "Specistry release failed",
+  validate: "Specistry validation failed",
 };
 
 export function formatHumanResult(
@@ -212,8 +212,8 @@ export function formatHumanResult(
     const { release } = result;
     const lines = [
       release.unchanged
-        ? `Specra release ${sanitizeTerminal(release.version)} already exists with identical content; nothing changed.`
-        : `Specra release ${sanitizeTerminal(release.version)} promoted.`,
+        ? `Specistry release ${sanitizeTerminal(release.version)} already exists with identical content; nothing changed.`
+        : `Specistry release ${sanitizeTerminal(release.version)} promoted.`,
       `Project: ${sanitizeTerminal(result.context.config.name)}`,
       `Release: ${release.directory} (${release.components.join(", ")}; ${release.bytes} bytes)`,
       `Identity: ${release.digest}`,
@@ -237,8 +237,8 @@ export function formatHumanResult(
     const { catalog } = result;
     const lines = [
       command === "deprecate"
-        ? "Specra release deprecated."
-        : "Specra current release selected.",
+        ? "Specistry release deprecated."
+        : "Specistry current release selected.",
       `Current: ${sanitizeTerminal(catalog.current)}`,
       ...catalog.releases.map(
         (release) =>
@@ -251,8 +251,8 @@ export function formatHumanResult(
   const { statistics } = result.ingestion;
   const lines = [
     command === "build"
-      ? "Specra build succeeded."
-      : "Specra project is valid.",
+      ? "Specistry build succeeded."
+      : "Specistry project is valid.",
     `Project: ${sanitizeTerminal(result.context.config.name)}`,
     `Sources: ${statistics.documents} document(s), ${statistics.operations} operation(s), ${statistics.schemas} schema(s)`,
     `Docs: ${result.content.pages} page(s), ${result.content.assets} asset(s)`,
@@ -266,7 +266,7 @@ export function formatHumanResult(
     );
     if (result.candidates !== undefined) {
       lines.push(
-        `Diff candidates: ${result.candidates.count} compared with ${sanitizeTerminal(result.candidates.from)}${result.candidates.truncated ? " (truncated)" : ""} in .specra/candidates/diff.json`,
+        `Diff candidates: ${result.candidates.count} compared with ${sanitizeTerminal(result.candidates.from)}${result.candidates.truncated ? " (truncated)" : ""} in .specistry/candidates/diff.json`,
       );
     }
   } else {
@@ -323,7 +323,7 @@ function formatQuality(
       ? `release ${sanitizeTerminal(evaluation.target.version ?? "")}`
       : "candidate";
   const lines = [
-    `Specra check — ${scope}`,
+    `Specistry check — ${scope}`,
     `Project: ${sanitizeTerminal(result.context.config.name)}`,
   ];
   if (evaluation.comparison !== undefined) {
@@ -434,7 +434,7 @@ function marker(kind: DiffCandidate["kind"]): string {
 
 function formatDiff(diff: ContractDiff): string {
   const lines = [
-    `Specra diff ${sanitizeTerminal(diff.from)} → ${sanitizeTerminal(diff.to)}`,
+    `Specistry diff ${sanitizeTerminal(diff.from)} → ${sanitizeTerminal(diff.to)}`,
   ];
   for (const group of DIFF_GROUPS) {
     const candidates = diff.candidates.filter((candidate) =>
@@ -512,7 +512,7 @@ export function formatJsonResult(result: CommandResult): string {
 }
 
 export function formatUsageError(message: string): string {
-  return `Usage error: ${sanitizeTerminal(message)}\nRun 'specra --help' for usage.\n`;
+  return `Usage error: ${sanitizeTerminal(message)}\nRun 'specistry --help' for usage.\n`;
 }
 
 export function sanitizeTerminal(value: string): string {

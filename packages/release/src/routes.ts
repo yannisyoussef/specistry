@@ -2,8 +2,8 @@ import {
   buildApiRouteTree,
   type ContentArtifact,
   type NavigationArtifact,
-} from "@specra/content";
-import type { DocumentationArtifact } from "@specra/model";
+} from "@specistry/content";
+import type { DocumentationArtifact } from "@specistry/model";
 
 import {
   hasOnlyKeys,

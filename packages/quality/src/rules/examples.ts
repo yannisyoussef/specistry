@@ -5,7 +5,7 @@
  * never what it is.
  */
 
-import type { MediaTypeContent, Operation } from "@specra/model";
+import type { MediaTypeContent, Operation } from "@specistry/model";
 
 import type { QualityRule, RuleFinding } from "../contracts.js";
 import type { OperationFacts } from "../facts.js";

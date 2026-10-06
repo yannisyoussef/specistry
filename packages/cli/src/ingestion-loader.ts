@@ -1,7 +1,7 @@
 import {
   parseDocumentationArtifact,
   type DocumentationArtifact,
-} from "@specra/model";
+} from "@specistry/model";
 import {
   SOURCE_DIAGNOSTIC_MESSAGES,
   SOURCE_DIAGNOSTIC_SEVERITY,
@@ -9,7 +9,7 @@ import {
   type IngestionSourceRecord,
   type IngestionStatistics,
   type SourceDiagnosticCode,
-} from "@specra/openapi";
+} from "@specistry/openapi";
 
 import { isDocumentId } from "./acquisition.js";
 import {

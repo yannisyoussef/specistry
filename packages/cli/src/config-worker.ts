@@ -2,7 +2,7 @@ import { createReadStream, writeSync } from "node:fs";
 import { registerHooks } from "node:module";
 import { exit } from "node:process";
 
-import { redactIssuePath, specraConfigSchema } from "@specra/config";
+import { redactIssuePath, specistryConfigSchema } from "@specistry/config";
 
 const MAX_CONFIG_BYTES = 1_048_576;
 // Must match the loader's protocol cap: the frame embeds the config JSON as a
@@ -38,7 +38,7 @@ async function evaluateConfig(data: ConfigHostData | undefined): Promise<void> {
 
     registerHooks({
       resolve(specifier, context, nextResolve) {
-        if (specifier === "@specra/config") {
+        if (specifier === "@specistry/config") {
           return { shortCircuit: true, url: data.configPackageUrl };
         }
         return nextResolve(specifier, context);
@@ -65,7 +65,7 @@ async function evaluateConfig(data: ConfigHostData | undefined): Promise<void> {
       return;
     }
 
-    const parsed = specraConfigSchema.safeParse(candidate);
+    const parsed = specistryConfigSchema.safeParse(candidate);
     if (!parsed.success) {
       const issuePaths = [
         ...new Set(

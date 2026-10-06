@@ -23,7 +23,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 const goldenRoot = path.join(process.cwd(), "packages/snippets/goldens");
 const goldens = readdirSync(goldenRoot).sort();
-const scratch = mkdtempSync(path.join(tmpdir(), "specra-snippets-syntax-"));
+const scratch = mkdtempSync(path.join(tmpdir(), "specistry-snippets-syntax-"));
 
 afterAll(() => rmSync(scratch, { force: true, recursive: true }));
 

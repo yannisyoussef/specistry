@@ -16,12 +16,14 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { licenseMetadata, readLicensePolicy } from "./lib/license-policy.mjs";
+import { readReleaseIdentity } from "./lib/release-identity.mjs";
 
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
 const supplied = process.argv[2];
+const identity = await readReleaseIdentity(repositoryRoot);
 if (supplied === undefined || process.argv.length !== 3) {
   throw new Error(
     "Usage: node scripts/build-release-candidate.mjs <new-directory>",
@@ -36,7 +38,7 @@ try {
 }
 await mkdir(output, { recursive: true });
 
-const stagingRoot = await mkdtemp(path.join(tmpdir(), "specra-cli-stage-"));
+const stagingRoot = await mkdtemp(path.join(tmpdir(), "specistry-cli-stage-"));
 const staged = run(process.execPath, [
   path.join(repositoryRoot, "scripts", "stage-cli-package.mjs"),
   path.join(stagingRoot, "package"),
@@ -50,7 +52,7 @@ const packedText = run("npm", [
   "--json",
 ]);
 const packed = JSON.parse(packedText)[0];
-if (packed === undefined || typeof packed.filename !== "string") {
+if (packed === undefined || packed.filename !== identity.tarball) {
   throw new Error("npm pack did not report one release artifact.");
 }
 const manifest = JSON.parse(
@@ -91,7 +93,7 @@ if (forbidden.length > 0) {
   throw new Error(`Packed CLI contains private files: ${forbidden.join(", ")}`);
 }
 
-const sbom = path.join(output, "specra-cli.cdx.json");
+const sbom = path.join(output, identity.sbom);
 run(process.execPath, [
   path.join(
     repositoryRoot,

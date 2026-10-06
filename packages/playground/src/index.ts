@@ -1,5 +1,5 @@
-import type { DocumentationArtifact } from "@specra/model";
-import { operationKey, type SnippetsArtifact } from "@specra/snippets";
+import type { DocumentationArtifact } from "@specistry/model";
+import { operationKey, type SnippetsArtifact } from "@specistry/snippets";
 
 import {
   isLoopbackOrigin,
@@ -33,7 +33,7 @@ import {
 } from "./types.js";
 
 /**
- * `@specra/playground` build entry (SPEC-009): the form projection and
+ * `@specistry/playground` build entry (SPEC-009): the form projection and
  * capability analysis of every operation, the exact-origin environment
  * policy, and the strict artifact contract. This entry runs in the CLI and
  * the reader server; the browser loads `./client` only.

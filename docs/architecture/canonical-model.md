@@ -1,6 +1,6 @@
 # Canonical documentation model v1
 
-`@specra/model` is Specra's source-independent documentation projection. It is the
+`@specistry/model` is Specistry's source-independent documentation projection. It is the
 stable boundary between untrusted source adapters and consumers such as readers,
 search indexers, snippet generators, and quality rules. It is not an OpenAPI object
 model, a JSON Schema execution engine, or UI state.
@@ -138,7 +138,7 @@ canonical capability defines that behavior.
 JSON Schema keywords do not imply a type. A source schema such as `{ minimum: 0 }`
 therefore becomes a `type-less` node with numeric constraints and applicable types
 `integer` and `number`. It still accepts non-numeric instances according to JSON
-Schema keyword applicability; Specra does not narrow it to a number schema.
+Schema keyword applicability; Specistry does not narrow it to a number schema.
 
 Mixed compatible groups are explicit. For example, numeric and string constraints
 produce applicable types `integer`, `number`, and `string`. The validator derives the
@@ -245,7 +245,7 @@ adapter responsibilities.
 Model version 1 is frozen by SPEC-001. Additive optional fields may remain compatible;
 the optional schema `name` (SPEC-005) is the first such addition. An artifact without
 it stays valid, and an artifact carrying it is rejected only by validators older than
-that change, so consumers upgrade `@specra/model` before adopting a newer CLI.
+that change, so consumers upgrade `@specistry/model` before adopting a newer CLI.
 Removing/renaming fields, changing identity/ordering/semantic meaning, or widening a
 closed union incompatibly requires a new model version and either deterministic
 migration or artifact rebuild. Readers reject unknown future versions.

@@ -21,7 +21,7 @@ import {
   type ReleaseCatalog,
   type ReleaseManifest,
   type RouteTable,
-} from "@specra/release";
+} from "@specistry/release";
 
 import {
   projectRoot,
@@ -40,7 +40,7 @@ import { readerVersion, releaseRoots } from "./scope";
  * releases keyed by version and aggregate identity.
  */
 
-export const SERVE_MODE_VARIABLE = "SPECRA_SERVE";
+export const SERVE_MODE_VARIABLE = "SPECISTRY_SERVE";
 export const MAX_LOADED_RELEASES = 4;
 const MAX_LOADED_METADATA = 32;
 
@@ -133,7 +133,7 @@ export function readerMode(
 /**
  * The catalog, when the project has released versions. Memoized per root
  * and re-read only when the file's size or modification time changes, so
- * `specra current` and `specra deprecate` take effect on the next request
+ * `specistry current` and `specistry deprecate` take effect on the next request
  * without restarting the reader (one `stat` per request, no parse).
  */
 export async function loadReaderCatalog(
@@ -189,7 +189,7 @@ async function readCatalog(root: string): Promise<ReaderCatalog | undefined> {
 }
 
 const RELEASE_HINT =
-  "Restore the release store from backup or re-run `specra release`; the reader never falls back to another version.";
+  "Restore the release store from backup or re-run `specistry release`; the reader never falls back to another version.";
 
 /** Release manifest, route table, redirects, and changelog: small, verified, cached. */
 export function loadReleaseMetadata(

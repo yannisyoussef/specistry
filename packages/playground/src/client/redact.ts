@@ -2,7 +2,7 @@ import {
   isSensitiveName,
   looksLikeSecret,
   type Pair,
-} from "@specra/snippets/protocol";
+} from "@specistry/snippets/protocol";
 
 /**
  * Presentation-only redaction (SPEC-009 §69, §120–§122): credential headers

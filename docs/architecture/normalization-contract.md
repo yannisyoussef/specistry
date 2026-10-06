@@ -11,7 +11,7 @@ Keyword-only schemas use the explicit `type-less` node. Its constraint groups ap
 only to compatible JSON instance types and never imply a type. Mixed vocabularies are
 evaluated by adapters before projection: represented semantics become canonical
 fields, while partial, ignored-annotation, unsupported, and invalid dispositions use
-the stable [capability diagnostic catalog](model-diagnostics.md). Specra does not claim
+the stable [capability diagnostic catalog](model-diagnostics.md). Specistry does not claim
 JSON Schema validation-engine equivalence.
 
 ## Identity

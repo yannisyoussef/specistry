@@ -253,7 +253,7 @@ describe("validateProject", () => {
   it("does not re-evaluate parent NODE_OPTIONS in the config process", async () => {
     const project = await createProject();
     const previous = process.env.NODE_OPTIONS;
-    process.env.NODE_OPTIONS = "--require=/definitely/not/specra.cjs";
+    process.env.NODE_OPTIONS = "--require=/definitely/not/specistry.cjs";
     try {
       await expect(validateProject({ cwd: project })).resolves.toEqual(
         expect.objectContaining({ ok: true }),
@@ -273,7 +273,7 @@ describe("validateProject", () => {
       "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n",
     );
     await writeFile(
-      path.join(project, "specra.config.ts"),
+      path.join(project, "specistry.config.ts"),
       `import { spawn } from "node:child_process";
        spawn(process.execPath, ["-e", ${JSON.stringify(
          `setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(marker)}, "orphan"), 400)`,
@@ -380,7 +380,7 @@ describe("validateProject", () => {
       "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n",
     );
     await writeFile(
-      path.join(project, "specra.config.ts"),
+      path.join(project, "specistry.config.ts"),
       `export default {
         schemaVersion: 1,
         name: "Portable paths",
@@ -405,10 +405,10 @@ describe("validateProject", () => {
 
     const outside = await createProject();
     const project = await createProject();
-    await rm(path.join(project, "specra.config.ts"));
+    await rm(path.join(project, "specistry.config.ts"));
     await symlink(
-      path.join(outside, "specra.config.ts"),
-      path.join(project, "specra.config.ts"),
+      path.join(outside, "specistry.config.ts"),
+      path.join(project, "specistry.config.ts"),
       "file",
     );
     await expectCodes(validateProject({ cwd: project }), [
@@ -434,7 +434,7 @@ describe("validateProject", () => {
     const artifactEscape = await createProject();
     await symlink(
       outside,
-      path.join(artifactEscape, ".specra"),
+      path.join(artifactEscape, ".specistry"),
       process.platform === "win32" ? "junction" : "dir",
     );
     const result = await validateProject({ cwd: artifactEscape });
@@ -451,7 +451,7 @@ describe("validateProject", () => {
 
   it("rejects a regular file blocking the artifact directory", async () => {
     const project = await createProject();
-    await writeFile(path.join(project, ".specra"), "not a directory");
+    await writeFile(path.join(project, ".specistry"), "not a directory");
     const result = await validateProject({ cwd: project });
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -470,7 +470,7 @@ describe("validateProject", () => {
     expect(result.ok).toBe(true);
     await expect(
       import("node:fs/promises").then(async ({ stat }) => {
-        await stat(path.join(project, ".specra"));
+        await stat(path.join(project, ".specistry"));
       }),
     ).rejects.toThrow();
   });
@@ -478,7 +478,7 @@ describe("validateProject", () => {
 
 async function createProject(
   configSource = `
-    import { defineConfig } from "@specra/config";
+    import { defineConfig } from "@specistry/config";
     const projectName: string = "Example API";
     export default defineConfig({
       schemaVersion: 1,
@@ -507,12 +507,12 @@ async function createProject(
       "openapi: 3.1.0\ninfo:\n  title: Example\n  version: 1.0.0\npaths: {}\n",
     );
   }
-  await writeFile(path.join(project, "specra.config.ts"), configSource);
+  await writeFile(path.join(project, "specistry.config.ts"), configSource);
   return project;
 }
 
 async function makeTemporaryDirectory(): Promise<string> {
-  const directory = await mkdtemp(path.join(tmpdir(), "specra-cli-test-"));
+  const directory = await mkdtemp(path.join(tmpdir(), "specistry-cli-test-"));
   temporaryDirectories.push(directory);
   return directory;
 }

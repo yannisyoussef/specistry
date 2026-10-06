@@ -1,5 +1,5 @@
 /**
- * `@specra/quality` contracts (SPEC-011 §8–§11). Three layers stay
+ * `@specistry/quality` contracts (SPEC-011 §8–§11). Three layers stay
  * separate: normalized **facts** describe the documentation, **rules**
  * turn facts into findings, and **policy** decides what a finding means
  * for a build. A rule never knows an exit code; a finding never carries a

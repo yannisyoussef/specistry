@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { ARTIFACT_ASSETS_DIRECTORY } from "@specra/content";
+import { ARTIFACT_ASSETS_DIRECTORY } from "@specistry/content";
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
@@ -12,7 +12,7 @@ import {
 import { readerMode, releaseForAsset } from "../../../lib/reader/release";
 
 /**
- * Serves documentation assets copied by `specra build`. The name must be a
+ * Serves documentation assets copied by `specistry build`. The name must be a
  * content-addressed file the manifest lists, so nothing outside the artifact
  * `assets/` directory can ever be read, and the type comes from the manifest
  * extension the build derived from the file's bytes. SVG (logos only) is

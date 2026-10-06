@@ -33,7 +33,7 @@ describe("reader artifact boundary", () => {
     const first = await loadReaderArtifact(root);
     const second = await loadReaderArtifact(root);
     expect(second).toBe(first);
-    expect(first.directory).toBe(".specra/artifacts");
+    expect(first.directory).toBe(".specistry/artifacts");
     expect(first.manifest.statistics.operations).toBe(25);
     expect(first.index.operationCount).toBe(25);
     expect(JSON.stringify(first.index)).not.toContain(root);
@@ -41,11 +41,11 @@ describe("reader artifact boundary", () => {
 
   it("resolves the project root from the environment or the working directory", () => {
     expect(projectRoot({})).toBe(path.resolve(process.cwd()));
-    expect(projectRoot({ SPECRA_PROJECT_ROOT: "" })).toBe(
+    expect(projectRoot({ SPECISTRY_PROJECT_ROOT: "" })).toBe(
       path.resolve(process.cwd()),
     );
     expect(
-      projectRoot({ SPECRA_PROJECT_ROOT: "tests/fixtures/reader/edge" }),
+      projectRoot({ SPECISTRY_PROJECT_ROOT: "tests/fixtures/reader/edge" }),
     ).toBe(path.resolve("tests/fixtures/reader/edge"));
   });
 
@@ -53,19 +53,19 @@ describe("reader artifact boundary", () => {
     const empty = await makeProject();
     await expectFailure(
       empty,
-      /No canonical artifact was found at \.specra\/artifacts\/manifest\.json/,
+      /No canonical artifact was found at \.specistry\/artifacts\/manifest\.json/,
     );
 
     const malformed = await makeProject("testinbox");
     await writeFile(
-      path.join(malformed, ".specra/artifacts/manifest.json"),
+      path.join(malformed, ".specistry/artifacts/manifest.json"),
       "{not json",
     );
-    await expectFailure(malformed, /not a supported Specra manifest/);
+    await expectFailure(malformed, /not a supported Specistry manifest/);
 
     const unsupported = await makeProject("testinbox");
     await patchJson(
-      path.join(unsupported, ".specra/artifacts/manifest.json"),
+      path.join(unsupported, ".specistry/artifacts/manifest.json"),
       (manifest) => ({
         ...manifest,
         modelVersion: 2,
@@ -75,7 +75,7 @@ describe("reader artifact boundary", () => {
 
     const broken = await makeProject("testinbox");
     await patchJson(
-      path.join(broken, ".specra/artifacts/documentation.json"),
+      path.join(broken, ".specistry/artifacts/documentation.json"),
       (artifact) => ({
         ...artifact,
         model: { ...(artifact.model as object), modelVersion: 2 },
@@ -85,7 +85,7 @@ describe("reader artifact boundary", () => {
 
     const mismatched = await makeProject("testinbox");
     await patchJson(
-      path.join(mismatched, ".specra/artifacts/manifest.json"),
+      path.join(mismatched, ".specistry/artifacts/manifest.json"),
       (manifest) => ({
         ...manifest,
         project: { id: "Other", name: "Other" },
@@ -95,7 +95,7 @@ describe("reader artifact boundary", () => {
 
     const inconsistent = await makeProject("testinbox");
     await patchJson(
-      path.join(inconsistent, ".specra/artifacts/manifest.json"),
+      path.join(inconsistent, ".specistry/artifacts/manifest.json"),
       (manifest) => ({
         ...manifest,
         statistics: { ...(manifest.statistics as object), operations: 1 },
@@ -108,11 +108,14 @@ describe("reader artifact boundary", () => {
 
     const missingDocumentation = await makeProject("testinbox");
     await rm(
-      path.join(missingDocumentation, ".specra/artifacts/documentation.json"),
+      path.join(
+        missingDocumentation,
+        ".specistry/artifacts/documentation.json",
+      ),
     );
     await expectFailure(
       missingDocumentation,
-      /No canonical artifact was found at \.specra\/artifacts\/documentation\.json/,
+      /No canonical artifact was found at \.specistry\/artifacts\/documentation\.json/,
     );
   });
 
@@ -122,8 +125,8 @@ describe("reader artifact boundary", () => {
       ReaderArtifactError,
     );
     await cp(
-      path.join(fixtureRoot, "edge", ".specra"),
-      path.join(project, ".specra"),
+      path.join(fixtureRoot, "edge", ".specistry"),
+      path.join(project, ".specistry"),
       {
         recursive: true,
       },
@@ -140,23 +143,23 @@ async function expectFailure(root: string, pattern: RegExp): Promise<void> {
   );
   expect(error).toBeInstanceOf(ReaderArtifactError);
   expect((error as Error).message).toMatch(pattern);
-  expect((error as Error).message).toContain("Run `specra build`");
+  expect((error as Error).message).toContain("Run `specistry build`");
   expect((error as Error).message).not.toContain(root);
 }
 
 async function makeProject(fixture?: string): Promise<string> {
-  const directory = await mkdtemp(path.join(tmpdir(), "specra-reader-"));
+  const directory = await mkdtemp(path.join(tmpdir(), "specistry-reader-"));
   temporaryDirectories.push(directory);
   if (fixture !== undefined) {
     await cp(
-      path.join(fixtureRoot, fixture, ".specra"),
-      path.join(directory, ".specra"),
+      path.join(fixtureRoot, fixture, ".specistry"),
+      path.join(directory, ".specistry"),
       {
         recursive: true,
       },
     );
   } else {
-    await mkdir(path.join(directory, ".specra"));
+    await mkdir(path.join(directory, ".specistry"));
   }
   return directory;
 }

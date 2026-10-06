@@ -1,4 +1,4 @@
-# Specra product definition
+# Specistry product definition
 
 ## Problem
 
@@ -6,17 +6,17 @@ Engineering teams need accurate, polished API and product documentation without 
 
 ## Vision
 
-Specra transforms specifications, authored guidance, and validated configuration into a cohesive, accessible, self-hosted developer experience. It is infrastructure reusable across products; TestInbox is its first production-realistic acceptance case, not a privileged code path.
+Specistry transforms specifications, authored guidance, and validated configuration into a cohesive, accessible, self-hosted developer experience. It is infrastructure reusable across products; TestInbox is its first production-realistic acceptance case, not a privileged code path.
 
 ## Users and terminology
 
-| Term                 | Meaning                                                                                                        |
-| -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Specra author        | Writes guides, configuration, examples, navigation, branding, and contract annotations for a consuming project |
-| Specra consumer      | Product or team that integrates Specra and deploys the resulting portal                                        |
-| Documentation reader | Person reading guides or reference material                                                                    |
-| API consumer         | Developer integrating with an API, possibly through the playground or SDK examples                             |
-| Specra contributor   | Engineer evolving Specra packages, tooling, architecture, and tests                                            |
+| Term                  | Meaning                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Specistry author      | Writes guides, configuration, examples, navigation, branding, and contract annotations for a consuming project |
+| Specistry consumer    | Product or team that integrates Specistry and deploys the resulting portal                                     |
+| Documentation reader  | Person reading guides or reference material                                                                    |
+| API consumer          | Developer integrating with an API, possibly through the playground or SDK examples                             |
+| Specistry contributor | Engineer evolving Specistry packages, tooling, architecture, and tests                                         |
 
 A person may hold several roles, but their trust and workflows differ. In particular, being a documentation reader never grants content-execution or upstream-network authority.
 
@@ -31,18 +31,18 @@ A person may hold several roles, but their trust and workflows differ. In partic
 
 ## Primary use cases
 
-1. An author points Specra at one or more OpenAPI contracts and a docs tree, then previews changes locally.
+1. An author points Specistry at one or more OpenAPI contracts and a docs tree, then previews changes locally.
 2. A product builds immutable documentation artifacts and deploys them on its own infrastructure.
 3. A reader finds a concept or operation, understands schemas and authentication, and copies an accurate protocol or curated SDK example.
-4. An API consumer chooses an approved environment and executes a request without exposing credentials to Specra persistence or telemetry.
+4. An API consumer chooses an approved environment and executes a request without exposing credentials to Specistry persistence or telemetry.
 5. CI validates source correctness, documentation completeness, architecture boundaries, and regressions.
 6. A maintainer retains historical docs versions independently of application deployment versions.
 
 ## Functional boundary
 
-Specra owns ingestion adapters, normalization, content compilation under a defined trust model, reference and guide rendering, navigation, build-time indexing, snippet generation, quality policy, a CLI orchestrator, and guarded playground integration. Consumers own contract correctness against live APIs, documentation source review, branding assets, SDK API mappings, deployment policy, upstream authorization, and environment allowlists.
+Specistry owns ingestion adapters, normalization, content compilation under a defined trust model, reference and guide rendering, navigation, build-time indexing, snippet generation, quality policy, a CLI orchestrator, and guarded playground integration. Consumers own contract correctness against live APIs, documentation source review, branding assets, SDK API mappings, deployment policy, upstream authorization, and environment allowlists.
 
-Specra can expose hooks for contract-conformance tools, but does not assert that a parsing OpenAPI file matches a running service.
+Specistry can expose hooks for contract-conformance tools, but does not assert that a parsing OpenAPI file matches a running service.
 
 ## Non-functional requirements
 
@@ -60,7 +60,7 @@ Measurable initial targets live in [performance and accessibility objectives](de
 
 ## Explicit non-goals
 
-Initial development excludes AsyncAPI and GraphQL renderers, AI writing or chat, SaaS multi-tenancy, billing, hosted analytics, collaborative editing, WYSIWYG authoring, marketplaces, arbitrary runtime plugins or code, developer account management, and automatic inference of high-level SDK calls. Specra is not a general HTTP proxy or a runtime API-conformance product.
+Initial development excludes AsyncAPI and GraphQL renderers, AI writing or chat, SaaS multi-tenancy, billing, hosted analytics, collaborative editing, WYSIWYG authoring, marketplaces, arbitrary runtime plugins or code, developer account management, and automatic inference of high-level SDK calls. Specistry is not a general HTTP proxy or a runtime API-conformance product.
 
 ## Product principles
 

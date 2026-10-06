@@ -10,21 +10,21 @@ deployment artifact.
 Build documentation before building or starting the reader:
 
 ```bash
-specra validate
-specra build
-specra check
-specra release v1 --current --no-diff
-docker build --tag specra-reader:0.1.0-rc.2 .
+specistry validate
+specistry build
+specistry check
+specistry release v1 --current --no-diff
+docker build --tag specistry-reader:0.1.0-rc.3 .
 docker run --read-only --tmpfs /tmp --publish 3000:3000 \
   --mount type=bind,src="$PWD",dst=/data/project,readonly \
-  --env SPECRA_SITE_URL=https://docs.example.com \
-  specra-reader:0.1.0-rc.2
+  --env SPECISTRY_SITE_URL=https://docs.example.com \
+  specistry-reader:0.1.0-rc.3
 ```
 
 The image pins Node 24.20.0, runs the minimal Next standalone output as the
 unprivileged `node` user, contains no consumer source or secret, and reads the
 mounted project at `/data/project`. Build from the repository root. Locally,
-`pnpm --filter @specra/web start` launches the same standalone server; the
+`pnpm --filter @specistry/web start` launches the same standalone server; the
 build wrapper stages its static assets beside it. The reader image is a
 separate release artifact from the packed author CLI.
 
@@ -36,7 +36,7 @@ manifest, component digests, and artifact contracts. Both responses are
 ## Reverse proxy and origin
 
 Terminate TLS at a trusted reverse proxy, pass the original scheme and host
-only from that proxy, and set `SPECRA_SITE_URL` to the public HTTPS origin.
+only from that proxy, and set `SPECISTRY_SITE_URL` to the public HTTPS origin.
 Preserve the reader's response headers:
 
 - nonce `Content-Security-Policy` with `frame-ancestors 'none'` and
@@ -57,7 +57,7 @@ documentation origin through CORS; never broaden the reader into a proxy.
 | Content-addressed assets and search indexes           | Public immutable cache                    |
 | Explicit `/docs/{version}` and `/api/{version}` pages | Cacheable with release-aware revalidation |
 | `/docs`, `/api`, `/`, catalog, health, readiness      | Revalidate or `no-store`; never immutable |
-| Personalized or credential-bearing API responses      | Never cached by Specra                    |
+| Personalized or credential-bearing API responses      | Never cached by Specistry                 |
 
 The nonce policy makes rendered HTML request-specific. An edge that caches HTML
 must preserve nonce/header equivalence or document and review a different CSP;
@@ -67,18 +67,18 @@ the reference deployment does not make that trade.
 
 Every instance must see one coherent, read-only release-store snapshot. Bake
 the same snapshot into each deployment or mount an atomically published shared
-store. Specra does not provide distributed locks or replication. Do not update
+store. Specistry does not provide distributed locks or replication. Do not update
 component files independently while instances are serving them.
 
 ## Backup and restore
 
 Back up:
 
-- `.specra/releases`, including `catalog.json` and immutable version folders;
+- `.specistry/releases`, including `catalog.json` and immutable version folders;
 - consumer sources, configuration, changelog sources, and contract inputs;
 - deployment configuration outside the repository.
 
-`.specra/artifacts` and `.specra/candidates` are regenerable. To prove a
+`.specistry/artifacts` and `.specistry/candidates` are regenerable. To prove a
 restore, copy the release store into a clean project root, start the same
 reader image with that root mounted read-only, require `/readyz` to return 200,
 and exercise the current alias plus an explicit historical route.
@@ -88,7 +88,7 @@ and exercise the current alias plus an explicit historical route.
 Rollback changes only the catalog pointer:
 
 ```bash
-specra current v1
+specistry current v1
 ```
 
 Verify `/readyz`, `/docs`, search, snippets, sitemap, canonical URLs, and CSP.

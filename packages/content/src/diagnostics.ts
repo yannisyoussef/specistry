@@ -71,7 +71,7 @@ export const CONTENT_DIAGNOSTIC_MESSAGES: Readonly<
   CONTENT_COMPONENT_PROP_INVALID:
     "A component attribute is missing, unknown, or has an invalid value.",
   CONTENT_COMPONENT_UNKNOWN:
-    "The component is not part of the Specra authoring vocabulary.",
+    "The component is not part of the Specistry authoring vocabulary.",
   CONTENT_ESM_FORBIDDEN:
     "Import and export statements are not allowed in documentation.",
   CONTENT_EXPRESSION_FORBIDDEN:
@@ -87,7 +87,7 @@ export const CONTENT_DIAGNOSTIC_MESSAGES: Readonly<
   CONTENT_HEADING_SKIPPED:
     "The heading skips a level; headings should descend one level at a time.",
   CONTENT_HTML_FORBIDDEN:
-    "Raw HTML is not allowed in documentation; use Markdown or a Specra component.",
+    "Raw HTML is not allowed in documentation; use Markdown or a Specistry component.",
   CONTENT_LINK_ANCHOR_MISSING:
     "The link points at a heading anchor that does not exist on the target page.",
   CONTENT_LINK_SCHEME_FORBIDDEN:
@@ -98,7 +98,7 @@ export const CONTENT_DIAGNOSTIC_MESSAGES: Readonly<
   CONTENT_SOURCE_OUTSIDE_ROOT:
     "The authored file resolves outside the documentation root and was not compiled.",
   CONTENT_UNSUPPORTED:
-    "The Markdown construct is not supported by the Specra content model.",
+    "The Markdown construct is not supported by the Specistry content model.",
   NAVIGATION_API_DUPLICATE:
     "The generated API reference is inserted more than once in the navigation.",
   NAVIGATION_DEPTH_EXCEEDED:

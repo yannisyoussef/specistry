@@ -1,4 +1,4 @@
-import type { Pair } from "@specra/snippets/protocol";
+import type { Pair } from "@specistry/snippets/protocol";
 
 import type { PlaygroundLimits } from "../types.js";
 import { redactHeaders, sanitizeHeaderValue } from "./redact.js";
@@ -51,11 +51,11 @@ export const RESULT_MESSAGES: Readonly<
   Record<Exclude<ResultState, "ok">, string>
 > = {
   cancelled:
-    "Cancelled. Specra stopped waiting for the response; a request that was already transmitted may still have been processed by the API.",
+    "Cancelled. Specistry stopped waiting for the response; a request that was already transmitted may still have been processed by the API.",
   "network-failure":
     "The browser could not complete this request. Common causes include CORS policy, a blocked redirect, network or TLS failure, DNS, or private-network restrictions.",
   "redirect-blocked":
-    "The target returned a redirect. Specra does not automatically follow redirects in the playground. Configure the final approved environment URL.",
+    "The target returned a redirect. Specistry does not automatically follow redirects in the playground. Configure the final approved environment URL.",
   timeout: "Timed out. The API did not respond within the playground timeout.",
 };
 

@@ -6,9 +6,9 @@ import {
   parseSdkExamplesFile,
   type SdkConfig,
   type SdkExampleRecord,
-} from "@specra/config";
-import { highlightCode, normalizeLanguage } from "@specra/content";
-import { parseDocumentationArtifact, type Operation } from "@specra/model";
+} from "@specistry/config";
+import { highlightCode, normalizeLanguage } from "@specistry/content";
+import { parseDocumentationArtifact, type Operation } from "@specistry/model";
 import {
   operationKey,
   projectArtifact,
@@ -17,7 +17,7 @@ import {
   type EnvironmentProjection,
   type SdkDeclaration,
   type SdkExample,
-} from "@specra/snippets";
+} from "@specistry/snippets";
 
 import type { BuildContext, Diagnostic } from "./contracts.js";
 import {
@@ -35,9 +35,9 @@ import { resolveExistingProjectPath } from "./path-policy.js";
  * projections (the reader generates cURL/HTTP/JavaScript/TypeScript/Java/
  * Python from them), and the consumer's explicit SDK examples are validated,
  * resolved to canonical operation identity, highlighted, and carried through
- * as authored text. Nothing is inferred and nothing is executed. `specra
+ * as authored text. Nothing is inferred and nothing is executed. `specistry
  * validate` runs the same step so mapping diagnostics appear without a
- * build; `specra build` writes the result as `snippets.json`.
+ * build; `specistry build` writes the result as `snippets.json`.
  */
 
 export interface SnippetsBuildOutput {

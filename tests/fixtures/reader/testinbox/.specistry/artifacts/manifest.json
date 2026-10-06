@@ -1,0 +1,128 @@
+{
+  "artifactFormat": 1,
+  "assets": [
+    {
+      "bytes": 131,
+      "path": "assets/5cb94515a1027e4c.svg",
+      "sha256": "5cb94515a1027e4c0747aa178d903856c20b25b2c7a57aa646b93daf844b5abe"
+    },
+    {
+      "bytes": 99,
+      "path": "assets/632a3aed30e688aa.png",
+      "sha256": "632a3aed30e688aafa5189767c29c683fe2e48aac4b0435392fd43156dcb68de"
+    },
+    {
+      "bytes": 157,
+      "path": "assets/8a8489932558b153.png",
+      "sha256": "8a8489932558b153cc3c27fa379c138de9a9025ec748680a0ae99a52e006945b"
+    },
+    {
+      "bytes": 31477,
+      "path": "assets/977b85582ab05e38.png",
+      "sha256": "977b85582ab05e383b6af910466ce60c89e5e2feac60c2a7f5e1abf7482b9ba5"
+    }
+  ],
+  "branding": {
+    "accent": "#2a6fdb",
+    "favicon": "assets/632a3aed30e688aa.png",
+    "logo": "assets/5cb94515a1027e4c.svg"
+  },
+  "diagnostics": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "files": {
+    "content": "content.json",
+    "documentation": "documentation.json",
+    "navigation": "navigation.json",
+    "playground": "playground.json",
+    "search": "search.json",
+    "snippets": "snippets.json"
+  },
+  "generator": "specistry",
+  "modelVersion": 1,
+  "playground": {
+    "bytes": 25646,
+    "enabled": true,
+    "environments": 2,
+    "operations": 25,
+    "sha256": "a9448b1eb9ce1f25312395d487e80c3722c0ebd8084c99ccb32b2b1ea7e57637",
+    "version": 1
+  },
+  "project": {
+    "id": "TestInbox",
+    "name": "TestInbox"
+  },
+  "search": {
+    "bytes": 53651,
+    "documents": 63,
+    "sha256": "82e6342134f12b60fca0adb96105f82a04115cec63deaf1ea65dead9ffe95970",
+    "version": 1
+  },
+  "snippets": {
+    "bytes": 26796,
+    "operations": 25,
+    "sdkExamples": 5,
+    "sha256": "4cd11fb6f89e1db498a392bba4356aea8143a4d1ad43320c691721a677d65eb1",
+    "version": 1
+  },
+  "sources": [
+    {
+      "bytes": 1527,
+      "path": "docs/authentication.mdx",
+      "sha256": "7ef9b22d60d71b21461128422d667fd9e6ef3620516b2035c502c4d7542076c9"
+    },
+    {
+      "bytes": 1209,
+      "path": "docs/concepts/inbox-lifecycle.md",
+      "sha256": "566c4d6d03f5e9695ecc7118719abf8406a02812fbdee520bc2d831f93aa8957"
+    },
+    {
+      "bytes": 852,
+      "path": "docs/guides/attachments.md",
+      "sha256": "42f33bbb29f44dfcd3d66bb24c552e3a2ee1b97c653f6c286749a141c92e0684"
+    },
+    {
+      "bytes": 1171,
+      "path": "docs/guides/ci-integration.mdx",
+      "sha256": "1412e7c77ad9549c15ea6be1affb3381fedd6c31104927ead35d5f7779d556e1"
+    },
+    {
+      "bytes": 1636,
+      "path": "docs/guides/waiting-for-email.mdx",
+      "sha256": "3fd7102ecb3e556b48613b854a05f0e4f2d4fe94aa78e3124410edef902d9120"
+    },
+    {
+      "bytes": 2005,
+      "path": "docs/index.mdx",
+      "sha256": "574392590766d9930e0397b6f1087c73955bd589536e7c41a6445952ab6a9c82"
+    },
+    {
+      "bytes": 912,
+      "path": "docs/introduction.md",
+      "sha256": "70e1f225d8acbd6417108ba08f782259b579cc7a3cd5ba74bb2627ab1934e4bf"
+    },
+    {
+      "bytes": 2150,
+      "path": "docs/quickstart.mdx",
+      "sha256": "61e7dcc757c0b18f643c923927fe689eba4e72ce5d3e8494ba666d87fd662174"
+    },
+    {
+      "bytes": 1522,
+      "path": "docs/troubleshooting.md",
+      "sha256": "dd746a354d2e72fcb6f2e96f392d90c7c3a932767d72f6ee1ec365991e0f84a5"
+    },
+    {
+      "bytes": 32799,
+      "path": "openapi.yaml",
+      "sha256": "822e4a452bc8d83959668811170a8fcbab9fa7ac4cb05753aa85ff8a992f7f08"
+    }
+  ],
+  "statistics": {
+    "documents": 1,
+    "operations": 25,
+    "pages": 9,
+    "references": 78,
+    "schemas": 20
+  }
+}

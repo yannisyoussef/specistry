@@ -2,7 +2,7 @@ import {
   createSchemaId,
   serializeDocumentationArtifact,
   type SchemaNode,
-} from "@specra/model";
+} from "@specistry/model";
 import { describe, expect, it } from "vitest";
 
 import {

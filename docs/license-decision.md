@@ -4,9 +4,9 @@ Status: **OWNER CONFIRMED — licensor identity, ownership, licensing authority,
 and final parameters are recorded.**
 
 The owner selected the Business Source License 1.1 (`BUSL-1.1`) business model
-for Specra and approved the final populated parameters. The confirmed
+for Specistry and approved the final populated parameters. The confirmed
 copyright owner and Licensor is INFINITY VENTURES, whose legal form is recorded
-separately as SASU. INFINITY VENTURES owns Specra and has authority to license
+separately as SASU. INFINITY VENTURES owns Specistry and has authority to license
 the work.
 The current license is source-available, not open source. Each specific
 version changes to the Apache License, Version 2.0 (`Apache-2.0`) three years
@@ -16,7 +16,7 @@ after that version's first public distribution.
 
 - **Licensor:** INFINITY VENTURES.
 - **Legal form:** SASU.
-- **Licensed Work:** Specra. The standard BSL terms apply separately to each
+- **Licensed Work:** Specistry. The standard BSL terms apply separately to each
   version.
 - **Change Date:** three years after the first public distribution
   of each specific version.
@@ -51,12 +51,12 @@ Licensor while that version remains under BSL.
 
 These examples are explanatory and do not replace the license text:
 
-| Scenario                                                                                   | Guidance                                                                                                                 |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| A company hosts `docs.example.com` with Specra for its own product                         | Permitted by the Additional Use Grant.                                                                                   |
-| A source-available or open-source project self-hosts its own documentation with Specra     | Permitted by the Additional Use Grant.                                                                                   |
-| A consultant installs Specra in a customer's infrastructure for that customer's own docs   | Evaluate the exact grant and deployment facts; do not assume rights beyond the license. Contact the Licensor if unclear. |
-| A vendor sells a multi-tenant “Hosted Specra” documentation service to third-party clients | A commercial agreement is required while the applicable version remains under BSL.                                       |
+| Scenario                                                                                      | Guidance                                                                                                                 |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| A company hosts `docs.example.com` with Specistry for its own product                         | Permitted by the Additional Use Grant.                                                                                   |
+| A source-available or open-source project self-hosts its own documentation with Specistry     | Permitted by the Additional Use Grant.                                                                                   |
+| A consultant installs Specistry in a customer's infrastructure for that customer's own docs   | Evaluate the exact grant and deployment facts; do not assume rights beyond the license. Contact the Licensor if unclear. |
+| A vendor sells a multi-tenant “Hosted Specistry” documentation service to third-party clients | A commercial agreement is required while the applicable version remains under BSL.                                       |
 
 For edge cases, rely on the authoritative license and obtain guidance from the
 Licensor rather than extending these examples by analogy.
@@ -64,7 +64,7 @@ Licensor rather than extending these examples by analogy.
 ## Confirmed owner record
 
 The owner has recorded the canonical legal name `INFINITY VENTURES`, the legal
-form `SASU`, Specra ownership, authority to license the work, and approval of
+form `SASU`, Specistry ownership, authority to license the work, and approval of
 the final populated parameters. The canonical machine-readable legal name does
 not append the legal form; human-facing notices may identify the entity as
 INFINITY VENTURES, SASU where useful.
@@ -92,7 +92,7 @@ is not a public distribution. At actual publication, the release operator must
 create the immutable per-version record; its Change Date is derived from the
 recorded first-public-distribution date.
 
-The Specra name, Specra logo, and associated branding are trademarks or brand
+The Specistry name, Specistry logo, and associated branding are trademarks or brand
 assets of their respective owner. The software license grants no trademark
 rights except as expressly required by the license. This repository record is
 implementation evidence, not legal advice; external counsel should review the

@@ -1,6 +1,6 @@
 # Dependency and supply-chain policy
 
-Prefer native platform capability, then a focused established dependency, then custom code. Specra does not wrap a complete documentation renderer.
+Prefer native platform capability, then a focused established dependency, then custom code. Specistry does not wrap a complete documentation renderer.
 
 ## Admission review
 
@@ -26,7 +26,7 @@ Pnpm may record exact, reviewable `minimumReleaseAgeExclude` entries when a newl
 
 SPEC-003 evaluated `@apidevtools/json-schema-ref-parser`, `@scalar/openapi-parser`, `@readme/openapi-parser`, `@apidevtools/swagger-parser`, `ajv` with the official OAS meta-schemas, and `@hyperjump/json-schema` against the corpus, OpenAPI 3.1 semantics, remote-reference controls, maintenance, license, and parser-model leakage, and selected an adapter-private resolver/validator/normalizer over `yaml` instead; see [ADR-009](../adr/009-openapi-ingestion-and-source-isolation.md).
 
-SPEC-002 intentionally adds no CLI framework: one command and three options do not justify another production dependency. The packed private CLI bundles `@specra/config`, `@specra/model`, `@specra/openapi`, and Zod so its executable can be installed and exercised without workspace symlinks; `yaml` is staged beside the adapter as its own dependency rather than declared by the CLI, so Zod remains the single config-schema implementation and `yaml` the adapter's single parser.
+SPEC-002 intentionally adds no CLI framework: one command and three options do not justify another production dependency. The packed private CLI bundles `@specistry/config`, `@specistry/model`, `@specistry/openapi`, and Zod so its executable can be installed and exercised without workspace symlinks; `yaml` is staged beside the adapter as its own dependency rather than declared by the CLI, so Zod remains the single config-schema implementation and `yaml` the adapter's single parser.
 
 ## Enforcement and response
 

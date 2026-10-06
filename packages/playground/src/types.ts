@@ -1,10 +1,10 @@
-import type { HttpMethod } from "@specra/model";
+import type { HttpMethod } from "@specistry/model";
 import type {
   AuthSchemeKind,
   BodyKind,
   PathSerialization,
   QuerySerialization,
-} from "@specra/snippets/protocol";
+} from "@specistry/snippets/protocol";
 
 /**
  * SPEC-009 contracts. The build projects each canonical operation into a
@@ -195,7 +195,7 @@ export const CAPABILITY_MESSAGES: Readonly<Record<CapabilityReason, string>> = {
   "auth-cookie-api-key":
     "This API key travels in a cookie, which browser JavaScript cannot set.",
   "auth-mutual-tls":
-    "This operation requires a client certificate (mutual TLS) that the Specra playground does not manage.",
+    "This operation requires a client certificate (mutual TLS) that the Specistry playground does not manage.",
   "auth-query-api-key":
     "This authentication method places credentials in the URL and is disabled in the browser playground.",
   "auth-unsupported-scheme":

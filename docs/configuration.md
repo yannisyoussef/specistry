@@ -1,9 +1,9 @@
 # Configuration reference
 
-The canonical local filename is `specra.config.ts`. `@specra/config` exposes the strict data contract and `defineConfig`; `@specra/cli` loads and validates that file through the SPEC-002 orchestration boundary.
+The canonical local filename is `specistry.config.ts`. `@specistry/config` exposes the strict data contract and `defineConfig`; `@specistry/cli` loads and validates that file through the SPEC-002 orchestration boundary.
 
 ```typescript
-import { defineConfig } from "@specra/config";
+import { defineConfig } from "@specistry/config";
 
 export default defineConfig({
   schemaVersion: 1,
@@ -52,12 +52,12 @@ export default defineConfig({
 
 Omitting `quality` is the same as `{ rules: {}, failOn: "error", suppressions: [] }`; existing configurations stay valid and unchanged.
 
-Objects are strict: unknown keys fail with path-aware validation issues. `specra validate` maps library issues to stable, value-free `CONFIG_INVALID` diagnostics whose paths use the unified grammar (`config#/environments/*/baseUrl`, `config#/openapi/1`); raw Zod errors, source values, exception text, and stacks are not the terminal/JSON contract. The OpenAPI documents themselves are validated by the ingestion pipeline described in the [OpenAPI ingestion reference](openapi.md).
+Objects are strict: unknown keys fail with path-aware validation issues. `specistry validate` maps library issues to stable, value-free `CONFIG_INVALID` diagnostics whose paths use the unified grammar (`config#/environments/*/baseUrl`, `config#/openapi/1`); raw Zod errors, source values, exception text, and stacks are not the terminal/JSON contract. The OpenAPI documents themselves are validated by the ingestion pipeline described in the [OpenAPI ingestion reference](openapi.md).
 
 Paths first pass cross-platform lexical constraints, then orchestration canonicalizes the project root and resolves existing paths/symlinks beneath it. OpenAPI, branding, and SDK example paths must be files; `docs` must be a directory. Missing, wrong-type, absolute, traversing, or symlink-escaping paths fail closed. Environment base paths are allowed; the code examples and the playground resolve operation paths against the normalized base, and the playground refuses any composed URL that leaves the approved origin or its base path.
 
-The project root defaults to the invocation directory. `--root` accepts one relative or absolute host path; relative values resolve from the invocation directory. Specra does not search parent directories. The deterministic artifact root is `.specra/artifacts`; validation resolves it through the nearest existing ancestor but does not create or delete it, and `specra build` writes it atomically.
+The project root defaults to the invocation directory. `--root` accepts one relative or absolute host path; relative values resolve from the invocation directory. Specistry does not search parent directories. The deterministic artifact root is `.specistry/artifacts`; validation resolves it through the nearest existing ancestor but does not create or delete it, and `specistry build` writes it atomically.
 
 ## Trust and migration
 
-`specra.config.ts` is trusted build code with the operating-system authority and environment of its isolated child process. The process bounds time, output, memory hints, cancellation, descendant lifecycle, and result serialization, but is not a security sandbox. Config exceptions and output are discarded from normal diagnostics to avoid leaking ambient secrets. `NODE_OPTIONS` is removed when starting the child so parent execution flags and loaders are not re-evaluated. Untrusted or hosted builds must use a data-only JSON/YAML equivalent. After v1 stabilizes, deprecated keys warn for at least one documented release window; migrations are explicit and deterministic. See [ADR-004](adr/004-content-and-configuration-trust.md), [ADR-008](adr/008-cli-orchestration-and-config-execution.md), and the [CLI reference](cli.md).
+`specistry.config.ts` is trusted build code with the operating-system authority and environment of its isolated child process. The process bounds time, output, memory hints, cancellation, descendant lifecycle, and result serialization, but is not a security sandbox. Config exceptions and output are discarded from normal diagnostics to avoid leaking ambient secrets. `NODE_OPTIONS` is removed when starting the child so parent execution flags and loaders are not re-evaluated. Untrusted or hosted builds must use a data-only JSON/YAML equivalent. After v1 stabilizes, deprecated keys warn for at least one documented release window; migrations are explicit and deterministic. See [ADR-004](adr/004-content-and-configuration-trust.md), [ADR-008](adr/008-cli-orchestration-and-config-execution.md), and the [CLI reference](cli.md).

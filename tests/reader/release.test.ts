@@ -53,9 +53,11 @@ const fixture = fileURLToPath(
 const temporary: string[] = [];
 
 async function copyFixture(): Promise<string> {
-  const root = await mkdtemp(path.join(tmpdir(), "specra-versioned-reader-"));
+  const root = await mkdtemp(
+    path.join(tmpdir(), "specistry-versioned-reader-"),
+  );
   temporary.push(root);
-  await cp(path.join(fixture, ".specra"), path.join(root, ".specra"), {
+  await cp(path.join(fixture, ".specistry"), path.join(root, ".specistry"), {
     recursive: true,
   });
   return root;
@@ -82,7 +84,7 @@ describe("reader mode", () => {
       new URL("../fixtures/reader/testinbox/", import.meta.url),
     );
     expect(await readerMode(testinbox)).toBe("candidate");
-    expect(await readerMode(fixture, { SPECRA_SERVE: "candidate" })).toBe(
+    expect(await readerMode(fixture, { SPECISTRY_SERVE: "candidate" })).toBe(
       "candidate",
     );
     const candidate = await loadReaderFor("/docs/v2", fixture);
@@ -225,7 +227,7 @@ describe("release loader", () => {
   it("evicts the oldest release beyond the bound without corrupting reloads", async () => {
     const root = await copyFixture();
     // Fabricate additional catalog entries pointing at copies of v1 to exceed the bound.
-    const store = path.join(root, ".specra", "releases");
+    const store = path.join(root, ".specistry", "releases");
     const catalog = JSON.parse(
       await readFile(path.join(store, "catalog.json"), "utf8"),
     ) as { releases: { version: string }[] };
@@ -269,7 +271,7 @@ describe("release loader", () => {
         sha256: createHash("sha256").update(redirects).digest("hex"),
       };
       const { computeReleaseDigest, serializeReleaseManifest } =
-        await import("@specra/release");
+        await import("@specistry/release");
       parsed.digest = computeReleaseDigest(parsed as never);
       await writeFile(
         path.join(store, version, "release.json"),
@@ -295,7 +297,7 @@ describe("release loader", () => {
 describe("release integrity", () => {
   it("refuses a component swapped in from another release even though it parses", async () => {
     const root = await copyFixture();
-    const store = path.join(root, ".specra", "releases");
+    const store = path.join(root, ".specistry", "releases");
     for (const file of [
       "search.json",
       "snippets.json",
@@ -313,7 +315,7 @@ describe("release integrity", () => {
         /does not match the release manifest/,
       );
       await cp(
-        path.join(fixture, ".specra", "releases", "v1", file),
+        path.join(fixture, ".specistry", "releases", "v1", file),
         path.join(store, "v1", file),
       );
     }
@@ -323,7 +325,7 @@ describe("release integrity", () => {
 
   it("refuses a tampered route table, redirect table, changelog, manifest digest, or catalog entry", async () => {
     const root = await copyFixture();
-    const store = path.join(root, ".specra", "releases");
+    const store = path.join(root, ".specistry", "releases");
     const original = await readFile(
       path.join(store, "v2", "routes.json"),
       "utf8",
@@ -446,9 +448,14 @@ describe("route resolution", () => {
       location: "/docs/v2",
       status: 307,
     });
-    // `specra current v1` rewrites catalog.json only; the reader notices the
+    // `specistry current v1` rewrites catalog.json only; the reader notices the
     // new file (size or mtime) and re-reads it, keeping every release.
-    const catalogPath = path.join(root, ".specra", "releases", "catalog.json");
+    const catalogPath = path.join(
+      root,
+      ".specistry",
+      "releases",
+      "catalog.json",
+    );
     const catalog = JSON.parse(await readFile(catalogPath, "utf8")) as {
       current: string;
       releases: { version: string; state: string }[];
@@ -559,8 +566,8 @@ describe("content-addressed lookups", () => {
 
 describe("sitemaps", () => {
   it("lists canonical versioned URLs per release and never an alias", async () => {
-    vi.stubEnv("SPECRA_SITE_URL", "https://versioned.example.test");
-    vi.stubEnv("SPECRA_PROJECT_ROOT", fixture);
+    vi.stubEnv("SPECISTRY_SITE_URL", "https://versioned.example.test");
+    vi.stubEnv("SPECISTRY_PROJECT_ROOT", fixture);
     const partitions = await sitemapPartitions();
     expect(partitions.map((partition) => partition.name)).toEqual([
       "v1.xml",
@@ -587,9 +594,9 @@ describe("sitemaps", () => {
   });
 
   it("keeps the candidate-mode urlset", async () => {
-    vi.stubEnv("SPECRA_SITE_URL", "https://docs.example.test");
+    vi.stubEnv("SPECISTRY_SITE_URL", "https://docs.example.test");
     vi.stubEnv(
-      "SPECRA_PROJECT_ROOT",
+      "SPECISTRY_PROJECT_ROOT",
       fileURLToPath(new URL("../fixtures/reader/testinbox/", import.meta.url)),
     );
     resetReleaseCaches();
