@@ -43,3 +43,18 @@ subject verification, GitHub publication and npm/GitHub byte equality remain
 separate release gates. npm scope ownership is owner-confirmed; registry
 publication is pending. Manual VoiceOver/NVDA remains **DEFERRED TO 1.0.0**,
 without a comprehensive screen-reader or WCAG-conformance claim.
+
+## Protected preparation preflight
+
+The first protected preparation run, `37471834797`, at production source
+`16f56994f00babe437719cfa2b3bcb35cb2e19ca` failed before packing or uploading
+any artifact. Repository-wide Markdown lint included the external Odexa checkout
+and reported formatting in its existing documents. The release workflow now
+checks out that pinned consumer only after Specistry's quality gates and packing,
+immediately before public-boundary consumer qualification. No gate is removed,
+no Odexa document is rewritten, and no lint waiver is introduced.
+
+The initial RC3 annotated tag object was
+`3590e698dca63bc934f55ba2f91fc5bf83905d22`. Moving this not-yet-released tag
+was explicitly authorized by the owner on 2026-10-06, conditional on corrected
+source review and green production CI. Historical RC2 remains immutable.
