@@ -8,6 +8,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -131,6 +132,32 @@ async function fixture() {
 }
 
 describe("public-first release binding", () => {
+  it("builds the reader against the same canonical fixture as ordinary CI", async () => {
+    const packageRequire = createRequire(
+      path.join(root, "packages/openapi/package.json"),
+    );
+    const { parse } = packageRequire("yaml") as {
+      parse(source: string): {
+        env?: Record<string, string>;
+        jobs: Record<string, { env?: Record<string, string> }>;
+      };
+    };
+    const candidate = parse(
+      await readFile(
+        path.join(root, ".github/workflows/release-candidate.yml"),
+        "utf8",
+      ),
+    );
+    const ci = parse(
+      await readFile(path.join(root, ".github/workflows/ci.yml"), "utf8"),
+    );
+    for (const key of ["SPECRA_PROJECT_ROOT", "SPECRA_SITE_URL"]) {
+      expect(ci.env?.[key]).toBeTruthy();
+      expect(candidate.jobs.prepare.env?.[key]).toBe(ci.env?.[key]);
+    }
+    expect(candidate.jobs.attest.env).toBeUndefined();
+  });
+
   it("accepts only the successful private preparation from the exact source tag", () => {
     expect(verifyPreparationBinding(binding()).id).toBe(123);
     for (const patch of [
