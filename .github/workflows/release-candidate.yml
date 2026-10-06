@@ -29,6 +29,9 @@ jobs:
     if: inputs.mode == 'prepare' && github.event.repository.private
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      SPECRA_PROJECT_ROOT: ${{ github.workspace }}/tests/fixtures/reader/testinbox
+      SPECRA_SITE_URL: https://docs.example.test
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
