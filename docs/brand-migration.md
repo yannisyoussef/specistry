@@ -2,7 +2,7 @@
 
 Beginning with **0.1.0-rc.3**, the canonical product name is **Specistry**
 (SPECification + regISTRY), the executable is `specistry`, the sole public npm
-package is `@specistry/cli`, and the target repository is
+package is `@specistry/cli`, and the repository is
 `yannisyoussef/specistry`. The tagline is “Documentation you can build on.”
 
 The owner chose to replace **Specra** because an unrelated existing
@@ -27,7 +27,9 @@ RC3 makes a clean pre-1.0 cutover: replace `specra` with `specistry`,
 preserve any original RC2 artifacts separately. RC3 provides no old-name aliases.
 
 Only the qualified CLI artifact is publishable; all source workspace packages
-and bundled internal packages remain private. npm publication and the GitHub
-repository rename are pending their release gates and verified namespace
-ownership. The repository rename follows reviewed `develop` → `master`
-promotion; original GitHub links must continue to redirect.
+and bundled internal packages remain private. The owner has confirmed ownership
+and publishing authority for npm scope `specistry`; first npm publication is
+pending owner authentication and the remaining release gates. The GitHub
+repository rename followed reviewed, green `develop` → `master` promotion on
+2026-10-06. Original GitHub links redirect to `yannisyoussef/specistry`, and
+historical RC2 release identities and asset fingerprints were verified unchanged.

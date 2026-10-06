@@ -45,13 +45,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: node scripts/verify-release-tag.mjs
-      - name: Check out the reviewed Odexa integration
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          repository: yannisyoussef/odexa
-          ref: ddba1548f592bea481b2233bf5c946ae2a246558
-          path: .specistry-tooling/odexa
-          persist-credentials: false
       - uses: pnpm/action-setup@d15e628ca66d93ee5f352c71671a7bc6a97af5c9 # v6.0.8
         with:
           version: 11.19.0
@@ -61,6 +54,15 @@ jobs:
       - run: pnpm audit --audit-level high
       - run: pnpm check:release-license
       - run: pnpm release:candidate
+      # Keep external consumer sources out of repository-wide quality gates.
+      # They are independently checked below through the qualified public CLI.
+      - name: Check out the reviewed Odexa integration
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: yannisyoussef/odexa
+          ref: ddba1548f592bea481b2233bf5c946ae2a246558
+          path: .specistry-tooling/odexa
+          persist-credentials: false
       - name: Qualify these exact bytes with npm, pnpm, self-docs and Odexa
         run: node scripts/qualify-cli-candidate.mjs .release/candidate .specistry-tooling/odexa
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
