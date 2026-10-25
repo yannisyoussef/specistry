@@ -60,7 +60,7 @@
     "@specistry/release": "workspace:*",
     "@specistry/search": "workspace:*",
     "@specistry/snippets": "workspace:*",
-    "zod": "4.5.4"
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/node": "24.13.3"
