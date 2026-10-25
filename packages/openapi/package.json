@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@specistry/model": "workspace:*",
-    "yaml": "2.9.0"
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@types/node": "24.13.3"
